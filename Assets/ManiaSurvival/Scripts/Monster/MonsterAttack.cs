@@ -66,7 +66,7 @@ public class MonsterAttack : MonoBehaviour
 
     public void TryAttackTarget(SurvivorHealth target)
     {
-        if (target == null || !target.IsAlive || cooldownTimer > 0f)
+        if (target == null || !target.enabled || !target.IsAlive || cooldownTimer > 0f)
         {
             return;
         }
@@ -91,7 +91,7 @@ public class MonsterAttack : MonoBehaviour
         {
             SurvivorHealth survivor = hits[i].GetComponentInParent<SurvivorHealth>();
 
-            if (survivor == null || !survivor.IsAlive)
+            if (survivor == null || !survivor.enabled || !survivor.IsAlive)
             {
                 continue;
             }

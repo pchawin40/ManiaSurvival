@@ -49,12 +49,12 @@ public class MonsterAI : MonoBehaviour
 
         retargetTimer -= Time.deltaTime;
 
-        if (currentTarget == null || !currentTarget.IsAlive || retargetTimer <= 0f)
+        if (currentTarget == null || !currentTarget.enabled || !currentTarget.IsAlive || retargetTimer <= 0f)
         {
             FindNearestTarget();
         }
 
-        if (currentTarget == null || !currentTarget.IsAlive)
+        if (currentTarget == null || !currentTarget.enabled || !currentTarget.IsAlive)
         {
             ApplyGravityOnly();
             return;
@@ -81,7 +81,7 @@ public class MonsterAI : MonoBehaviour
         {
             SurvivorHealth survivor = allSurvivors[i];
 
-            if (survivor == null || !survivor.IsAlive)
+            if (survivor == null || !survivor.enabled || !survivor.IsAlive)
             {
                 continue;
             }
