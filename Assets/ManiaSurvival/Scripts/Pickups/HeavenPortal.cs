@@ -12,7 +12,7 @@ public class HeavenPortal : MonoBehaviour
     public float cooldownDuration = 10f;
 
     [Header("Safety")]
-    public bool disableSurvivorHealth = true;
+    public bool disableUnitHealth = true;
 
     private bool isBusy;
     private float nextUseTime;
@@ -24,7 +24,7 @@ public class HeavenPortal : MonoBehaviour
             return;
         }
 
-        SurvivorHealth survivorHealth = other.GetComponentInParent<SurvivorHealth>();
+        UnitHealth survivorHealth = other.GetComponentInParent<UnitHealth>();
         SurvivorMovement survivorMovement = other.GetComponentInParent<SurvivorMovement>();
 
         if (survivorHealth == null && survivorMovement == null)
@@ -46,12 +46,12 @@ public class HeavenPortal : MonoBehaviour
         StartCoroutine(RunPortalSequence(survivorRoot, survivorHealth));
     }
 
-    private IEnumerator RunPortalSequence(Transform survivorRoot, SurvivorHealth survivorHealth)
+    private IEnumerator RunPortalSequence(Transform survivorRoot, UnitHealth survivorHealth)
     {
         CharacterController survivorController = survivorRoot.GetComponent<CharacterController>();
 
         bool healthWasEnabled = survivorHealth != null && survivorHealth.enabled;
-        if (disableSurvivorHealth && survivorHealth != null)
+        if (disableUnitHealth && survivorHealth != null)
         {
             survivorHealth.enabled = false;
         }
@@ -90,7 +90,7 @@ public class HeavenPortal : MonoBehaviour
 
         Debug.Log("[HeavenPortal] Survivor returned from heaven: " + survivorRoot.position);
 
-        if (disableSurvivorHealth && survivorHealth != null)
+        if (disableUnitHealth && survivorHealth != null)
         {
             survivorHealth.enabled = healthWasEnabled;
         }

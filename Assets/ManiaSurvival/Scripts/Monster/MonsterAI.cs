@@ -7,7 +7,7 @@ public class MonsterAI : MonoBehaviour
     public float moveSpeed = 5.75f;
     public float stoppingDistance = 1.25f;
     public float retargetInterval = 0.5f;
-    public SurvivorHealth currentTarget;
+    public UnitHealth currentTarget;
 
     [Header("Movement")]
     public float rotationSpeed = 720f;
@@ -49,12 +49,12 @@ public class MonsterAI : MonoBehaviour
 
         retargetTimer -= Time.deltaTime;
 
-        if (currentTarget == null || !currentTarget.enabled || !currentTarget.IsAlive || retargetTimer <= 0f)
+        if (currentTarget == null || currentTarget.IsDead || retargetTimer <= 0f)
         {
             FindNearestTarget();
         }
 
-        if (currentTarget == null || !currentTarget.enabled || !currentTarget.IsAlive)
+        if (currentTarget == null || currentTarget.IsDead)
         {
             ApplyGravityOnly();
             return;
@@ -63,7 +63,7 @@ public class MonsterAI : MonoBehaviour
         ChaseTarget();
     }
 
-    public void SetTarget(SurvivorHealth target)
+    public void SetTarget(UnitHealth target)
     {
         currentTarget = target;
         retargetTimer = retargetInterval;
@@ -73,15 +73,15 @@ public class MonsterAI : MonoBehaviour
     {
         retargetTimer = retargetInterval;
 
-        SurvivorHealth[] allSurvivors = FindObjectsByType<SurvivorHealth>(FindObjectsSortMode.None);
-        SurvivorHealth nearest = null;
+        GameObject[] allSurvivorObjects = GameObject.FindGameObjectsWithTag("Survivor");
+        UnitHealth nearest = null;
         float nearestDistanceSqr = float.MaxValue;
 
-        for (int i = 0; i < allSurvivors.Length; i++)
+        for (int i = 0; i < allSurvivorObjects.Length; i++)
         {
-            SurvivorHealth survivor = allSurvivors[i];
+            UnitHealth survivor = allSurvivorObjects[i].GetComponent<UnitHealth>();
 
-            if (survivor == null || !survivor.enabled || !survivor.IsAlive)
+            if (survivor == null || survivor.IsDead)
             {
                 continue;
             }

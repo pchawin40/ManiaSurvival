@@ -9,6 +9,7 @@ public class MonsterAttack : MonoBehaviour
     public bool autoAttack = true;
     public LayerMask survivorLayers = ~0;
     public Transform attackPoint;
+    public string targetTag = "Survivor";
 
     [Header("Game Manager")]
     public ManiaGameManager gameManager;
@@ -56,7 +57,7 @@ public class MonsterAttack : MonoBehaviour
             return;
         }
 
-        SurvivorHealth target = FindNearestSurvivorInRange();
+        UnitHealth target = FindNearestSurvivorInRange();
 
         if (target != null)
         {
@@ -64,9 +65,9 @@ public class MonsterAttack : MonoBehaviour
         }
     }
 
-    public void TryAttackTarget(SurvivorHealth target)
+    public void TryAttackTarget(UnitHealth target)
     {
-        if (target == null || !target.enabled || !target.IsAlive || cooldownTimer > 0f)
+        if (!CanAttackTarget(target) || cooldownTimer > 0f)
         {
             return;
         }
@@ -80,18 +81,18 @@ public class MonsterAttack : MonoBehaviour
         }
     }
 
-    private SurvivorHealth FindNearestSurvivorInRange()
+    private UnitHealth FindNearestSurvivorInRange()
     {
         Vector3 origin = GetAttackOrigin();
         Collider[] hits = Physics.OverlapSphere(origin, attackRange, survivorLayers, QueryTriggerInteraction.Ignore);
-        SurvivorHealth nearest = null;
+        UnitHealth nearest = null;
         float nearestDistanceSqr = float.MaxValue;
 
         for (int i = 0; i < hits.Length; i++)
         {
-            SurvivorHealth survivor = hits[i].GetComponentInParent<SurvivorHealth>();
+            UnitHealth survivor = hits[i].GetComponentInParent<UnitHealth>();
 
-            if (survivor == null || !survivor.enabled || !survivor.IsAlive)
+            if (!CanAttackTarget(survivor))
             {
                 continue;
             }
@@ -108,15 +109,40 @@ public class MonsterAttack : MonoBehaviour
         return nearest;
     }
 
-    private void Attack(SurvivorHealth target)
+    private void Attack(UnitHealth target)
     {
         cooldownTimer = attackCooldown;
         target.TakeDamage(damage, gameObject);
+
+        if (target.IsDead && gameManager != null)
+        {
+            gameManager.ReportSurvivorDeath(target, gameObject);
+        }
     }
 
     private Vector3 GetAttackOrigin()
     {
         return attackPoint != null ? attackPoint.position : transform.position;
+    }
+
+    private bool CanAttackTarget(UnitHealth target)
+    {
+        if (target == null || target.IsDead)
+        {
+            return false;
+        }
+
+        if (target.gameObject == gameObject)
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrEmpty(targetTag) && !target.CompareTag(targetTag))
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private void OnDrawGizmosSelected()

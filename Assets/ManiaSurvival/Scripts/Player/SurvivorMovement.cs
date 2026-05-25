@@ -35,7 +35,7 @@ public class SurvivorMovement : MonoBehaviour
     public bool IsSprinting { get; private set; }
 
     private CharacterController characterController;
-    private SurvivorHealth health;
+    private UnitHealth health;
     private Vector2 mobileMoveInput;
     private Vector3 lastMoveDirection = Vector3.forward;
     private float verticalVelocity;
@@ -45,13 +45,13 @@ public class SurvivorMovement : MonoBehaviour
     private void Awake()
     {
         characterController = GetComponent<CharacterController>();
-        health = GetComponent<SurvivorHealth>();
+        health = GetComponent<UnitHealth>();
         CurrentStamina = maxStamina;
     }
 
     private void Update()
     {
-        if (health != null && !health.IsAlive)
+        if (health != null && health.IsDead)
         {
             IsSprinting = false;
             return;

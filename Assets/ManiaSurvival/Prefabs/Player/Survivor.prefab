@@ -179,13 +179,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 1935288733120376740}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 88dd921bd5a30b542b955403400a1ebd, type: 3}
+  m_Script: {fileID: 11500000, guid: baf81515361201b44aee4e4337e22132, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SurvivorHealth
-  maxHealth: 3
-  resetOnStart: 1
-  deathVisual: {fileID: 0}
-  behavioursToDisableOnDeath: []
-  collidersToDisableOnDeath: []
-  renderersToHideOnDeath: []
-  gameManager: {fileID: 0}
+  m_EditorClassIdentifier: Assembly-CSharp::UnitHealth
+  maxHealth: 20
+  currentHealth: 20
+  destroyOnDeath: 0
+  disableOnDeath: 0
+  onDamaged:
+    m_PersistentCalls:
+      m_Calls: []
+  onDeath:
+    m_PersistentCalls:
+      m_Calls: []

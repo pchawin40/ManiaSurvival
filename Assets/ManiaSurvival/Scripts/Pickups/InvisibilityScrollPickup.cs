@@ -18,7 +18,7 @@ public class InvisibilityScrollPickup : MonoBehaviour
             return;
         }
 
-        SurvivorHealth survivorHealth = other.GetComponentInParent<SurvivorHealth>();
+        UnitHealth survivorHealth = other.GetComponentInParent<UnitHealth>();
         SurvivorMovement survivorMovement = other.GetComponentInParent<SurvivorMovement>();
 
         if (survivorHealth == null && survivorMovement == null)
@@ -44,7 +44,7 @@ public class InvisibilityScrollPickup : MonoBehaviour
         }
     }
 
-    private IEnumerator ApplyInvisibility(SurvivorHealth survivorHealth, SurvivorMovement survivorMovement)
+    private IEnumerator ApplyInvisibility(UnitHealth survivorHealth, SurvivorMovement survivorMovement)
     {
         bool healthWasEnabled = survivorHealth != null && survivorHealth.enabled;
         Renderer[] renderers = survivorMovement != null

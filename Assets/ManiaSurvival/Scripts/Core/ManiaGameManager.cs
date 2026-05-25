@@ -18,7 +18,7 @@ public class ManiaGameManager : MonoBehaviour
     public bool startOnAwake = true;
 
     [Header("Scene References")]
-    public List<SurvivorHealth> survivors = new List<SurvivorHealth>();
+    public List<UnitHealth> survivors = new List<UnitHealth>();
     public ManiaGameUI gameUI;
 
     [Header("Debug")]
@@ -36,7 +36,9 @@ public class ManiaGameManager : MonoBehaviour
 
             for (int i = 0; i < survivors.Count; i++)
             {
-                if (survivors[i] != null && survivors[i].IsAlive)
+                UnitHealth survivor = survivors[i];
+
+                if (survivor != null && survivor.gameObject.CompareTag("Survivor") && !survivor.IsDead)
                 {
                     aliveCount++;
                 }
@@ -122,9 +124,9 @@ public class ManiaGameManager : MonoBehaviour
         ChangeState(ManiaGameState.Playing);
     }
 
-    public void RegisterSurvivor(SurvivorHealth survivor)
+    public void RegisterSurvivor(UnitHealth survivor)
     {
-        if (survivor == null || survivors.Contains(survivor))
+        if (survivor == null || survivors.Contains(survivor) || !survivor.gameObject.CompareTag("Survivor"))
         {
             return;
         }
@@ -132,7 +134,7 @@ public class ManiaGameManager : MonoBehaviour
         survivors.Add(survivor);
     }
 
-    public void ReportSurvivorDeath(SurvivorHealth survivor, GameObject damageSource)
+    public void ReportSurvivorDeath(UnitHealth survivor, GameObject damageSource)
     {
         if (damageSource != null && damageSource.GetComponentInParent<MonsterAttack>() != null)
         {
@@ -162,13 +164,20 @@ public class ManiaGameManager : MonoBehaviour
 
     public void RefreshSurvivorList()
     {
-        survivors.RemoveAll(survivor => survivor == null);
+        survivors.RemoveAll(survivor => survivor == null || !survivor.gameObject.CompareTag("Survivor"));
 
-        SurvivorHealth[] foundSurvivors = FindObjectsByType<SurvivorHealth>(FindObjectsSortMode.None);
+        GameObject[] foundSurvivors = GameObject.FindGameObjectsWithTag("Survivor");
 
         for (int i = 0; i < foundSurvivors.Length; i++)
         {
-            RegisterSurvivor(foundSurvivors[i]);
+            UnitHealth survivor = foundSurvivors[i].GetComponent<UnitHealth>();
+
+            if (survivor == null)
+            {
+                survivor = foundSurvivors[i].GetComponentInParent<UnitHealth>();
+            }
+
+            RegisterSurvivor(survivor);
         }
     }
 

@@ -8,23 +8,24 @@ public class UnitHealth : MonoBehaviour
     public int currentHealth;
 
     [Header("Death")]
-    public bool destroyOnDeath = true;
+    public bool destroyOnDeath = false;
     public bool disableOnDeath = false;
 
     [Header("Events")]
     public UnityEvent onDamaged;
     public UnityEvent onDeath;
 
-    private bool isDead;
+    public bool IsDead { get; private set; }
 
     void Awake()
     {
         currentHealth = maxHealth;
+        IsDead = false;
     }
 
-    public void TakeDamage(int amount)
+    public void TakeDamage(int amount, GameObject damageSource = null)
     {
-        if (isDead) return;
+        if (IsDead) return;
         if (amount <= 0) return;
 
         currentHealth -= amount;
@@ -34,17 +35,28 @@ public class UnitHealth : MonoBehaviour
 
         if (currentHealth <= 0)
         {
-            Die();
+            Die(damageSource);
         }
     }
 
     public void Heal(int amount)
     {
-        if (isDead) return;
+        if (IsDead) return;
         if (amount <= 0) return;
 
         currentHealth += amount;
         currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+    }
+
+    public void ResetHealth()
+    {
+        if (!gameObject.activeSelf)
+        {
+            gameObject.SetActive(true);
+        }
+
+        IsDead = false;
+        currentHealth = maxHealth;
     }
 
     public float GetHealthPercent()
@@ -53,11 +65,13 @@ public class UnitHealth : MonoBehaviour
         return (float)currentHealth / maxHealth;
     }
 
-    private void Die()
+    private void Die(GameObject damageSource = null)
     {
-        if (isDead) return;
+        if (IsDead) return;
 
-        isDead = true;
+        IsDead = true;
+        currentHealth = 0;
+
         onDeath?.Invoke();
 
         if (disableOnDeath)
