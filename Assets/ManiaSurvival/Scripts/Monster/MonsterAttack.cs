@@ -142,8 +142,8 @@ public class MonsterAttack : MonoBehaviour
             return false;
         }
 
-        SurvivorStealthStatus stealthStatus = target.GetComponent<SurvivorStealthStatus>();
-        if (stealthStatus != null && stealthStatus.IsInvisible)
+        SurvivorVisibilityStatus visibilityStatus = target.GetComponent<SurvivorVisibilityStatus>();
+        if (visibilityStatus != null && visibilityStatus.IsHiddenFromMonster)
         {
             return false;
         }

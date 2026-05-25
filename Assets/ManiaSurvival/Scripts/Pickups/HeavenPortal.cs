@@ -9,30 +9,32 @@ public class HeavenPortal : MonoBehaviour
 
     [Header("Timing")]
     public float safeDuration = 15f;
-    public float cooldownDuration = 10f;
-
-    [Header("Safety")]
-    public bool disableUnitHealth = true;
+    public float cooldownDuration = 0f;
 
     private bool isBusy;
     private float nextUseTime;
 
     private void OnTriggerEnter(Collider other)
     {
-        if (isBusy || Time.time < nextUseTime)
+        if (isBusy || (cooldownDuration > 0f && Time.time < nextUseTime))
         {
             return;
         }
 
         UnitHealth survivorHealth = other.GetComponentInParent<UnitHealth>();
-        SurvivorMovement survivorMovement = other.GetComponentInParent<SurvivorMovement>();
 
-        if (survivorHealth == null && survivorMovement == null)
+        if (survivorHealth == null || !survivorHealth.CompareTag("Survivor"))
         {
             return;
         }
 
-        Transform survivorRoot = survivorHealth != null ? survivorHealth.transform : survivorMovement.transform;
+        SurvivorVisibilityStatus visibilityStatus = survivorHealth.GetComponent<SurvivorVisibilityStatus>();
+        if (visibilityStatus == null)
+        {
+            visibilityStatus = survivorHealth.gameObject.AddComponent<SurvivorVisibilityStatus>();
+        }
+
+        Transform survivorRoot = survivorHealth.transform;
         if (survivorRoot == null || safeZone == null || returnPoint == null)
         {
             return;
@@ -43,18 +45,13 @@ public class HeavenPortal : MonoBehaviour
         Debug.Log("[HeavenPortal] Survivor position before teleport: " + survivorRoot.position);
 
         isBusy = true;
-        StartCoroutine(RunPortalSequence(survivorRoot, survivorHealth));
+        StartCoroutine(RunPortalSequence(survivorRoot, visibilityStatus));
     }
 
-    private IEnumerator RunPortalSequence(Transform survivorRoot, UnitHealth survivorHealth)
+    private IEnumerator RunPortalSequence(Transform survivorRoot, SurvivorVisibilityStatus visibilityStatus)
     {
         CharacterController survivorController = survivorRoot.GetComponent<CharacterController>();
-
-        bool healthWasEnabled = survivorHealth != null && survivorHealth.enabled;
-        if (disableUnitHealth && survivorHealth != null)
-        {
-            survivorHealth.enabled = false;
-        }
+        visibilityStatus.SetHiddenFromMonster(true);
 
         if (survivorController != null)
         {
@@ -89,13 +86,15 @@ public class HeavenPortal : MonoBehaviour
         }
 
         Debug.Log("[HeavenPortal] Survivor returned from heaven: " + survivorRoot.position);
+        visibilityStatus.SetHiddenFromMonster(false);
 
-        if (disableUnitHealth && survivorHealth != null)
-        {
-            survivorHealth.enabled = healthWasEnabled;
-        }
-
-        nextUseTime = Time.time + cooldownDuration;
+        nextUseTime = cooldownDuration > 0f ? Time.time + cooldownDuration : 0f;
         isBusy = false;
+    }
+
+    private void OnDisable()
+    {
+        isBusy = false;
+        nextUseTime = 0f;
     }
 }

@@ -42,6 +42,9 @@ public class SurvivorMovement : MonoBehaviour
     private float dodgeTimer;
     private bool mobileSprintHeld;
 
+    private float speedBoostMultiplier = 1f;
+    private Coroutine speedBoostRoutine;
+
     private void Awake()
     {
         characterController = GetComponent<CharacterController>();
@@ -75,7 +78,8 @@ public class SurvivorMovement : MonoBehaviour
         bool wantsSprint = mobileSprintHeld || (keyboardInputEnabled && IsKeyPressed(sprintKey));
         IsSprinting = wantsSprint && input.sqrMagnitude > 0.01f && CurrentStamina > minimumSprintStamina;
 
-        float moveSpeed = IsSprinting ? sprintSpeed : walkSpeed;
+        float baseMoveSpeed = IsSprinting ? sprintSpeed : walkSpeed;
+        float moveSpeed = baseMoveSpeed * speedBoostMultiplier;
 
         if (IsSprinting)
         {
@@ -208,5 +212,29 @@ public class SurvivorMovement : MonoBehaviour
 
         Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
         transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+    }
+
+    public void ApplySpeedBoost(float multiplier, float duration)
+    {
+        if (speedBoostRoutine != null)
+        {
+            StopCoroutine(speedBoostRoutine);
+        }
+
+        speedBoostRoutine = StartCoroutine(SpeedBoostRoutine(multiplier, duration));
+    }
+
+    private System.Collections.IEnumerator SpeedBoostRoutine(float multiplier, float duration)
+    {
+        speedBoostMultiplier = Mathf.Max(1f, multiplier);
+
+        Debug.Log($"Speed boost applied: x{speedBoostMultiplier} for {duration} seconds");
+
+        yield return new WaitForSeconds(duration);
+
+        speedBoostMultiplier = 1f;
+        speedBoostRoutine = null;
+
+        Debug.Log("Speed boost ended");
     }
 }

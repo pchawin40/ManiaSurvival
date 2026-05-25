@@ -18,21 +18,24 @@ public class InvisibilityScrollPickup : MonoBehaviour
             return;
         }
 
-        SurvivorStealthStatus stealthStatus = other.GetComponentInParent<SurvivorStealthStatus>();
+        UnitHealth survivorHealth = other.GetComponentInParent<UnitHealth>();
         SurvivorMovement survivorMovement = other.GetComponentInParent<SurvivorMovement>();
 
-        if (stealthStatus == null)
+        if (survivorHealth == null || !survivorHealth.CompareTag("Survivor"))
         {
             return;
         }
 
+        SurvivorVisibilityStatus visibilityStatus = survivorHealth.GetComponent<SurvivorVisibilityStatus>();
+        if (visibilityStatus == null)
+        {
+            visibilityStatus = survivorHealth.gameObject.AddComponent<SurvivorVisibilityStatus>();
+        }
+
         isCollected = true;
 
-        MonoBehaviour coroutineHost = survivorMovement != null ? (MonoBehaviour)survivorMovement : stealthStatus;
-        if (coroutineHost != null)
-        {
-            coroutineHost.StartCoroutine(ApplyInvisibility(stealthStatus, survivorMovement));
-        }
+        MonoBehaviour coroutineHost = survivorMovement != null ? (MonoBehaviour)survivorMovement : visibilityStatus;
+        coroutineHost.StartCoroutine(ApplyInvisibility(visibilityStatus, survivorMovement, survivorHealth.transform));
 
         if (destroyOnCollect)
         {
@@ -44,11 +47,9 @@ public class InvisibilityScrollPickup : MonoBehaviour
         }
     }
 
-    private IEnumerator ApplyInvisibility(SurvivorStealthStatus stealthStatus, SurvivorMovement survivorMovement)
+    private IEnumerator ApplyInvisibility(SurvivorVisibilityStatus visibilityStatus, SurvivorMovement survivorMovement, Transform survivorRoot)
     {
-        Transform survivorRoot = stealthStatus.transform;
-
-        stealthStatus.SetInvisible(true);
+        visibilityStatus.HideFromMonster(duration);
 
         Renderer[] renderers = survivorMovement != null
             ? survivorMovement.GetComponentsInChildren<Renderer>(true)
@@ -65,8 +66,6 @@ public class InvisibilityScrollPickup : MonoBehaviour
         }
 
         yield return new WaitForSeconds(duration);
-
-        stealthStatus.SetInvisible(false);
 
         for (int i = 0; i < renderers.Length; i++)
         {

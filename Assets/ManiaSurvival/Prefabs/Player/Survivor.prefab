@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 3073585702208525362}
   - component: {fileID: 2987547738584403006}
   - component: {fileID: 9072114925855080895}
+  - component: {fileID: 1154864873043892011}
   m_Layer: 0
   m_Name: Survivor
   m_TagString: Survivor
@@ -192,3 +193,15 @@ MonoBehaviour:
   onDeath:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &1154864873043892011
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1935288733120376740}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f2f1d4f18c64d0e8a0f01b8cf4ef6b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SurvivorVisibilityStatus

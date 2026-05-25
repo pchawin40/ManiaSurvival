@@ -4096,8 +4096,7 @@ MonoBehaviour:
   safeZone: {fileID: 2081617075}
   returnPoint: {fileID: 389332160}
   safeDuration: 15
-  cooldownDuration: 30
-  disableUnitHealth: 1
+  cooldownDuration: 0
 --- !u!136 &2017594252
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -4362,7 +4361,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 749344204299725652, guid: ce1525e56c83f0140b11933b3b78a48a, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 749344204299725652, guid: ce1525e56c83f0140b11933b3b78a48a, type: 3}
       propertyPath: m_LocalPosition.z

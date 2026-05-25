@@ -111,8 +111,8 @@ public class MonsterAI : MonoBehaviour
             return false;
         }
 
-        SurvivorStealthStatus stealthStatus = target.GetComponent<SurvivorStealthStatus>();
-        return stealthStatus == null || !stealthStatus.IsInvisible;
+        SurvivorVisibilityStatus visibilityStatus = target.GetComponent<SurvivorVisibilityStatus>();
+        return visibilityStatus == null || !visibilityStatus.IsHiddenFromMonster;
     }
 
     private void ChaseTarget()
