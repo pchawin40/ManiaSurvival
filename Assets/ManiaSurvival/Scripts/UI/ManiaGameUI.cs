@@ -110,7 +110,7 @@ public class ManiaGameUI : MonoBehaviour
 
         if (roleText != null)
         {
-            roleText.text = manager.State == ManiaGameState.Playing ? playingRoleText : "";
+            roleText.text = manager.State == ManiaGameState.Playing ? GetPlayingRoleLabel() : "";
         }
 
         if (survivorCountText != null)
@@ -343,10 +343,48 @@ public class ManiaGameUI : MonoBehaviour
 
     private void HandleStartPressed()
     {
+        if (localRoleController != null)
+        {
+            StartGameWithMode(localRoleController.controlMode);
+            return;
+        }
+
+        StartAsSurvivor();
+    }
+
+    public void StartAsSurvivor()
+    {
+        StartGameWithMode(PlayerControlMode.SurvivorControlled);
+    }
+
+    public void StartAsMonster()
+    {
+        StartGameWithMode(PlayerControlMode.MonsterControlled);
+    }
+
+    private void StartGameWithMode(PlayerControlMode mode)
+    {
+        if (localRoleController != null)
+        {
+            localRoleController.SetControlMode(mode);
+        }
+
         if (gameManager != null)
         {
             gameManager.BeginRound();
         }
+    }
+
+    private string GetPlayingRoleLabel()
+    {
+        if (localRoleController != null)
+        {
+            return localRoleController.controlMode == PlayerControlMode.MonsterControlled
+                ? "Playing: Monster"
+                : "Playing: Survivor";
+        }
+
+        return playingRoleText;
     }
 
     private string FormatTime(float seconds)

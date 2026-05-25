@@ -49,13 +49,19 @@ public class MonsterAI : MonoBehaviour
 
         retargetTimer -= Time.deltaTime;
 
-        if (currentTarget == null || currentTarget.IsDead || retargetTimer <= 0f)
+        if (!IsValidVisibleTarget(currentTarget))
+        {
+            currentTarget = null;
+        }
+
+        if (currentTarget == null || retargetTimer <= 0f)
         {
             FindNearestTarget();
         }
 
-        if (currentTarget == null || currentTarget.IsDead)
+        if (!IsValidVisibleTarget(currentTarget))
         {
+            currentTarget = null;
             ApplyGravityOnly();
             return;
         }
@@ -81,7 +87,7 @@ public class MonsterAI : MonoBehaviour
         {
             UnitHealth survivor = allSurvivorObjects[i].GetComponent<UnitHealth>();
 
-            if (survivor == null || survivor.IsDead)
+            if (!IsValidVisibleTarget(survivor))
             {
                 continue;
             }
@@ -96,6 +102,17 @@ public class MonsterAI : MonoBehaviour
         }
 
         currentTarget = nearest;
+    }
+
+    private bool IsValidVisibleTarget(UnitHealth target)
+    {
+        if (target == null || target.IsDead || !target.CompareTag("Survivor"))
+        {
+            return false;
+        }
+
+        SurvivorStealthStatus stealthStatus = target.GetComponent<SurvivorStealthStatus>();
+        return stealthStatus == null || !stealthStatus.IsInvisible;
     }
 
     private void ChaseTarget()

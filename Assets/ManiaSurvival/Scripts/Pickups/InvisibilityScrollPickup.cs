@@ -18,20 +18,20 @@ public class InvisibilityScrollPickup : MonoBehaviour
             return;
         }
 
-        UnitHealth survivorHealth = other.GetComponentInParent<UnitHealth>();
+        SurvivorStealthStatus stealthStatus = other.GetComponentInParent<SurvivorStealthStatus>();
         SurvivorMovement survivorMovement = other.GetComponentInParent<SurvivorMovement>();
 
-        if (survivorHealth == null && survivorMovement == null)
+        if (stealthStatus == null)
         {
             return;
         }
 
         isCollected = true;
 
-        MonoBehaviour coroutineHost = survivorMovement != null ? (MonoBehaviour)survivorMovement : survivorHealth;
+        MonoBehaviour coroutineHost = survivorMovement != null ? (MonoBehaviour)survivorMovement : stealthStatus;
         if (coroutineHost != null)
         {
-            coroutineHost.StartCoroutine(ApplyInvisibility(survivorHealth, survivorMovement));
+            coroutineHost.StartCoroutine(ApplyInvisibility(stealthStatus, survivorMovement));
         }
 
         if (destroyOnCollect)
@@ -44,12 +44,15 @@ public class InvisibilityScrollPickup : MonoBehaviour
         }
     }
 
-    private IEnumerator ApplyInvisibility(UnitHealth survivorHealth, SurvivorMovement survivorMovement)
+    private IEnumerator ApplyInvisibility(SurvivorStealthStatus stealthStatus, SurvivorMovement survivorMovement)
     {
-        bool healthWasEnabled = survivorHealth != null && survivorHealth.enabled;
+        Transform survivorRoot = stealthStatus.transform;
+
+        stealthStatus.SetInvisible(true);
+
         Renderer[] renderers = survivorMovement != null
             ? survivorMovement.GetComponentsInChildren<Renderer>(true)
-            : survivorHealth.GetComponentsInChildren<Renderer>(true);
+            : survivorRoot.GetComponentsInChildren<Renderer>(true);
         bool[] rendererStates = new bool[renderers.Length];
 
         for (int i = 0; i < renderers.Length; i++)
@@ -61,17 +64,9 @@ public class InvisibilityScrollPickup : MonoBehaviour
             }
         }
 
-        if (survivorHealth != null)
-        {
-            survivorHealth.enabled = false;
-        }
-
         yield return new WaitForSeconds(duration);
 
-        if (survivorHealth != null)
-        {
-            survivorHealth.enabled = healthWasEnabled;
-        }
+        stealthStatus.SetInvisible(false);
 
         for (int i = 0; i < renderers.Length; i++)
         {
