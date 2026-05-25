@@ -683,11 +683,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 574797378984097217, guid: 7e62eb2a30033f54b88645a2bba7b7d8, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 690
+      value: 180
       objectReference: {fileID: 0}
     - target: {fileID: 574797378984097217, guid: 7e62eb2a30033f54b88645a2bba7b7d8, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 501.8
+      value: 40
       objectReference: {fileID: 0}
     - target: {fileID: 574797378984097217, guid: 7e62eb2a30033f54b88645a2bba7b7d8, type: 3}
       propertyPath: m_LocalScale.x
@@ -735,7 +735,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 574797378984097217, guid: 7e62eb2a30033f54b88645a2bba7b7d8, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 2.2
+      value: 2.4
       objectReference: {fileID: 0}
     - target: {fileID: 574797378984097217, guid: 7e62eb2a30033f54b88645a2bba7b7d8, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -756,6 +756,14 @@ PrefabInstance:
     - target: {fileID: 7457820372195511116, guid: 7e62eb2a30033f54b88645a2bba7b7d8, type: 3}
       propertyPath: m_Name
       value: SurvivorHPBarCanvas
+      objectReference: {fileID: 0}
+    - target: {fileID: 8628590457971523476, guid: 7e62eb2a30033f54b88645a2bba7b7d8, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 180
+      objectReference: {fileID: 0}
+    - target: {fileID: 8628590457971523476, guid: 7e62eb2a30033f54b88645a2bba7b7d8, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 24
       objectReference: {fileID: 0}
     - target: {fileID: 8721977820610060533, guid: 7e62eb2a30033f54b88645a2bba7b7d8, type: 3}
       propertyPath: m_Type
@@ -1178,8 +1186,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
-  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+    rgba: 4294769400
+  m_fontColor: {r: 0.972549, g: 0.98039216, b: 0.9882353, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -1202,7 +1210,7 @@ MonoBehaviour:
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 0
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -1851,11 +1859,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 574797378984097217, guid: 7e62eb2a30033f54b88645a2bba7b7d8, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 690
+      value: 180
       objectReference: {fileID: 0}
     - target: {fileID: 574797378984097217, guid: 7e62eb2a30033f54b88645a2bba7b7d8, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 501.8
+      value: 40
       objectReference: {fileID: 0}
     - target: {fileID: 574797378984097217, guid: 7e62eb2a30033f54b88645a2bba7b7d8, type: 3}
       propertyPath: m_LocalScale.x
@@ -1903,7 +1911,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 574797378984097217, guid: 7e62eb2a30033f54b88645a2bba7b7d8, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 2.2
+      value: 2.6
       objectReference: {fileID: 0}
     - target: {fileID: 574797378984097217, guid: 7e62eb2a30033f54b88645a2bba7b7d8, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -1928,6 +1936,14 @@ PrefabInstance:
     - target: {fileID: 7457820372195511116, guid: 7e62eb2a30033f54b88645a2bba7b7d8, type: 3}
       propertyPath: m_Name
       value: MonsterHPBarCanvas
+      objectReference: {fileID: 0}
+    - target: {fileID: 8628590457971523476, guid: 7e62eb2a30033f54b88645a2bba7b7d8, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 180
+      objectReference: {fileID: 0}
+    - target: {fileID: 8628590457971523476, guid: 7e62eb2a30033f54b88645a2bba7b7d8, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 24
       objectReference: {fileID: 0}
     - target: {fileID: 8721977820610060533, guid: 7e62eb2a30033f54b88645a2bba7b7d8, type: 3}
       propertyPath: m_Type
@@ -3558,8 +3574,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
-  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+    rgba: 4294769400
+  m_fontColor: {r: 0.972549, g: 0.98039216, b: 0.9882353, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -3582,7 +3598,7 @@ MonoBehaviour:
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 0
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
