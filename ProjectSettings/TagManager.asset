@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Survivor
   - Monster
+  - Predator
   layers:
   - Default
   - TransparentFX

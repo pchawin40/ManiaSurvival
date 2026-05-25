@@ -36,6 +36,7 @@ public class ManiaGameUI : MonoBehaviour
 
     [Header("References")]
     public ManiaGameManager gameManager;
+    public LocalRoleController localRoleController;
     public SurvivorMovement localSurvivorMovement;
 
     private int activeTouchId = -1;
@@ -51,6 +52,11 @@ public class ManiaGameUI : MonoBehaviour
         if (localSurvivorMovement == null)
         {
             localSurvivorMovement = FindFirstObjectByType<SurvivorMovement>();
+        }
+
+        if (localRoleController == null)
+        {
+            localRoleController = FindFirstObjectByType<LocalRoleController>();
         }
 
         if (startButton != null)
@@ -151,6 +157,12 @@ public class ManiaGameUI : MonoBehaviour
 
     public void SetMobileMoveInput(Vector2 input)
     {
+        if (localRoleController != null)
+        {
+            localRoleController.SetMoveInput(input);
+            return;
+        }
+
         if (localSurvivorMovement != null)
         {
             localSurvivorMovement.SetMoveInput(input);
@@ -159,6 +171,12 @@ public class ManiaGameUI : MonoBehaviour
 
     public void SetMobileSprintHeld(bool isHeld)
     {
+        if (localRoleController != null)
+        {
+            localRoleController.SetSprintHeld(isHeld);
+            return;
+        }
+
         if (localSurvivorMovement != null)
         {
             localSurvivorMovement.SetSprintHeld(isHeld);
@@ -167,6 +185,12 @@ public class ManiaGameUI : MonoBehaviour
 
     public void PressMobileDodge()
     {
+        if (localRoleController != null)
+        {
+            localRoleController.PressDodge();
+            return;
+        }
+
         if (localSurvivorMovement != null)
         {
             localSurvivorMovement.TryDodge();
@@ -175,7 +199,7 @@ public class ManiaGameUI : MonoBehaviour
 
     private void UpdateSimpleMobileJoystick()
     {
-        if (joystickArea == null || localSurvivorMovement == null)
+        if (joystickArea == null || (localRoleController == null && localSurvivorMovement == null))
         {
             return;
         }

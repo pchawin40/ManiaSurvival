@@ -1,0 +1,127 @@
+using UnityEngine;
+
+public enum PlayerControlMode
+{
+    SurvivorControlled,
+    MonsterControlled
+}
+
+public class LocalRoleController : MonoBehaviour
+{
+    [Header("Control")]
+    public PlayerControlMode controlMode = PlayerControlMode.SurvivorControlled;
+    [Range(0f, 0.5f)] public float joystickDeadZone = 0.15f;
+
+    [Header("References")]
+    public SurvivorMovement survivorMovement;
+    public MonsterPlayerMovement monsterMovement;
+    public MonsterAI monsterAI;
+
+    private void Awake()
+    {
+        AutoFindReferences();
+    }
+
+    private void Start()
+    {
+        ApplyControlMode();
+    }
+
+    private void OnValidate()
+    {
+        if (Application.isPlaying)
+        {
+            ApplyControlMode();
+        }
+    }
+
+    public void SetControlMode(PlayerControlMode newMode)
+    {
+        controlMode = newMode;
+        ApplyControlMode();
+    }
+
+    public void ApplyControlMode()
+    {
+        AutoFindReferences();
+
+        if (survivorMovement != null)
+        {
+            survivorMovement.enabled = controlMode == PlayerControlMode.SurvivorControlled;
+            survivorMovement.SetMoveInput(Vector2.zero);
+            survivorMovement.SetSprintHeld(false);
+        }
+
+        if (monsterMovement != null)
+        {
+            monsterMovement.enabled = controlMode == PlayerControlMode.MonsterControlled;
+            monsterMovement.SetMoveInput(Vector2.zero);
+        }
+
+        if (monsterAI != null)
+        {
+            monsterAI.enabled = controlMode != PlayerControlMode.MonsterControlled;
+        }
+    }
+
+    public void SetMoveInput(Vector2 input)
+    {
+        Vector2 filteredInput = ApplyDeadZone(input);
+
+        if (controlMode == PlayerControlMode.SurvivorControlled)
+        {
+            if (survivorMovement != null)
+            {
+                survivorMovement.SetMoveInput(filteredInput);
+            }
+        }
+        else if (monsterMovement != null)
+        {
+            monsterMovement.SetMoveInput(filteredInput);
+        }
+    }
+
+    public void SetSprintHeld(bool isHeld)
+    {
+        if (controlMode == PlayerControlMode.SurvivorControlled && survivorMovement != null)
+        {
+            survivorMovement.SetSprintHeld(isHeld);
+        }
+    }
+
+    public void PressDodge()
+    {
+        if (controlMode == PlayerControlMode.SurvivorControlled && survivorMovement != null)
+        {
+            survivorMovement.TryDodge();
+        }
+    }
+
+    private void AutoFindReferences()
+    {
+        if (survivorMovement == null)
+        {
+            survivorMovement = FindFirstObjectByType<SurvivorMovement>();
+        }
+
+        if (monsterMovement == null)
+        {
+            monsterMovement = FindFirstObjectByType<MonsterPlayerMovement>();
+        }
+
+        if (monsterAI == null)
+        {
+            monsterAI = FindFirstObjectByType<MonsterAI>();
+        }
+    }
+
+    private Vector2 ApplyDeadZone(Vector2 input)
+    {
+        if (input.magnitude < joystickDeadZone)
+        {
+            return Vector2.zero;
+        }
+
+        return Vector2.ClampMagnitude(input, 1f);
+    }
+}
