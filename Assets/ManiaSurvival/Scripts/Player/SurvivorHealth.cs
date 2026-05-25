@@ -18,6 +18,21 @@ public class SurvivorHealth : MonoBehaviour
     public int CurrentHealth { get; private set; }
     public bool IsAlive { get; private set; } = true;
 
+    public int GetCurrentHealth()
+    {
+        return CurrentHealth;
+    }
+
+    public int GetMaxHealth()
+    {
+        return maxHealth;
+    }
+
+    public float GetHealthPercent()
+    {
+        return maxHealth <= 0 ? 0f : (float)CurrentHealth / maxHealth;
+    }
+
     private void Awake()
     {
         if (gameManager == null)
