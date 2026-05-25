@@ -1,0 +1,58 @@
+# Mania Survival - AI Coding Instructions
+
+This is a Unity 6 mobile-first top-down arcade survival game.
+
+## Game identity
+Mania Survival is a standalone game.
+Do not reference or reuse Camping With Monsters systems unless specifically requested.
+
+## Inspiration
+Inspired by the gameplay feel of Warcraft III custom games like “The Predator”:
+- One powerful Monster hunts multiple Survivors.
+- Survivors do not complete tasks, generators, repairs, or objectives.
+- Survivors win by staying alive until the timer ends.
+- Monster wins by eliminating all Survivors.
+- The fun comes from panic, jukes, traps, pickups, portals, hazards, and near-death escapes.
+
+Do not copy Warcraft III assets, names, lore, UI, sounds, icons, or copyrighted material.
+
+## Target feel
+WC3 chaos arena + tag survival + random map events + mobile arcade controls.
+
+Player reaction goal:
+“Bro, I barely escaped. Queue again.”
+
+## Core gameplay
+- 3–5 minute rounds.
+- One joystick.
+- 2–3 ability buttons.
+- Big readable effects.
+- Simple top-down readability.
+- No complex inventory.
+- Pickups are automatic or one-button use.
+
+## Development rules
+- Create small beginner-friendly scripts.
+- One feature per prompt.
+- Do not create huge manager scripts.
+- Do not rewrite unrelated systems.
+- Do not rename classes unless asked.
+- Use public Inspector fields with [Header].
+- Always explain:
+  - where to attach the script
+  - which Inspector fields to assign
+  - how to test it in Unity
+
+## Avoid for now
+- multiplayer networking
+- monetization
+- gacha
+- pay-to-win
+- base building
+- wood economy
+- turrets
+- campfires
+- wall repair
+- task objectives
+- Dead by Daylight repair loop
+- Among Us tasks
