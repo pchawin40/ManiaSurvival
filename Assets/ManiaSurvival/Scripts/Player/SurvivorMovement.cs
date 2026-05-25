@@ -36,21 +36,66 @@ public class SurvivorMovement : MonoBehaviour
 
     private CharacterController characterController;
     private SurvivorHealth health;
+    private ManiaGameManager gameManager;
     private Vector2 mobileMoveInput;
     private Vector3 lastMoveDirection = Vector3.forward;
     private float verticalVelocity;
     private float dodgeTimer;
     private bool mobileSprintHeld;
+    private bool warnedMissingCharacterController;
+    private bool warnedMovementDisabledByGameManager;
+    private Vector2 lastLoggedMoveInput = new Vector2(float.NaN, float.NaN);
 
     private void Awake()
     {
         characterController = GetComponent<CharacterController>();
         health = GetComponent<SurvivorHealth>();
+        gameManager = ManiaGameManager.Instance;
+
+        if (gameManager == null)
+        {
+            gameManager = FindFirstObjectByType<ManiaGameManager>();
+        }
+
         CurrentStamina = maxStamina;
     }
 
     private void Update()
     {
+        if (characterController == null)
+        {
+            if (!warnedMissingCharacterController)
+            {
+                warnedMissingCharacterController = true;
+                Debug.LogWarning("[SurvivorMovement] Missing CharacterController. Movement cannot run.", this);
+            }
+
+            return;
+        }
+
+        if (gameManager == null)
+        {
+            gameManager = ManiaGameManager.Instance;
+            if (gameManager == null)
+            {
+                gameManager = FindFirstObjectByType<ManiaGameManager>();
+            }
+        }
+
+        if (gameManager != null && gameManager.State != ManiaGameState.Playing)
+        {
+            if (!warnedMovementDisabledByGameManager)
+            {
+                warnedMovementDisabledByGameManager = true;
+                Debug.LogWarning("[SurvivorMovement] Movement is disabled because ManiaGameManager is not in Playing state.", this);
+            }
+
+            IsSprinting = false;
+            return;
+        }
+
+        warnedMovementDisabledByGameManager = false;
+
         if (health != null && !health.IsAlive)
         {
             IsSprinting = false;
@@ -146,7 +191,15 @@ public class SurvivorMovement : MonoBehaviour
         }
 
         Vector2 input = keyboardInput.sqrMagnitude > 0.01f ? keyboardInput : mobileMoveInput;
-        return Vector2.ClampMagnitude(input, 1f);
+        Vector2 clampedInput = Vector2.ClampMagnitude(input, 1f);
+
+        if (clampedInput != lastLoggedMoveInput)
+        {
+            lastLoggedMoveInput = clampedInput;
+            Debug.Log("[SurvivorMovement] Move input read: " + clampedInput, this);
+        }
+
+        return clampedInput;
     }
 
     private bool IsKeyPressed(Key key)

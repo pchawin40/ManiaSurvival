@@ -1,17 +1,18 @@
+using System.Reflection;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class WorldHealthBar : MonoBehaviour
 {
-    [Header("Target")]
-    public Transform target;
-    public Vector3 worldOffset = new Vector3(0f, 2f, 0f);
-    public Vector2 screenOffset = Vector2.zero;
+    [Header("Bar Parts")]
+    public Transform backgroundBar;
+    public Transform fillBar;
+    public TextMeshPro hpText;
 
-    [Header("UI")]
-    public Image fillImage;
-    public TMP_Text hpText;
+    [Header("Placement")]
+    [Tooltip("Extra local offset added after the bar is placed above the unit.")]
+    public Vector3 extraOffset = Vector3.zero;
+    public bool autoPosition = true;
 
     [Header("Colors")]
     public Color highHealthColor = Color.green;
@@ -19,179 +20,311 @@ public class WorldHealthBar : MonoBehaviour
     public Color lowHealthColor = Color.red;
 
     private Camera mainCamera;
-    private Canvas canvasRoot;
-    private RectTransform rectTransform;
+    private Transform unitRoot;
     private SurvivorHealth survivorHealth;
-    private Transform cachedTarget;
-    private bool hasWarnedAboutCanvas;
-    private bool hasWarnedAboutTarget;
-    private bool hasWarnedAboutFillImage;
-    private bool hasWarnedAboutHpText;
-    private bool hasWarnedAboutCamera;
+    private Component genericHealthSource;
+    private Renderer[] fillRenderers;
+    private Vector3 fillBaseScale;
+    private Vector3 fillBaseLocalPosition;
+    private bool warnedMissingHealth;
+    private bool warnedMissingCamera;
+    private bool warnedMissingFill;
+    private bool warnedMissingText;
+
+    private MethodInfo getCurrentHealthMethod;
+    private MethodInfo getMaxHealthMethod;
+    private PropertyInfo currentHealthProperty;
+    private PropertyInfo maxHealthProperty;
+    private FieldInfo currentHealthField;
+    private FieldInfo maxHealthField;
 
     private void Awake()
     {
         mainCamera = Camera.main;
-        canvasRoot = GetComponent<Canvas>();
-        rectTransform = GetComponent<RectTransform>();
-        ValidateCanvasSetup();
-        AutoAssignReferences();
+        unitRoot = transform.parent;
+
+        AutoAssignParts();
+        CacheBarDefaults();
+        ResolveHealthSource();
     }
 
     private void OnEnable()
     {
-        ValidateCanvasSetup();
-        AutoAssignReferences();
+        mainCamera = Camera.main;
+        unitRoot = transform.parent;
+
+        AutoAssignParts();
+        CacheBarDefaults();
+        ResolveHealthSource();
     }
 
     private void LateUpdate()
     {
         if (mainCamera == null)
         {
-            if (!hasWarnedAboutCamera)
-            {
-                hasWarnedAboutCamera = true;
-                Debug.LogWarning("[WorldHealthBar] No Main Camera found. Tag the active camera as MainCamera.", this);
-            }
             mainCamera = Camera.main;
+            if (mainCamera == null)
+            {
+                if (!warnedMissingCamera)
+                {
+                    warnedMissingCamera = true;
+                    Debug.LogWarning("[WorldHealthBar] No Main Camera found. Tag the active camera as MainCamera.", this);
+                }
+                return;
+            }
         }
 
-        AutoAssignReferences();
-
-        if (target == null || survivorHealth == null)
+        if (unitRoot == null)
         {
-            SetVisible(false);
+            unitRoot = transform.parent;
+        }
+
+        ResolveHealthSource();
+        AutoAssignParts();
+
+        if (unitRoot == null)
+        {
             return;
         }
 
-        Vector3 worldPosition = target.position + worldOffset;
-        if (mainCamera == null)
+        if (survivorHealth == null && genericHealthSource == null)
         {
-            SetVisible(false);
+            if (!warnedMissingHealth)
+            {
+                warnedMissingHealth = true;
+                Debug.LogWarning("[WorldHealthBar] No health component found on the unit parent. Add SurvivorHealth now, or a future MonsterHealth later.", this);
+            }
+
             return;
         }
 
-        Vector3 screenPosition = mainCamera.WorldToScreenPoint(worldPosition);
-        if (screenPosition.z <= 0f)
-        {
-            SetVisible(false);
-            return;
-        }
-
-        if (rectTransform != null)
-        {
-            rectTransform.position = screenPosition + (Vector3)screenOffset;
-        }
-        else
-        {
-            transform.position = screenPosition + (Vector3)screenOffset;
-        }
-
+        UpdatePlacement();
+        FaceCamera();
         UpdateBar();
     }
 
-    private void AutoAssignReferences()
+    private void AutoAssignParts()
     {
-        if (fillImage == null)
+        if (backgroundBar == null && transform.childCount > 0)
         {
-            Image[] images = GetComponentsInChildren<Image>(true);
-            for (int i = 0; i < images.Length; i++)
-            {
-                if (images[i] != null && images[i] != GetComponent<Image>())
-                {
-                    if (fillImage == null)
-                    {
-                        fillImage = images[i];
-                    }
+            backgroundBar = transform.GetChild(0);
+        }
 
-                    if (images[i].type == Image.Type.Filled)
-                    {
-                        fillImage = images[i];
-                        break;
-                    }
-                }
-            }
+        if (fillBar == null && backgroundBar != null && backgroundBar.childCount > 0)
+        {
+            fillBar = backgroundBar.GetChild(0);
         }
 
         if (hpText == null)
         {
-            TMP_Text[] texts = GetComponentsInChildren<TMP_Text>(true);
-            for (int i = 0; i < texts.Length; i++)
+            hpText = GetComponentInChildren<TextMeshPro>(true);
+        }
+
+        if (fillBar != null && fillRenderers == null)
+        {
+            fillRenderers = fillBar.GetComponentsInChildren<Renderer>(true);
+        }
+
+        if (fillBar == null && !warnedMissingFill)
+        {
+            warnedMissingFill = true;
+            Debug.LogWarning("[WorldHealthBar] Missing fillBar. Create a child 3D object for the fill and assign it here.", this);
+        }
+
+        if (hpText == null && !warnedMissingText)
+        {
+            warnedMissingText = true;
+            Debug.LogWarning("[WorldHealthBar] Missing hpText. Add a TextMeshPro component to the prefab and assign it here.", this);
+        }
+    }
+
+    private void CacheBarDefaults()
+    {
+        if (fillBar != null)
+        {
+            fillBaseScale = fillBar.localScale;
+            fillBaseLocalPosition = fillBar.localPosition;
+        }
+
+    }
+
+    private void ResolveHealthSource()
+    {
+        if (unitRoot == null)
+        {
+            survivorHealth = null;
+            genericHealthSource = null;
+            return;
+        }
+
+        SurvivorHealth foundSurvivorHealth = GetComponentInParent<SurvivorHealth>();
+        if (foundSurvivorHealth != null)
+        {
+            survivorHealth = foundSurvivorHealth;
+            genericHealthSource = null;
+            return;
+        }
+
+        survivorHealth = null;
+        genericHealthSource = null;
+        getCurrentHealthMethod = null;
+        getMaxHealthMethod = null;
+        currentHealthProperty = null;
+        maxHealthProperty = null;
+        currentHealthField = null;
+        maxHealthField = null;
+
+        MonoBehaviour[] components = unitRoot.GetComponentsInChildren<MonoBehaviour>(true);
+        for (int i = 0; i < components.Length; i++)
+        {
+            MonoBehaviour component = components[i];
+            if (component == null || component == this || component.transform == transform || component.transform.IsChildOf(transform))
             {
-                if (texts[i] != null)
-                {
-                    hpText = texts[i];
-                    break;
-                }
+                continue;
+            }
+
+            if (TryCacheHealthMembers(component))
+            {
+                genericHealthSource = component;
+                return;
+            }
+        }
+    }
+
+    private bool TryCacheHealthMembers(Component component)
+    {
+        System.Type type = component.GetType();
+
+        getCurrentHealthMethod = type.GetMethod("GetCurrentHealth", BindingFlags.Instance | BindingFlags.Public);
+        getMaxHealthMethod = type.GetMethod("GetMaxHealth", BindingFlags.Instance | BindingFlags.Public);
+
+        currentHealthProperty = type.GetProperty("CurrentHealth", BindingFlags.Instance | BindingFlags.Public);
+        if (currentHealthProperty == null)
+        {
+            currentHealthProperty = type.GetProperty("currentHealth", BindingFlags.Instance | BindingFlags.Public);
+        }
+
+        maxHealthProperty = type.GetProperty("MaxHealth", BindingFlags.Instance | BindingFlags.Public);
+        if (maxHealthProperty == null)
+        {
+            maxHealthProperty = type.GetProperty("maxHealth", BindingFlags.Instance | BindingFlags.Public);
+        }
+
+        currentHealthField = type.GetField("CurrentHealth", BindingFlags.Instance | BindingFlags.Public);
+        if (currentHealthField == null)
+        {
+            currentHealthField = type.GetField("currentHealth", BindingFlags.Instance | BindingFlags.Public);
+        }
+
+        maxHealthField = type.GetField("MaxHealth", BindingFlags.Instance | BindingFlags.Public);
+        if (maxHealthField == null)
+        {
+            maxHealthField = type.GetField("maxHealth", BindingFlags.Instance | BindingFlags.Public);
+        }
+
+        return HasHealthMembers();
+    }
+
+    private bool HasHealthMembers()
+    {
+        bool hasCurrent =
+            getCurrentHealthMethod != null ||
+            currentHealthProperty != null ||
+            currentHealthField != null;
+
+        bool hasMax =
+            getMaxHealthMethod != null ||
+            maxHealthProperty != null ||
+            maxHealthField != null;
+
+        return hasCurrent && hasMax;
+    }
+
+    private void UpdatePlacement()
+    {
+        if (!autoPosition || unitRoot == null)
+        {
+            return;
+        }
+
+        float calculatedHeight = GetCalculatedHeight();
+        transform.localPosition = new Vector3(0f, calculatedHeight + extraOffset.y, 0f);
+    }
+
+    private float GetCalculatedHeight()
+    {
+        CharacterController controller = unitRoot.GetComponent<CharacterController>();
+        if (controller != null)
+        {
+            return controller.center.y + controller.height * 0.5f;
+        }
+
+        if (TryGetRendererBounds(unitRoot, out Bounds bounds))
+        {
+            return bounds.max.y - unitRoot.position.y;
+        }
+
+        return 2f;
+    }
+
+    private bool TryGetRendererBounds(Transform root, out Bounds bounds)
+    {
+        Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+        bool hasBounds = false;
+        bounds = default;
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null || renderer.transform == transform || renderer.transform.IsChildOf(transform))
+            {
+                continue;
+            }
+
+            if (!hasBounds)
+            {
+                bounds = renderer.bounds;
+                hasBounds = true;
+            }
+            else
+            {
+                bounds.Encapsulate(renderer.bounds);
             }
         }
 
-        if (survivorHealth == null)
+        return hasBounds;
+    }
+
+    private void FaceCamera()
+    {
+        if (mainCamera == null || backgroundBar == null)
         {
-            survivorHealth = GetComponentInParent<SurvivorHealth>();
+            return;
         }
 
-        if (target == null)
+        Vector3 lookDirection = backgroundBar.position - mainCamera.transform.position;
+        if (lookDirection.sqrMagnitude <= 0.0001f)
         {
-            if (survivorHealth != null)
-            {
-                target = survivorHealth.transform;
-            }
-            else if (transform.parent != null)
-            {
-                target = transform.parent;
-            }
+            return;
         }
 
-        if (survivorHealth == null && target != null)
-        {
-            survivorHealth = target != null ? target.GetComponentInParent<SurvivorHealth>() : null;
-        }
-
-        if (target != cachedTarget)
-        {
-            cachedTarget = target;
-        }
-
-        if (survivorHealth == null && !hasWarnedAboutTarget)
-        {
-            hasWarnedAboutTarget = true;
-            Debug.LogWarning("[WorldHealthBar] No SurvivorHealth found. Put this bar under a Survivor prefab or assign Target manually.", this);
-        }
-
-        if (fillImage == null && !hasWarnedAboutFillImage)
-        {
-            hasWarnedAboutFillImage = true;
-            Debug.LogWarning("[WorldHealthBar] Fill Image is missing. Assign a child Image set to Filled, or name it Fill.", this);
-        }
-
-        if (hpText == null && !hasWarnedAboutHpText)
-        {
-            hasWarnedAboutHpText = true;
-            Debug.LogWarning("[WorldHealthBar] Hp Text is missing. Assign a child TMP_Text object.", this);
-        }
+        backgroundBar.rotation = Quaternion.LookRotation(lookDirection.normalized, Vector3.up);
     }
 
     private void UpdateBar()
     {
-        if (survivorHealth == null)
+        if (!TryGetHealthValues(out int currentHealth, out int maxHealth))
         {
-            SetVisible(false);
             return;
         }
 
-        SetVisible(true);
-
-        int currentHealth = survivorHealth.GetCurrentHealth();
-        int maxHealth = survivorHealth.GetMaxHealth();
+        currentHealth = Mathf.Max(0, currentHealth);
+        maxHealth = Mathf.Max(0, maxHealth);
 
         if (maxHealth <= 0)
         {
-            if (fillImage != null)
-            {
-                fillImage.fillAmount = 0f;
-                fillImage.color = lowHealthColor;
-            }
+            SetFillScale(0f);
+            SetFillColor(lowHealthColor);
 
             if (hpText != null)
             {
@@ -202,18 +335,112 @@ public class WorldHealthBar : MonoBehaviour
         }
 
         currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
-        float healthPercent = survivorHealth.GetHealthPercent();
+        float healthPercent = (float)currentHealth / maxHealth;
 
-        if (fillImage != null)
-        {
-            fillImage.fillAmount = healthPercent;
-            fillImage.color = GetHealthColor(healthPercent);
-        }
+        SetFillScale(healthPercent);
+        SetFillColor(GetHealthColor(healthPercent));
 
         if (hpText != null)
         {
             hpText.text = currentHealth.ToString();
         }
+    }
+
+    private void SetFillScale(float healthPercent)
+    {
+        if (fillBar == null)
+        {
+            return;
+        }
+
+        float clampedPercent = Mathf.Clamp01(healthPercent);
+        Vector3 scale = fillBaseScale;
+        scale.x = fillBaseScale.x * clampedPercent;
+        fillBar.localScale = scale;
+
+        Vector3 position = fillBaseLocalPosition;
+        position.x = fillBaseLocalPosition.x - (fillBaseScale.x - scale.x) * 0.5f;
+        fillBar.localPosition = position;
+    }
+
+    private void SetFillColor(Color color)
+    {
+        if (fillRenderers == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < fillRenderers.Length; i++)
+        {
+            Renderer renderer = fillRenderers[i];
+            if (renderer == null)
+            {
+                continue;
+            }
+
+            if (renderer.material.HasProperty("_BaseColor"))
+            {
+                renderer.material.color = color;
+            }
+            else if (renderer.material.HasProperty("_Color"))
+            {
+                renderer.material.color = color;
+            }
+        }
+    }
+
+    private bool TryGetHealthValues(out int currentHealth, out int maxHealth)
+    {
+        currentHealth = 0;
+        maxHealth = 0;
+
+        if (survivorHealth != null)
+        {
+            currentHealth = survivorHealth.GetCurrentHealth();
+            maxHealth = survivorHealth.GetMaxHealth();
+            return true;
+        }
+
+        if (genericHealthSource == null)
+        {
+            return false;
+        }
+
+        if (getCurrentHealthMethod != null)
+        {
+            currentHealth = (int)getCurrentHealthMethod.Invoke(genericHealthSource, null);
+        }
+        else if (currentHealthProperty != null)
+        {
+            currentHealth = (int)currentHealthProperty.GetValue(genericHealthSource);
+        }
+        else if (currentHealthField != null)
+        {
+            currentHealth = (int)currentHealthField.GetValue(genericHealthSource);
+        }
+        else
+        {
+            return false;
+        }
+
+        if (getMaxHealthMethod != null)
+        {
+            maxHealth = (int)getMaxHealthMethod.Invoke(genericHealthSource, null);
+        }
+        else if (maxHealthProperty != null)
+        {
+            maxHealth = (int)maxHealthProperty.GetValue(genericHealthSource);
+        }
+        else if (maxHealthField != null)
+        {
+            maxHealth = (int)maxHealthField.GetValue(genericHealthSource);
+        }
+        else
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private Color GetHealthColor(float healthPercent)
@@ -229,39 +456,5 @@ public class WorldHealthBar : MonoBehaviour
         }
 
         return lowHealthColor;
-    }
-
-    private void SetVisible(bool isVisible)
-    {
-        if (canvasRoot != null)
-        {
-            canvasRoot.enabled = isVisible;
-        }
-
-        if (fillImage != null)
-        {
-            fillImage.enabled = isVisible;
-        }
-
-        if (hpText != null)
-        {
-            hpText.enabled = isVisible;
-        }
-    }
-
-    private void ValidateCanvasSetup()
-    {
-        if (canvasRoot == null && !hasWarnedAboutCanvas)
-        {
-            hasWarnedAboutCanvas = true;
-            Debug.LogWarning("[WorldHealthBar] Missing Canvas component. Add a Canvas to the health bar prefab.", this);
-            return;
-        }
-
-        if (canvasRoot != null && canvasRoot.renderMode == RenderMode.WorldSpace && !hasWarnedAboutCanvas)
-        {
-            hasWarnedAboutCanvas = true;
-            Debug.LogWarning("[WorldHealthBar] This version uses screen-space placement. Change the Canvas render mode to Screen Space Overlay or Screen Space Camera.", this);
-        }
     }
 }
