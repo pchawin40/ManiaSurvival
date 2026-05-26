@@ -125,6 +125,13 @@ public class LocalRoleController : MonoBehaviour
         }
     }
 
+    public void RestoreSurvivorControl()
+    {
+        soulwoodAvatarController = null;
+        controlMode = PlayerControlMode.SurvivorControlled;
+        Debug.Log("LocalRoleController target restored to Survivor");
+    }
+
     private void AutoFindReferences()
     {
         if (survivorMovement == null)

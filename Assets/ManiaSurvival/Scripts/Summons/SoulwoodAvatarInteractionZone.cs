@@ -10,14 +10,26 @@ public class SoulwoodAvatarInteractionZone : MonoBehaviour
 
     private void Awake()
     {
+        Debug.Log("Soulwood interaction zone awake");
+
         if (avatarController == null)
         {
             avatarController = GetComponentInParent<SoulwoodAvatarController>();
         }
 
+        if (avatarController == null)
+        {
+            Debug.LogError("SoulwoodAvatarInteractionZone: missing parent SoulwoodAvatarController");
+        }
+
         if (uiBridge == null)
         {
             uiBridge = FindFirstObjectByType<SoulwoodAvatarUIBridge>();
+        }
+
+        if (uiBridge == null)
+        {
+            Debug.LogError("SoulwoodAvatarInteractionZone: missing SoulwoodAvatarUIBridge in scene");
         }
 
         SphereCollider triggerCollider = GetComponent<SphereCollider>();
@@ -29,77 +41,97 @@ public class SoulwoodAvatarInteractionZone : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        NotifyNearbyAvatar(other);
-    }
+        Debug.Log("Soulwood enter trigger hit: " + (other != null ? other.name : "null") + ", tag: " + (other != null ? other.tag : "null"));
 
-    private void OnTriggerStay(Collider other)
-    {
-        NotifyNearbyAvatar(other);
+        if (!IsSurvivor(other))
+        {
+            return;
+        }
+
+        if (avatarController == null)
+        {
+            avatarController = GetComponentInParent<SoulwoodAvatarController>();
+        }
+
+        if (avatarController == null)
+        {
+            Debug.LogError("SoulwoodAvatarInteractionZone: no avatarController found on enter");
+            return;
+        }
+
+        if (uiBridge == null)
+        {
+            uiBridge = FindFirstObjectByType<SoulwoodAvatarUIBridge>();
+        }
+
+        if (uiBridge == null)
+        {
+            Debug.LogError("SoulwoodAvatarInteractionZone: no uiBridge found on enter");
+            return;
+        }
+
+        Debug.Log("Survivor near Soulwood Avatar");
+        uiBridge.SetNearbyAvatar(avatarController);
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (!IsSurvivorCollider(other))
+        Debug.Log("Soulwood exit trigger hit: " + (other != null ? other.name : "null") + ", tag: " + (other != null ? other.tag : "null"));
+
+        if (!IsSurvivor(other))
         {
             return;
         }
 
-        if (uiBridge != null && avatarController != null)
+        if (avatarController == null)
         {
-            uiBridge.ClearNearbyAvatar(avatarController);
+            avatarController = GetComponentInParent<SoulwoodAvatarController>();
         }
-    }
 
-    private void OnDisable()
-    {
-        ClearNearbyAvatar();
-    }
-
-    private void OnDestroy()
-    {
-        ClearNearbyAvatar();
-    }
-
-    private void NotifyNearbyAvatar(Collider other)
-    {
-        if (!IsSurvivorCollider(other))
+        if (avatarController == null)
         {
+            Debug.LogError("SoulwoodAvatarInteractionZone: no avatarController found on exit");
             return;
         }
 
-        if (avatarController == null || !avatarController.IsAlive)
+        if (uiBridge == null)
         {
-            ClearNearbyAvatar();
+            uiBridge = FindFirstObjectByType<SoulwoodAvatarUIBridge>();
+        }
+
+        if (uiBridge == null)
+        {
+            Debug.LogError("SoulwoodAvatarInteractionZone: no uiBridge found on exit");
             return;
         }
 
-        if (uiBridge != null)
-        {
-            uiBridge.SetNearbyAvatar(avatarController);
-        }
+        Debug.Log("Survivor left Soulwood Avatar");
+        uiBridge.ClearNearbyAvatar(avatarController);
     }
 
-    private bool IsSurvivorCollider(Collider other)
+    private bool IsSurvivor(Collider other)
     {
         if (other == null)
         {
             return false;
         }
 
+        if (other.CompareTag("Survivor"))
+        {
+            return true;
+        }
+
+        if (other.GetComponentInParent<SurvivorSoulwoodAvatarAbility>() != null)
+        {
+            return true;
+        }
+
         UnitHealth health = other.GetComponentInParent<UnitHealth>();
-        if (health == null || !health.CompareTag("Survivor"))
+        if (health != null && health.CompareTag("Survivor"))
         {
-            return false;
+            return true;
         }
 
-        return !health.IsDead;
-    }
-
-    private void ClearNearbyAvatar()
-    {
-        if (uiBridge != null && avatarController != null)
-        {
-            uiBridge.ClearNearbyAvatar(avatarController);
-        }
+        return false;
     }
 }

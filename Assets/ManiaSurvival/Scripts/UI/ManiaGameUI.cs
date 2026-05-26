@@ -313,6 +313,7 @@ public class ManiaGameUI : MonoBehaviour
 
     public void ShowEnterSoulwoodButton()
     {
+        Debug.Log("Showing Enter Soulwood button, assigned: " + (enterSoulwoodButton != null));
         if (enterSoulwoodButton != null)
         {
             enterSoulwoodButton.SetActive(true);
@@ -321,6 +322,7 @@ public class ManiaGameUI : MonoBehaviour
 
     public void HideEnterSoulwoodButton()
     {
+        Debug.Log("Hiding Enter Soulwood button");
         if (enterSoulwoodButton != null)
         {
             enterSoulwoodButton.SetActive(false);

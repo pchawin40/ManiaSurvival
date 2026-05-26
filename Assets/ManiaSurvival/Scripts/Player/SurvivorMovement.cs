@@ -54,6 +54,12 @@ public class SurvivorMovement : MonoBehaviour
 
     private void Update()
     {
+        if (gameObject == null || !gameObject.activeInHierarchy || !enabled || characterController == null || !characterController.enabled)
+        {
+            IsSprinting = false;
+            return;
+        }
+
         if (health != null && health.IsDead)
         {
             IsSprinting = false;
@@ -108,6 +114,12 @@ public class SurvivorMovement : MonoBehaviour
 
     public void TryDodge()
     {
+        if (gameObject == null || !gameObject.activeInHierarchy || !enabled || characterController == null || !characterController.enabled)
+        {
+            Debug.Log("Dodge blocked: controller inactive");
+            return;
+        }
+
         if (dodgeTimer > 0f || CurrentStamina < dodgeStaminaCost)
         {
             Debug.Log("Dodge blocked: cooldown/stamina");

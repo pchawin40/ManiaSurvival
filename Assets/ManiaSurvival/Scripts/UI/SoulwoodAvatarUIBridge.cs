@@ -55,6 +55,7 @@ public class SoulwoodAvatarUIBridge : MonoBehaviour
     public void SetNearbyAvatar(SoulwoodAvatarController avatar)
     {
         nearbyAvatar = avatar;
+        Debug.Log("Nearby Soulwood Avatar set: " + (avatar != null ? avatar.name : "null"));
         UpdateEnterButton();
     }
 

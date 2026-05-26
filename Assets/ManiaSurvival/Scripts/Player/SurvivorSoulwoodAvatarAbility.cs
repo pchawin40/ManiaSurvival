@@ -9,6 +9,9 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
     public float treeSearchRadius = 6f;
     public float avatarDuration = 14f;
     public float cooldown = 60f;
+    public float ejectDistance = 2.25f;
+    public float survivorGroundY = 0.15f;
+    public float ejectCheckRadius = 0.45f;
     public AbilityCooldownButton cooldownButton;
     public CameraFollow cameraFollow;
     public Transform cameraRig;
@@ -202,6 +205,7 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
             return;
         }
 
+        Debug.Log("Soulwood eject requested");
         Debug.Log("Soulwood Avatar eject: keeping avatar alive");
 
         if (localRoleController == null)
@@ -215,10 +219,13 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
             localRoleController.ClearSoulwoodAvatarController(avatarController);
         }
 
-        Vector3 returnPosition = GetSafeReturnPosition(avatarController.transform.position, avatarController);
-        RestoreSurvivorAtPosition(returnPosition);
+        Vector3 avatarPosition = avatarController.transform.position;
+        Debug.Log("avatar position: " + avatarPosition);
 
-        RestoreCameraTarget();
+        Vector3 returnPosition = GetSafeEjectPosition(avatarPosition, avatarController);
+        Debug.Log("chosen eject position: " + returnPosition);
+
+        RestoreSurvivorAfterEject(returnPosition);
 
         if (avatarUIBridge != null)
         {
@@ -241,6 +248,7 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
         Debug.Log("Avatar switched to idle guard mode");
 
         controlledAvatar = null;
+        Debug.Log("Soulwood eject complete");
     }
 
     public void OnAvatarEndedCompletely(SoulwoodAvatarController avatarController, Vector3 returnPosition)
@@ -265,9 +273,8 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
                 localRoleController.ClearSoulwoodAvatarController(avatarController);
             }
 
-            RestoreSurvivorAtPosition(GetSafeReturnPosition(returnPosition, avatarController));
-
-            RestoreCameraTarget();
+            Vector3 survivorReturnPosition = GetSafeEjectPosition(returnPosition, avatarController);
+            RestoreSurvivorAfterEject(survivorReturnPosition);
         }
 
         if (avatarUIBridge != null)
@@ -295,36 +302,152 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
         controlledAvatar = null;
     }
 
-    private void RestoreSurvivorAtPosition(Vector3 returnPosition)
+    private void RestoreSurvivorAfterEject(Vector3 returnPosition)
     {
+        Debug.Log("Restoring Survivor before controller enable");
+        Debug.Log("Restoring survivor GameObject active: " + gameObject.activeSelf);
+
+        if (!gameObject.activeSelf)
+        {
+            gameObject.SetActive(true);
+        }
+
+        if (survivorMovement != null)
+        {
+            survivorMovement.enabled = false;
+        }
+
+        if (survivorCharacterController != null)
+        {
+            survivorCharacterController.enabled = false;
+        }
+
         transform.position = returnPosition;
+
         ApplySurvivorHiddenState(false);
+
+        if (localRoleController == null)
+        {
+            localRoleController = FindFirstObjectByType<LocalRoleController>();
+        }
+
+        if (localRoleController != null)
+        {
+            localRoleController.RestoreSurvivorControl();
+        }
+
+        if (survivorCharacterController != null)
+        {
+            survivorCharacterController.enabled = true;
+            Debug.Log("Survivor CharacterController enabled: " + survivorCharacterController.enabled);
+        }
+        else
+        {
+            Debug.Log("Survivor CharacterController enabled: false");
+        }
+
+        if (survivorMovement != null)
+        {
+            survivorMovement.enabled = true;
+            survivorMovement.SetMoveInput(Vector2.zero);
+            survivorMovement.SetSprintHeld(false);
+            Debug.Log("SurvivorMovement enabled: " + survivorMovement.enabled);
+        }
+        else
+        {
+            Debug.Log("SurvivorMovement enabled: false");
+        }
+
+        if (localRoleController != null)
+        {
+            localRoleController.ApplyControlMode();
+        }
+
+        RestoreCameraTarget();
+        Debug.Log("Camera restored to Survivor");
+        Debug.Log("survivor final position: " + transform.position);
     }
 
-    private Vector3 GetSafeReturnPosition(Vector3 avatarPosition, SoulwoodAvatarController avatarController)
+    private Vector3 GetSafeEjectPosition(Vector3 avatarPosition, SoulwoodAvatarController avatarController)
     {
-        Vector3 rayOrigin = avatarPosition + Vector3.up * 6f;
-        RaycastHit[] hits = Physics.RaycastAll(rayOrigin, Vector3.down, 20f, ~0, QueryTriggerInteraction.Ignore);
+        Vector3 flatForward = Vector3.forward;
+        Vector3 flatRight = Vector3.right;
 
-        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        if (avatarController != null)
+        {
+            flatForward = avatarController.transform.forward;
+            flatRight = avatarController.transform.right;
+        }
+
+        flatForward.y = 0f;
+        flatRight.y = 0f;
+
+        if (flatForward.sqrMagnitude <= 0.001f)
+        {
+            flatForward = Vector3.forward;
+        }
+
+        if (flatRight.sqrMagnitude <= 0.001f)
+        {
+            flatRight = Vector3.right;
+        }
+
+        Vector3[] directions =
+        {
+            flatRight,
+            -flatRight,
+            flatForward,
+            -flatForward,
+            (flatForward + flatRight).normalized,
+            (flatForward - flatRight).normalized,
+            (-flatForward + flatRight).normalized,
+            (-flatForward - flatRight).normalized
+        };
+
+        for (int i = 0; i < directions.Length; i++)
+        {
+            Vector3 direction = directions[i];
+            if (direction.sqrMagnitude <= 0.001f)
+            {
+                continue;
+            }
+
+            Vector3 candidate = avatarPosition + direction.normalized * ejectDistance;
+            candidate.y = survivorGroundY;
+
+            if (IsEjectSpotClear(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        Vector3 fallback = avatarPosition + flatRight.normalized * ejectDistance;
+        fallback.y = survivorGroundY;
+        return fallback;
+    }
+
+    private bool IsEjectSpotClear(Vector3 candidatePosition)
+    {
+        Vector3 checkCenter = candidatePosition + Vector3.up * ejectCheckRadius;
+        Collider[] hits = Physics.OverlapSphere(checkCenter, ejectCheckRadius, ~0, QueryTriggerInteraction.Ignore);
 
         for (int i = 0; i < hits.Length; i++)
         {
-            RaycastHit hit = hits[i];
-            if (hit.collider == null)
+            Collider hit = hits[i];
+            if (hit == null)
             {
                 continue;
             }
 
-            if (avatarController != null && hit.collider.GetComponentInParent<SoulwoodAvatarController>() == avatarController)
+            if (hit.transform == transform || hit.transform.IsChildOf(transform))
             {
                 continue;
             }
 
-            return hit.point + Vector3.up * 0.15f;
+            return false;
         }
 
-        return avatarPosition + Vector3.up * 0.5f;
+        return true;
     }
 
     private NeutralTree FindNearestTree()
