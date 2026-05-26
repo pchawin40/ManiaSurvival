@@ -5,6 +5,12 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(CharacterController))]
 public class SoulwoodAvatarController : MonoBehaviour
 {
+    public enum AvatarControlMode
+    {
+        IdleGuard,
+        PlayerControlled
+    }
+
     [Header("Avatar")]
     public float moveSpeed = 2f;
     public float attackRange = 1.8f;
@@ -17,6 +23,8 @@ public class SoulwoodAvatarController : MonoBehaviour
     public Transform cameraTransform;
     public bool useCameraRelativeMovement = true;
 
+    public AvatarControlMode controlMode = AvatarControlMode.IdleGuard;
+
     private UnitHealth unitHealth;
     private CharacterController characterController;
     private SurvivorSoulwoodAvatarAbility ownerAbility;
@@ -26,6 +34,9 @@ public class SoulwoodAvatarController : MonoBehaviour
     private float nextAttackTime;
     private float lifeTimer;
     private bool hasFinished;
+
+    public bool IsAlive => unitHealth != null && !unitHealth.IsDead;
+    public bool IsPlayerControlled => controlMode == AvatarControlMode.PlayerControlled;
 
     private void Awake()
     {
@@ -56,35 +67,36 @@ public class SoulwoodAvatarController : MonoBehaviour
 
         if (unitHealth == null || unitHealth.IsDead)
         {
-            FinishAvatar();
+            FinishAvatarCompletely();
             return;
         }
 
         lifeTimer -= Time.deltaTime;
         if (lifeTimer <= 0f)
         {
-            FinishAvatar();
+            FinishAvatarCompletely();
             return;
         }
 
         if (!IsValidTarget(target))
         {
-            target = FindMonsterTarget();
+            target = FindMonsterTarget(false);
         }
 
-        Vector2 input = GetMoveInput();
-        Vector3 moveDirection = BuildWorldDirection(input);
-        if (moveDirection.sqrMagnitude > 0.001f)
+        if (IsPlayerControlled)
         {
-            characterController.Move(moveDirection.normalized * moveSpeed * Time.deltaTime);
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(moveDirection.normalized), 720f * Time.deltaTime);
+            Vector2 input = GetMoveInput();
+            Vector3 moveDirection = BuildWorldDirection(input);
+            if (moveDirection.sqrMagnitude > 0.001f)
+            {
+                characterController.Move(moveDirection.normalized * moveSpeed * Time.deltaTime);
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(moveDirection.normalized), 720f * Time.deltaTime);
+            }
         }
-
-        if (target == null)
+        else
         {
-            return;
+            AttemptAutoAttack();
         }
-
     }
 
     public void Initialize(Transform survivorOwner, SurvivorSoulwoodAvatarAbility ability, float avatarLifetime)
@@ -93,6 +105,8 @@ public class SoulwoodAvatarController : MonoBehaviour
         ownerAbility = ability;
         lifetime = avatarLifetime;
         lifeTimer = lifetime;
+        SetPlayerControlled(false);
+        target = null;
     }
 
     public void SetMoveInput(Vector2 input)
@@ -100,49 +114,40 @@ public class SoulwoodAvatarController : MonoBehaviour
         mobileMoveInput = Vector2.ClampMagnitude(input, 1f);
     }
 
+    public void SetPlayerControlled(bool isControlled)
+    {
+        controlMode = isControlled ? AvatarControlMode.PlayerControlled : AvatarControlMode.IdleGuard;
+
+        if (!isControlled)
+        {
+            mobileMoveInput = Vector2.zero;
+        }
+    }
+
     public void TryAttack()
+    {
+        AttemptAttack(true);
+    }
+
+    public void EjectPlayerOnly()
     {
         if (hasFinished)
         {
             return;
         }
 
-        if (unitHealth == null || unitHealth.IsDead)
+        SetPlayerControlled(false);
+
+        if (ownerAbility != null)
         {
-            return;
+            ownerAbility.ExitAvatarButKeepAvatarAlive(this);
         }
 
-        if (Time.time < nextAttackTime)
-        {
-            return;
-        }
-
-        if (!IsValidTarget(target))
-        {
-            target = FindMonsterTarget();
-        }
-
-        if (target == null)
-        {
-            Debug.Log("no valid target found");
-            return;
-        }
-
-        float targetDistance = GetTargetDistance(target);
-        if (targetDistance > attackRange)
-        {
-            return;
-        }
-
-        int healthBefore = target.currentHealth;
-        nextAttackTime = Time.time + attackCooldown;
-        target.TakeDamage(attackDamage, gameObject);
-        Debug.Log("attacking target: hp " + healthBefore + " -> " + target.currentHealth);
     }
 
     public void Eject()
     {
-        FinishAvatar();
+        EjectPlayerOnly();
     }
 
     private Vector2 GetMoveInput()
@@ -206,7 +211,56 @@ public class SoulwoodAvatarController : MonoBehaviour
         return (cameraForward.normalized * input.y + cameraRight.normalized * input.x).normalized;
     }
 
-    private UnitHealth FindMonsterTarget()
+    private void AttemptAutoAttack()
+    {
+        AttemptAttack(false);
+    }
+
+    private void AttemptAttack(bool logWhenNoTarget)
+    {
+        if (hasFinished)
+        {
+            return;
+        }
+
+        if (unitHealth == null || unitHealth.IsDead)
+        {
+            return;
+        }
+
+        if (Time.time < nextAttackTime)
+        {
+            return;
+        }
+
+        if (!IsValidTarget(target))
+        {
+            target = FindMonsterTarget(logWhenNoTarget);
+        }
+
+        if (target == null)
+        {
+            if (logWhenNoTarget)
+            {
+                Debug.Log("no valid target found");
+            }
+
+            return;
+        }
+
+        float targetDistance = GetTargetDistance(target);
+        if (targetDistance > attackRange)
+        {
+            return;
+        }
+
+        int healthBefore = target.currentHealth;
+        nextAttackTime = Time.time + attackCooldown;
+        target.TakeDamage(attackDamage, gameObject);
+        Debug.Log("attacking target: hp " + healthBefore + " -> " + target.currentHealth);
+    }
+
+    private UnitHealth FindMonsterTarget(bool logWhenNoTarget)
     {
         Collider[] hits = Physics.OverlapSphere(transform.position, 25f, ~0, QueryTriggerInteraction.Ignore);
         UnitHealth nearest = null;
@@ -217,7 +271,10 @@ public class SoulwoodAvatarController : MonoBehaviour
             UnitHealth health = hits[i].GetComponentInParent<UnitHealth>();
             if (health == null)
             {
-                Debug.Log("target missing UnitHealth");
+                if (logWhenNoTarget)
+                {
+                    Debug.Log("target missing UnitHealth");
+                }
                 continue;
             }
 
@@ -239,11 +296,11 @@ public class SoulwoodAvatarController : MonoBehaviour
             }
         }
 
-        if (nearest != null)
+        if (nearest != null && logWhenNoTarget)
         {
             Debug.Log("target found: " + nearest.name);
         }
-        else
+        else if (logWhenNoTarget)
         {
             Debug.Log("no valid target found");
         }
@@ -289,7 +346,7 @@ public class SoulwoodAvatarController : MonoBehaviour
         return Vector3.Distance(avatarPosition, targetPosition);
     }
 
-    private void FinishAvatar()
+    private void FinishAvatarCompletely()
     {
         if (hasFinished)
         {
@@ -298,10 +355,7 @@ public class SoulwoodAvatarController : MonoBehaviour
 
         hasFinished = true;
 
-        if (ownerAbility != null)
-        {
-            ownerAbility.OnAvatarEnded(this, transform.position);
-        }
+        ownerAbility?.OnAvatarEndedCompletely(this, transform.position);
 
         Destroy(gameObject);
     }

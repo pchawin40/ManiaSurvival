@@ -13,6 +13,7 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
     public CameraFollow cameraFollow;
     public Transform cameraRig;
     public SoulwoodAvatarUIBridge avatarUIBridge;
+    public ManiaGameUI gameUI;
 
     [Header("Hide Survivor")]
     public GameObject[] survivorObjectsToHideDuringAvatar;
@@ -23,9 +24,11 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
 
     private UnitHealth unitHealth;
     private CharacterController survivorCharacterController;
+    private SurvivorMovement survivorMovement;
     private SurvivorVisibilityStatus survivorVisibilityStatus;
     private LocalRoleController localRoleController;
     private SoulwoodAvatarController activeAvatar;
+    private SoulwoodAvatarController controlledAvatar;
     private Transform previousCameraTarget;
     private float nextCastTime;
 
@@ -34,13 +37,16 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
     private readonly Dictionary<Collider, bool> colliderStates = new Dictionary<Collider, bool>();
     private readonly Dictionary<CharacterController, bool> characterControllerStates = new Dictionary<CharacterController, bool>();
     private readonly Dictionary<GameObject, bool> gameObjectStates = new Dictionary<GameObject, bool>();
+    private bool survivorMovementWasEnabled;
 
     private void Awake()
     {
         unitHealth = GetComponent<UnitHealth>();
         survivorCharacterController = GetComponent<CharacterController>();
+        survivorMovement = GetComponent<SurvivorMovement>();
         survivorVisibilityStatus = GetComponent<SurvivorVisibilityStatus>();
         localRoleController = FindFirstObjectByType<LocalRoleController>();
+        gameUI = FindFirstObjectByType<ManiaGameUI>();
 
         if (cooldownButton == null)
         {
@@ -127,12 +133,53 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
         Destroy(tree.gameObject);
 
         activeAvatar = avatarController;
-        ApplySurvivorHiddenState(true);
         avatarController.Initialize(transform, this, avatarDuration);
+        avatarController.SetPlayerControlled(false);
+
+        nextCastTime = Time.time + cooldown;
+        if (cooldownButton != null)
+        {
+            cooldownButton.StartCooldown(cooldown);
+        }
+    }
+
+    public void OnAvatarEnded(SoulwoodAvatarController avatarController, Vector3 returnPosition)
+    {
+        OnAvatarEndedCompletely(avatarController, returnPosition);
+    }
+
+    public void EnterAvatar(SoulwoodAvatarController avatarController)
+    {
+        if (avatarController == null || activeAvatar != avatarController || !avatarController.IsAlive)
+        {
+            return;
+        }
+
+        if (controlledAvatar != null)
+        {
+            return;
+        }
+
+        controlledAvatar = avatarController;
+        Debug.Log("UI Enter Avatar Mode");
+
+        ApplySurvivorHiddenState(true);
+        avatarController.SetPlayerControlled(true);
+
         if (avatarUIBridge != null)
         {
             avatarUIBridge.SetActiveAvatar(avatarController);
-            avatarUIBridge.gameUI?.ShowAvatarPanel();
+        }
+
+        if (gameUI == null)
+        {
+            gameUI = FindFirstObjectByType<ManiaGameUI>();
+        }
+
+        if (gameUI != null)
+        {
+            gameUI.ShowAvatarPanel();
+            gameUI.HideEnterSoulwoodButton();
         }
 
         SetCameraTarget(avatarController.transform);
@@ -146,39 +193,138 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
         {
             localRoleController.SetSoulwoodAvatarController(avatarController);
         }
-
-        nextCastTime = Time.time + cooldown;
-        if (cooldownButton != null)
-        {
-            cooldownButton.StartCooldown(cooldown);
-        }
     }
 
-    public void OnAvatarEnded(SoulwoodAvatarController avatarController, Vector3 returnPosition)
+    public void ExitAvatarButKeepAvatarAlive(SoulwoodAvatarController avatarController)
     {
-        if (activeAvatar != avatarController)
+        if (avatarController == null || controlledAvatar != avatarController)
         {
             return;
         }
 
+        Debug.Log("Soulwood Avatar eject: keeping avatar alive");
+
+        if (localRoleController == null)
+        {
+            localRoleController = FindFirstObjectByType<LocalRoleController>();
+        }
+
+        Debug.Log("Restoring Survivor control");
         if (localRoleController != null)
         {
             localRoleController.ClearSoulwoodAvatarController(avatarController);
         }
 
-        transform.position = returnPosition;
+        Vector3 returnPosition = GetSafeReturnPosition(avatarController.transform.position, avatarController);
+        RestoreSurvivorAtPosition(returnPosition);
+
         RestoreCameraTarget();
+
         if (avatarUIBridge != null)
         {
             avatarUIBridge.ClearActiveAvatar(avatarController);
         }
-        ManiaGameUI gameUI = FindFirstObjectByType<ManiaGameUI>();
+
+        if (gameUI == null)
+        {
+            gameUI = FindFirstObjectByType<ManiaGameUI>();
+        }
+
         if (gameUI != null)
         {
             gameUI.ShowSurvivorPanel();
         }
-        ApplySurvivorHiddenState(false);
+
+        Debug.Log("UI Exit Avatar Mode");
+
+        avatarController.SetPlayerControlled(false);
+        Debug.Log("Avatar switched to idle guard mode");
+
+        controlledAvatar = null;
+    }
+
+    public void OnAvatarEndedCompletely(SoulwoodAvatarController avatarController, Vector3 returnPosition)
+    {
+        if (avatarController == null || activeAvatar != avatarController)
+        {
+            return;
+        }
+
+        bool wasPossessed = controlledAvatar == avatarController
+            || (localRoleController != null && localRoleController.soulwoodAvatarController == avatarController);
+
+        if (wasPossessed)
+        {
+            if (localRoleController == null)
+            {
+                localRoleController = FindFirstObjectByType<LocalRoleController>();
+            }
+
+            if (localRoleController != null)
+            {
+                localRoleController.ClearSoulwoodAvatarController(avatarController);
+            }
+
+            RestoreSurvivorAtPosition(GetSafeReturnPosition(returnPosition, avatarController));
+
+            RestoreCameraTarget();
+        }
+
+        if (avatarUIBridge != null)
+        {
+            avatarUIBridge.ClearNearbyAvatar(avatarController);
+            avatarUIBridge.ClearActiveAvatar(avatarController);
+        }
+
+        if (gameUI == null)
+        {
+            gameUI = FindFirstObjectByType<ManiaGameUI>();
+        }
+
+        if (gameUI != null)
+        {
+            gameUI.ShowSurvivorPanel();
+        }
+
+        if (wasPossessed)
+        {
+            Debug.Log("UI Exit Avatar Mode");
+        }
+
         activeAvatar = null;
+        controlledAvatar = null;
+    }
+
+    private void RestoreSurvivorAtPosition(Vector3 returnPosition)
+    {
+        transform.position = returnPosition;
+        ApplySurvivorHiddenState(false);
+    }
+
+    private Vector3 GetSafeReturnPosition(Vector3 avatarPosition, SoulwoodAvatarController avatarController)
+    {
+        Vector3 rayOrigin = avatarPosition + Vector3.up * 6f;
+        RaycastHit[] hits = Physics.RaycastAll(rayOrigin, Vector3.down, 20f, ~0, QueryTriggerInteraction.Ignore);
+
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            RaycastHit hit = hits[i];
+            if (hit.collider == null)
+            {
+                continue;
+            }
+
+            if (avatarController != null && hit.collider.GetComponentInParent<SoulwoodAvatarController>() == avatarController)
+            {
+                continue;
+            }
+
+            return hit.point + Vector3.up * 0.15f;
+        }
+
+        return avatarPosition + Vector3.up * 0.5f;
     }
 
     private NeutralTree FindNearestTree()
@@ -245,16 +391,23 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
                     continue;
                 }
 
+                if (behaviour is SurvivorMovement movement)
+                {
+                    survivorMovement = movement;
+                    survivorMovementWasEnabled = movement.enabled;
+                    movement.enabled = false;
+                    continue;
+                }
+
                 behaviourStates[behaviour] = behaviour.enabled;
                 behaviour.enabled = false;
             }
         }
         else
         {
-            SurvivorMovement survivorMovement = GetComponent<SurvivorMovement>();
             if (survivorMovement != null)
             {
-                behaviourStates[survivorMovement] = survivorMovement.enabled;
+                survivorMovementWasEnabled = survivorMovement.enabled;
                 survivorMovement.enabled = false;
             }
         }
@@ -365,6 +518,22 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
             else
             {
                 survivorCharacterController.enabled = true;
+            }
+
+            if (survivorCharacterController.enabled)
+            {
+                Debug.Log("Survivor CharacterController enabled");
+            }
+        }
+
+        if (survivorMovement != null)
+        {
+            survivorMovement.enabled = survivorMovementWasEnabled;
+            if (survivorMovement.enabled)
+            {
+                survivorMovement.SetMoveInput(Vector2.zero);
+                survivorMovement.SetSprintHeld(false);
+                Debug.Log("SurvivorMovement enabled");
             }
         }
 

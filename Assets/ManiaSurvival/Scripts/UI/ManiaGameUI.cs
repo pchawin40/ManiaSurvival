@@ -22,6 +22,7 @@ public class ManiaGameUI : MonoBehaviour
     public GameObject survivorPanel;
     public GameObject monsterPanel;
     public GameObject avatarPanel;
+    public GameObject enterSoulwoodButton;
 
     [Header("Buttons")]
     public Button startButton;
@@ -49,6 +50,19 @@ public class ManiaGameUI : MonoBehaviour
 
     private int activeTouchId = -1;
     private bool mouseJoystickActive;
+
+    private void Awake()
+    {
+        if (avatarPanel != null)
+        {
+            avatarPanel.SetActive(false);
+        }
+
+        if (enterSoulwoodButton != null)
+        {
+            enterSoulwoodButton.SetActive(false);
+        }
+    }
 
     private void Start()
     {
@@ -187,10 +201,16 @@ public class ManiaGameUI : MonoBehaviour
         bool isPlaying = gameManager != null && gameManager.State == ManiaGameState.Playing;
         bool isMonsterControlled = localRoleController != null && localRoleController.controlMode == PlayerControlMode.MonsterControlled;
         bool isAvatarControlled = soulwoodAvatarUIBridge != null && soulwoodAvatarUIBridge.HasActiveAvatar;
+        bool shouldShowEnterButton = isPlaying
+            && !isMonsterControlled
+            && soulwoodAvatarUIBridge != null
+            && soulwoodAvatarUIBridge.HasNearbyAvatar
+            && !isAvatarControlled;
 
         SetPanelActive(sharedHud, isPlaying, gameplayHUD);
         SetPanelActive(sharedControls, isPlaying);
         SetPanelActive(avatarPanel, isPlaying && isAvatarControlled);
+        SetPanelActive(enterSoulwoodButton, shouldShowEnterButton);
 
         if (survivorPanel != null)
         {
@@ -243,6 +263,7 @@ public class ManiaGameUI : MonoBehaviour
 
     public void ShowMonsterPanel()
     {
+        Debug.Log("Showing Monster Panel - survivorPanel assigned: " + (survivorPanel != null) + ", avatarPanel assigned: " + (avatarPanel != null));
         if (survivorPanel != null)
         {
             survivorPanel.SetActive(false);
@@ -257,6 +278,8 @@ public class ManiaGameUI : MonoBehaviour
         {
             avatarPanel.SetActive(false);
         }
+
+        HideEnterSoulwoodButton();
     }
 
     public void ShowAvatarPanel()
@@ -276,6 +299,8 @@ public class ManiaGameUI : MonoBehaviour
         {
             avatarPanel.SetActive(true);
         }
+
+        HideEnterSoulwoodButton();
     }
 
     public void HideAvatarPanel()
@@ -283,6 +308,22 @@ public class ManiaGameUI : MonoBehaviour
         if (avatarPanel != null)
         {
             avatarPanel.SetActive(false);
+        }
+    }
+
+    public void ShowEnterSoulwoodButton()
+    {
+        if (enterSoulwoodButton != null)
+        {
+            enterSoulwoodButton.SetActive(true);
+        }
+    }
+
+    public void HideEnterSoulwoodButton()
+    {
+        if (enterSoulwoodButton != null)
+        {
+            enterSoulwoodButton.SetActive(false);
         }
     }
 
@@ -518,9 +559,27 @@ public class ManiaGameUI : MonoBehaviour
             localRoleController.SetControlMode(mode);
         }
 
+        if (soulwoodAvatarUIBridge != null)
+        {
+            soulwoodAvatarUIBridge.ResetActiveAvatarState();
+        }
+
+        HideEnterSoulwoodButton();
+
         if (gameManager != null)
         {
             gameManager.BeginRound();
+        }
+
+        if (mode == PlayerControlMode.SurvivorControlled)
+        {
+            Debug.Log("UI Start Survivor Mode");
+            ShowSurvivorPanel();
+        }
+        else
+        {
+            Debug.Log("UI Start Monster Mode");
+            ShowMonsterPanel();
         }
     }
 
