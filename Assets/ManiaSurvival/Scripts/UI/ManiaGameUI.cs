@@ -17,6 +17,10 @@ public class ManiaGameUI : MonoBehaviour
     public GameObject startScreen;
     public GameObject gameplayHUD;
     public GameObject gameOverPanel;
+    public GameObject sharedHud;
+    public GameObject sharedControls;
+    public GameObject survivorPanel;
+    public GameObject monsterPanel;
 
     [Header("Buttons")]
     public Button startButton;
@@ -93,6 +97,8 @@ public class ManiaGameUI : MonoBehaviour
         {
             UpdateSimpleMobileJoystick();
         }
+
+        UpdateRolePanels();
     }
 
     private void OnDestroy()
@@ -155,16 +161,10 @@ public class ManiaGameUI : MonoBehaviour
         bool isWaiting = manager.State == ManiaGameState.WaitingToStart;
         bool isPlaying = manager.State == ManiaGameState.Playing;
         bool isGameOver = manager.State == ManiaGameState.MonsterWon || manager.State == ManiaGameState.SurvivorsWon;
-        bool isMonsterControlled = localRoleController != null && localRoleController.controlMode == PlayerControlMode.MonsterControlled;
 
         if (startScreen != null)
         {
             startScreen.SetActive(isWaiting);
-        }
-
-        if (gameplayHUD != null)
-        {
-            gameplayHUD.SetActive(isPlaying);
         }
 
         if (gameOverPanel != null)
@@ -172,9 +172,44 @@ public class ManiaGameUI : MonoBehaviour
             gameOverPanel.SetActive(isGameOver);
         }
 
+        UpdateRolePanels();
+    }
+
+    private void UpdateRolePanels()
+    {
+        bool isPlaying = gameManager != null && gameManager.State == ManiaGameState.Playing;
+        bool isMonsterControlled = localRoleController != null && localRoleController.controlMode == PlayerControlMode.MonsterControlled;
+
+        SetPanelActive(sharedHud, isPlaying, gameplayHUD);
+        SetPanelActive(sharedControls, isPlaying);
+
+        if (survivorPanel != null)
+        {
+            survivorPanel.SetActive(isPlaying && !isMonsterControlled);
+        }
+
+        if (monsterPanel != null)
+        {
+            monsterPanel.SetActive(isPlaying && isMonsterControlled);
+        }
+
         if (attackButton != null)
         {
             attackButton.gameObject.SetActive(isPlaying && isMonsterControlled);
+        }
+    }
+
+    private void SetPanelActive(GameObject primary, bool active, GameObject fallback = null)
+    {
+        if (primary != null)
+        {
+            primary.SetActive(active);
+            return;
+        }
+
+        if (fallback != null)
+        {
+            fallback.SetActive(active);
         }
     }
 

@@ -3023,7 +3023,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1129112747}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 8924335234456584560}
+        m_TargetAssemblyTypeName: MonsterAttack, Assembly-CSharp
+        m_MethodName: TryAttack
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1129112747
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3834,6 +3846,10 @@ MonoBehaviour:
   startScreen: {fileID: 1291559119}
   gameplayHUD: {fileID: 1713048607}
   gameOverPanel: {fileID: 1389474387}
+  sharedHud: {fileID: 877849062}
+  sharedControls: {fileID: 545819441}
+  survivorPanel: {fileID: 1161050125}
+  monsterPanel: {fileID: 394660925}
   startButton: {fileID: 436890713}
   restartButton: {fileID: 1272549150}
   attackButton: {fileID: 0}
@@ -6325,6 +6341,17 @@ MonoBehaviour:
   useCameraRelativeMovement: 0
   keyboardInputEnabled: 1
   gravity: -20
+--- !u!114 &8924335234456584560 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 363360154544469868, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
+  m_PrefabInstance: {fileID: 8924335234456584549}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8924335234456584550}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0356fd1c464434428c0439a598e541e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MonsterAttack
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
