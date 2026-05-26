@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(UnitHealth))]
 public class SurvivorSpiritBoltAbility : MonoBehaviour
@@ -15,23 +16,69 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
     public float cooldown = 10f;
     public float projectileLifetime = 3f;
 
+    [Header("Aim")]
+    public Camera aimCamera;
+    public LayerMask groundMask;
+    public LineRenderer aimLine;
+    public float aimLineLength = 8f;
+
     [Header("UI")]
     public AbilityCooldownButton cooldownButton;
 
     private UnitHealth unitHealth;
     private float nextCastTime;
+    private bool isAiming;
+    private Vector3 currentAimDirection = Vector3.forward;
 
     private void Awake()
     {
         unitHealth = GetComponent<UnitHealth>();
 
+        if (aimCamera == null)
+        {
+            aimCamera = Camera.main;
+        }
+
         if (cooldownButton == null)
         {
             cooldownButton = FindFirstObjectByType<AbilityCooldownButton>();
         }
+
+        SetAimLineVisible(false);
     }
 
-    public void CastSpiritBolt()
+    private void Update()
+    {
+        if (!isAiming)
+        {
+            return;
+        }
+
+        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+        {
+            CancelAiming();
+            return;
+        }
+
+        if (Mouse.current != null)
+        {
+            if (Mouse.current.rightButton.wasPressedThisFrame)
+            {
+                CancelAiming();
+                return;
+            }
+
+            if (Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                FireAimedSpiritBolt();
+                return;
+            }
+        }
+
+        UpdateAimPreview();
+    }
+
+    public void BeginAimSpiritBolt()
     {
         if (cooldownButton != null && cooldownButton.IsCoolingDown)
         {
@@ -50,9 +97,14 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
             return;
         }
 
-        if (Time.time < nextCastTime)
+        if (aimCamera == null)
         {
-            Debug.Log("Spirit Bolt on cooldown");
+            aimCamera = Camera.main;
+        }
+
+        if (aimCamera == null || groundMask.value == 0)
+        {
+            Debug.LogWarning("Spirit Bolt missing camera/ground warning");
             return;
         }
 
@@ -62,11 +114,78 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
             return;
         }
 
-        Vector3 castDirection = GetCastDirection();
+        isAiming = true;
+        SetAimLineVisible(true);
+        UpdateAimPreview();
+        Debug.Log("aiming started");
+    }
+
+    public void CastSpiritBolt()
+    {
+        FireSpiritBolt(GetCastDirection(), false);
+    }
+
+    private void FireAimedSpiritBolt()
+    {
+        if (!isAiming)
+        {
+            return;
+        }
+
+        isAiming = false;
+        SetAimLineVisible(false);
+
+        if (currentAimDirection.sqrMagnitude <= 0.001f)
+        {
+            Debug.Log("aiming canceled");
+            return;
+        }
+
+        if (FireSpiritBolt(currentAimDirection, true))
+        {
+            Debug.Log("fired aimed bolt");
+        }
+        else
+        {
+            Debug.Log("aiming canceled");
+        }
+    }
+
+    private bool FireSpiritBolt(Vector3 castDirection, bool aimedFire)
+    {
+        if (cooldownButton != null && cooldownButton.IsCoolingDown)
+        {
+            Debug.Log("Spirit Bolt on cooldown");
+            return false;
+        }
+
+        if (unitHealth == null)
+        {
+            unitHealth = GetComponent<UnitHealth>();
+        }
+
+        if (unitHealth == null || unitHealth.IsDead)
+        {
+            Debug.Log("Spirit Bolt blocked");
+            return false;
+        }
+
+        if (Time.time < nextCastTime)
+        {
+            Debug.Log("Spirit Bolt on cooldown");
+            return false;
+        }
+
+        if (projectilePrefab == null)
+        {
+            Debug.Log("Spirit Bolt blocked");
+            return false;
+        }
+
         if (castDirection.sqrMagnitude <= 0.001f)
         {
             Debug.Log("Spirit Bolt blocked");
-            return;
+            return false;
         }
 
         Debug.Log("close range check");
@@ -78,8 +197,12 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
                 cooldownButton.StartCooldown(cooldown);
             }
 
-            Debug.Log("Spirit Bolt cast");
-            return;
+            if (!aimedFire)
+            {
+                Debug.Log("Spirit Bolt cast");
+            }
+
+            return true;
         }
 
         Vector3 spawnPosition = GetSpawnPosition();
@@ -90,7 +213,7 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
         {
             Debug.Log("Spirit Bolt blocked");
             Destroy(projectileObject);
-            return;
+            return false;
         }
 
         projectile.Initialize(transform, castDirection, projectileSpeed, damage, knockbackDistance, projectileLifetime);
@@ -102,6 +225,7 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
         }
 
         Debug.Log("projectile fired normally");
+        return true;
     }
 
     private Vector3 GetCastDirection()
@@ -158,6 +282,74 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
         }
 
         return false;
+    }
+
+    private void UpdateAimPreview()
+    {
+        if (aimCamera == null || groundMask.value == 0)
+        {
+            Debug.LogWarning("Spirit Bolt missing camera/ground warning");
+            CancelAiming();
+            return;
+        }
+
+        Ray ray = aimCamera.ScreenPointToRay(Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero);
+        if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, groundMask, QueryTriggerInteraction.Ignore))
+        {
+            currentAimDirection = Vector3.zero;
+            SetAimLineVisible(false);
+            return;
+        }
+
+        Vector3 startPosition = GetSpawnPosition();
+        Vector3 targetPoint = hit.point;
+        Vector3 flatDirection = targetPoint - transform.position;
+        flatDirection.y = 0f;
+
+        if (flatDirection.sqrMagnitude <= 0.001f)
+        {
+            currentAimDirection = Vector3.zero;
+            SetAimLineVisible(false);
+            return;
+        }
+
+        currentAimDirection = flatDirection.normalized;
+
+        if (aimLine != null)
+        {
+            aimLine.useWorldSpace = true;
+            aimLine.enabled = true;
+            aimLine.positionCount = 2;
+            aimLine.SetPosition(0, startPosition);
+            float lineDistance = Mathf.Min(Mathf.Max(0.01f, aimLineLength), Vector3.Distance(startPosition, hit.point));
+            aimLine.SetPosition(1, startPosition + currentAimDirection * lineDistance);
+        }
+    }
+
+    private void CancelAiming()
+    {
+        if (!isAiming)
+        {
+            return;
+        }
+
+        isAiming = false;
+        currentAimDirection = Vector3.forward;
+        SetAimLineVisible(false);
+        Debug.Log("aiming canceled");
+    }
+
+    private void SetAimLineVisible(bool visible)
+    {
+        if (aimLine != null)
+        {
+            aimLine.useWorldSpace = true;
+            aimLine.enabled = visible;
+            if (!visible)
+            {
+                aimLine.positionCount = 0;
+            }
+        }
     }
 
     private void ApplyKnockback(UnitHealth targetHealth, Vector3 direction)
