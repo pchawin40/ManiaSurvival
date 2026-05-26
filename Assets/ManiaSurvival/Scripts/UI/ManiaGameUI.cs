@@ -21,6 +21,7 @@ public class ManiaGameUI : MonoBehaviour
     [Header("Buttons")]
     public Button startButton;
     public Button restartButton;
+    public Button attackButton;
 
     [Header("Mobile Joystick")]
     public bool enableSimpleMobileJoystick = true;
@@ -38,6 +39,7 @@ public class ManiaGameUI : MonoBehaviour
     public ManiaGameManager gameManager;
     public LocalRoleController localRoleController;
     public SurvivorMovement localSurvivorMovement;
+    public MonsterAttack localMonsterAttack;
 
     private int activeTouchId = -1;
     private bool mouseJoystickActive;
@@ -59,6 +61,11 @@ public class ManiaGameUI : MonoBehaviour
             localRoleController = FindFirstObjectByType<LocalRoleController>();
         }
 
+        if (localMonsterAttack == null)
+        {
+            localMonsterAttack = FindFirstObjectByType<MonsterAttack>();
+        }
+
         if (startButton != null)
         {
             startButton.onClick.AddListener(HandleStartPressed);
@@ -67,6 +74,11 @@ public class ManiaGameUI : MonoBehaviour
         if (restartButton != null)
         {
             restartButton.onClick.AddListener(HandleStartPressed);
+        }
+
+        if (attackButton != null)
+        {
+            attackButton.onClick.AddListener(OnMonsterAttackPressed);
         }
 
         if (gameManager != null)
@@ -93,6 +105,11 @@ public class ManiaGameUI : MonoBehaviour
         if (restartButton != null)
         {
             restartButton.onClick.RemoveListener(HandleStartPressed);
+        }
+
+        if (attackButton != null)
+        {
+            attackButton.onClick.RemoveListener(OnMonsterAttackPressed);
         }
     }
 
@@ -138,6 +155,7 @@ public class ManiaGameUI : MonoBehaviour
         bool isWaiting = manager.State == ManiaGameState.WaitingToStart;
         bool isPlaying = manager.State == ManiaGameState.Playing;
         bool isGameOver = manager.State == ManiaGameState.MonsterWon || manager.State == ManiaGameState.SurvivorsWon;
+        bool isMonsterControlled = localRoleController != null && localRoleController.controlMode == PlayerControlMode.MonsterControlled;
 
         if (startScreen != null)
         {
@@ -152,6 +170,11 @@ public class ManiaGameUI : MonoBehaviour
         if (gameOverPanel != null)
         {
             gameOverPanel.SetActive(isGameOver);
+        }
+
+        if (attackButton != null)
+        {
+            attackButton.gameObject.SetActive(isPlaying && isMonsterControlled);
         }
     }
 
@@ -360,6 +383,24 @@ public class ManiaGameUI : MonoBehaviour
     public void StartAsMonster()
     {
         StartGameWithMode(PlayerControlMode.MonsterControlled);
+    }
+
+    public void OnMonsterAttackPressed()
+    {
+        if (localRoleController == null || localRoleController.controlMode != PlayerControlMode.MonsterControlled)
+        {
+            return;
+        }
+
+        if (localMonsterAttack == null)
+        {
+            localMonsterAttack = FindFirstObjectByType<MonsterAttack>();
+        }
+
+        if (localMonsterAttack != null)
+        {
+            localMonsterAttack.TryAttack();
+        }
     }
 
     private void StartGameWithMode(PlayerControlMode mode)

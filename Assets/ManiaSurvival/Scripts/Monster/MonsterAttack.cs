@@ -3,10 +3,11 @@ using UnityEngine;
 public class MonsterAttack : MonoBehaviour
 {
     [Header("Attack")]
-    public int damage = 1;
-    public float attackRange = 1.6f;
-    public float attackCooldown = 0.8f;
+    public int attackDamage = 10;
+    public float attackRange = 1.75f;
+    public float attackCooldown = 0.75f;
     public bool autoAttack = true;
+    public float attackRadius = 1.75f;
     public LayerMask survivorLayers = ~0;
     public Transform attackPoint;
     public string targetTag = "Survivor";
@@ -46,23 +47,18 @@ public class MonsterAttack : MonoBehaviour
 
         if (autoAttack)
         {
-            TryAttackNearestSurvivor();
+            TryAttackInternal(false);
         }
+    }
+
+    public void TryAttack()
+    {
+        TryAttackInternal(true);
     }
 
     public void TryAttackNearestSurvivor()
     {
-        if (cooldownTimer > 0f)
-        {
-            return;
-        }
-
-        UnitHealth target = FindNearestSurvivorInRange();
-
-        if (target != null)
-        {
-            Attack(target);
-        }
+        TryAttackInternal(false);
     }
 
     public void TryAttackTarget(UnitHealth target)
@@ -81,10 +77,48 @@ public class MonsterAttack : MonoBehaviour
         }
     }
 
+    private void TryAttackInternal(bool logMessages)
+    {
+        if (cooldownTimer > 0f)
+        {
+            if (logMessages)
+            {
+                Debug.Log("[MonsterAttack] Attack on cooldown");
+            }
+
+            return;
+        }
+
+        if (logMessages)
+        {
+            Debug.Log("[MonsterAttack] Attack started");
+        }
+
+        UnitHealth target = FindNearestSurvivorInRange();
+
+        if (target == null)
+        {
+            if (logMessages)
+            {
+                Debug.Log("[MonsterAttack] No valid target");
+            }
+
+            return;
+        }
+
+        Attack(target);
+
+        if (logMessages)
+        {
+            Debug.Log("[MonsterAttack] Target hit: " + target.name);
+        }
+    }
+
     private UnitHealth FindNearestSurvivorInRange()
     {
         Vector3 origin = GetAttackOrigin();
-        Collider[] hits = Physics.OverlapSphere(origin, attackRange, survivorLayers, QueryTriggerInteraction.Ignore);
+        float searchRadius = attackRadius > 0f ? attackRadius : attackRange;
+        Collider[] hits = Physics.OverlapSphere(origin, searchRadius, survivorLayers, QueryTriggerInteraction.Ignore);
         UnitHealth nearest = null;
         float nearestDistanceSqr = float.MaxValue;
 
@@ -112,7 +146,7 @@ public class MonsterAttack : MonoBehaviour
     private void Attack(UnitHealth target)
     {
         cooldownTimer = attackCooldown;
-        target.TakeDamage(damage, gameObject);
+        target.TakeDamage(attackDamage, gameObject);
 
         if (target.IsDead && gameManager != null)
         {

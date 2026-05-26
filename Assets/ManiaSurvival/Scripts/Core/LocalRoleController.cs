@@ -16,6 +16,7 @@ public class LocalRoleController : MonoBehaviour
     public SurvivorMovement survivorMovement;
     public MonsterPlayerMovement monsterMovement;
     public MonsterAI monsterAI;
+    public MonsterAttack monsterAttack;
 
     private void Awake()
     {
@@ -61,6 +62,11 @@ public class LocalRoleController : MonoBehaviour
         if (monsterAI != null)
         {
             monsterAI.enabled = controlMode != PlayerControlMode.MonsterControlled;
+        }
+
+        if (monsterAttack != null)
+        {
+            monsterAttack.autoAttack = controlMode != PlayerControlMode.MonsterControlled;
         }
     }
 
@@ -112,6 +118,11 @@ public class LocalRoleController : MonoBehaviour
         if (monsterAI == null)
         {
             monsterAI = FindFirstObjectByType<MonsterAI>();
+        }
+
+        if (monsterAttack == null)
+        {
+            monsterAttack = FindFirstObjectByType<MonsterAttack>();
         }
     }
 
