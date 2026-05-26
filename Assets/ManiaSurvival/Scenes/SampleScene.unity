@@ -2567,7 +2567,7 @@ MonoBehaviour:
   treeSearchRadius: 6
   maxActiveTreants: 2
   cooldown: 20
-  cooldownButton: {fileID: 0}
+  cooldownButton: {fileID: 2013123244}
 --- !u!1 &721412224
 GameObject:
   m_ObjectHideFlags: 0
@@ -3488,6 +3488,10 @@ PrefabInstance:
       propertyPath: m_AdditionalShaderChannelsFlag
       value: 25
       objectReference: {fileID: 0}
+    - target: {fileID: 7032707299080401192, guid: 7e62eb2a30033f54b88645a2bba7b7d8, type: 3}
+      propertyPath: unitHealth
+      value: 
+      objectReference: {fileID: 8924335234456584551}
     - target: {fileID: 7457820372195511116, guid: 7e62eb2a30033f54b88645a2bba7b7d8, type: 3}
       propertyPath: m_Name
       value: MonsterHPBarCanvas
@@ -7676,7 +7680,7 @@ MonoBehaviour:
   maxTrees: 30
   treeSpawnIntervalMin: 8
   treeSpawnIntervalMax: 15
-  treeSpawnRadius: 20
+  treeSpawnRadius: 8
   minTreeSpacing: 2
   treeSpawnHeight: 1
   maxSpawnAttempts: 20
@@ -8369,6 +8373,10 @@ PrefabInstance:
     - target: {fileID: 1901775035134909915, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
       propertyPath: m_Name
       value: Monster
+      objectReference: {fileID: 0}
+    - target: {fileID: 3695475764972523763, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
+      propertyPath: moveSpeed
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 3809609058516897302, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
       propertyPath: m_LocalPosition.x
