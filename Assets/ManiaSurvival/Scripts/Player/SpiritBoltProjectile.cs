@@ -4,7 +4,7 @@ public class SpiritBoltProjectile : MonoBehaviour
 {
     [Header("Projectile")]
     public float projectileSpeed = 10f;
-    public int damage = 8;
+    public float damage = 8f;
     public float knockbackDistance = 2f;
     public float lifetime = 3f;
     public float hitRadius = 0.25f;
@@ -13,13 +13,12 @@ public class SpiritBoltProjectile : MonoBehaviour
     public string targetTag = "Monster";
 
     private Transform owner;
-    private Vector3 previousPosition;
+    private Vector3 moveDirection = Vector3.forward;
     private float lifeTimer;
     private bool hasHit;
 
     private void OnEnable()
     {
-        previousPosition = transform.position;
         lifeTimer = Mathf.Max(0f, lifetime);
         hasHit = false;
     }
@@ -32,7 +31,7 @@ public class SpiritBoltProjectile : MonoBehaviour
         }
 
         float moveDistance = projectileSpeed * Time.deltaTime;
-        Vector3 direction = transform.forward;
+        Vector3 direction = moveDirection;
         direction.y = 0f;
 
         if (direction.sqrMagnitude <= 0.001f)
@@ -52,26 +51,25 @@ public class SpiritBoltProjectile : MonoBehaviour
             return;
         }
 
-        previousPosition = currentPosition;
         transform.position = nextPosition;
 
         lifeTimer -= Time.deltaTime;
         if (lifeTimer <= 0f)
         {
-            Debug.Log("Spirit Bolt miss/lifetime expired");
+            Debug.Log("Spirit Bolt expired");
             Destroy(gameObject);
         }
     }
 
-    public void Initialize(Transform projectileOwner, float speed, int damageAmount, float knockbackAmount, float projectileLifetime)
+    public void Initialize(Transform projectileOwner, Vector3 direction, float speed, float damageAmount, float knockbackAmount, float projectileLifetime)
     {
         owner = projectileOwner;
+        moveDirection = direction.sqrMagnitude > 0.001f ? direction.normalized : Vector3.forward;
         projectileSpeed = speed;
         damage = damageAmount;
         knockbackDistance = knockbackAmount;
         lifetime = projectileLifetime;
         lifeTimer = Mathf.Max(0f, lifetime);
-        previousPosition = transform.position;
         hasHit = false;
     }
 
@@ -104,9 +102,9 @@ public class SpiritBoltProjectile : MonoBehaviour
         }
 
         hasHit = true;
-        targetHealth.TakeDamage(damage, gameObject);
+        targetHealth.TakeDamage(Mathf.RoundToInt(damage), gameObject);
         ApplyKnockback(targetHealth, direction);
-        Debug.Log("Spirit Bolt hit: " + targetHealth.name);
+        Debug.Log("Spirit Bolt hit Monster");
         Destroy(gameObject);
         return true;
     }
