@@ -21,6 +21,7 @@ public class ManiaGameUI : MonoBehaviour
     public GameObject sharedControls;
     public GameObject survivorPanel;
     public GameObject monsterPanel;
+    public GameObject avatarPanel;
 
     [Header("Buttons")]
     public Button startButton;
@@ -44,6 +45,7 @@ public class ManiaGameUI : MonoBehaviour
     public LocalRoleController localRoleController;
     public SurvivorMovement localSurvivorMovement;
     public MonsterAttack localMonsterAttack;
+    public SoulwoodAvatarUIBridge soulwoodAvatarUIBridge;
 
     private int activeTouchId = -1;
     private bool mouseJoystickActive;
@@ -68,6 +70,11 @@ public class ManiaGameUI : MonoBehaviour
         if (localMonsterAttack == null)
         {
             localMonsterAttack = FindFirstObjectByType<MonsterAttack>();
+        }
+
+        if (soulwoodAvatarUIBridge == null)
+        {
+            soulwoodAvatarUIBridge = FindFirstObjectByType<SoulwoodAvatarUIBridge>();
         }
 
         if (startButton != null)
@@ -179,13 +186,15 @@ public class ManiaGameUI : MonoBehaviour
     {
         bool isPlaying = gameManager != null && gameManager.State == ManiaGameState.Playing;
         bool isMonsterControlled = localRoleController != null && localRoleController.controlMode == PlayerControlMode.MonsterControlled;
+        bool isAvatarControlled = soulwoodAvatarUIBridge != null && soulwoodAvatarUIBridge.HasActiveAvatar;
 
         SetPanelActive(sharedHud, isPlaying, gameplayHUD);
         SetPanelActive(sharedControls, isPlaying);
+        SetPanelActive(avatarPanel, isPlaying && isAvatarControlled);
 
         if (survivorPanel != null)
         {
-            survivorPanel.SetActive(isPlaying && !isMonsterControlled);
+            survivorPanel.SetActive(isPlaying && !isMonsterControlled && !isAvatarControlled);
         }
 
         if (monsterPanel != null)
@@ -210,6 +219,70 @@ public class ManiaGameUI : MonoBehaviour
         if (fallback != null)
         {
             fallback.SetActive(active);
+        }
+    }
+
+    public void ShowSurvivorPanel()
+    {
+        Debug.Log("Showing Survivor Panel - survivorPanel assigned: " + (survivorPanel != null) + ", avatarPanel assigned: " + (avatarPanel != null));
+        if (survivorPanel != null)
+        {
+            survivorPanel.SetActive(true);
+        }
+
+        if (monsterPanel != null)
+        {
+            monsterPanel.SetActive(false);
+        }
+
+        if (avatarPanel != null)
+        {
+            avatarPanel.SetActive(false);
+        }
+    }
+
+    public void ShowMonsterPanel()
+    {
+        if (survivorPanel != null)
+        {
+            survivorPanel.SetActive(false);
+        }
+
+        if (monsterPanel != null)
+        {
+            monsterPanel.SetActive(true);
+        }
+
+        if (avatarPanel != null)
+        {
+            avatarPanel.SetActive(false);
+        }
+    }
+
+    public void ShowAvatarPanel()
+    {
+        Debug.Log("Showing Avatar Panel - survivorPanel assigned: " + (survivorPanel != null) + ", avatarPanel assigned: " + (avatarPanel != null));
+        if (survivorPanel != null)
+        {
+            survivorPanel.SetActive(false);
+        }
+
+        if (monsterPanel != null)
+        {
+            monsterPanel.SetActive(false);
+        }
+
+        if (avatarPanel != null)
+        {
+            avatarPanel.SetActive(true);
+        }
+    }
+
+    public void HideAvatarPanel()
+    {
+        if (avatarPanel != null)
+        {
+            avatarPanel.SetActive(false);
         }
     }
 

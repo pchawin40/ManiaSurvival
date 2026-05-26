@@ -85,19 +85,6 @@ public class SoulwoodAvatarController : MonoBehaviour
             return;
         }
 
-        float targetDistance = GetTargetDistance(target);
-        if (targetDistance > attackRange)
-        {
-            return;
-        }
-
-        if (Time.time < nextAttackTime)
-        {
-            return;
-        }
-
-        nextAttackTime = Time.time + attackCooldown;
-        target.TakeDamage(attackDamage, gameObject);
     }
 
     public void Initialize(Transform survivorOwner, SurvivorSoulwoodAvatarAbility ability, float avatarLifetime)
@@ -111,6 +98,51 @@ public class SoulwoodAvatarController : MonoBehaviour
     public void SetMoveInput(Vector2 input)
     {
         mobileMoveInput = Vector2.ClampMagnitude(input, 1f);
+    }
+
+    public void TryAttack()
+    {
+        if (hasFinished)
+        {
+            return;
+        }
+
+        if (unitHealth == null || unitHealth.IsDead)
+        {
+            return;
+        }
+
+        if (Time.time < nextAttackTime)
+        {
+            return;
+        }
+
+        if (!IsValidTarget(target))
+        {
+            target = FindMonsterTarget();
+        }
+
+        if (target == null)
+        {
+            Debug.Log("no valid target found");
+            return;
+        }
+
+        float targetDistance = GetTargetDistance(target);
+        if (targetDistance > attackRange)
+        {
+            return;
+        }
+
+        int healthBefore = target.currentHealth;
+        nextAttackTime = Time.time + attackCooldown;
+        target.TakeDamage(attackDamage, gameObject);
+        Debug.Log("attacking target: hp " + healthBefore + " -> " + target.currentHealth);
+    }
+
+    public void Eject()
+    {
+        FinishAvatar();
     }
 
     private Vector2 GetMoveInput()

@@ -10,8 +10,13 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
     public float avatarDuration = 14f;
     public float cooldown = 60f;
     public AbilityCooldownButton cooldownButton;
+    public CameraFollow cameraFollow;
+    public Transform cameraRig;
+    public SoulwoodAvatarUIBridge avatarUIBridge;
 
     [Header("Hide Survivor")]
+    public GameObject[] survivorObjectsToHideDuringAvatar;
+    public Canvas survivorHealthBarCanvas;
     public Behaviour[] survivorComponentsToDisable;
     public Renderer[] survivorRenderersToHide;
     public Collider[] survivorCollidersToDisable;
@@ -21,12 +26,14 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
     private SurvivorVisibilityStatus survivorVisibilityStatus;
     private LocalRoleController localRoleController;
     private SoulwoodAvatarController activeAvatar;
+    private Transform previousCameraTarget;
     private float nextCastTime;
 
     private readonly Dictionary<Behaviour, bool> behaviourStates = new Dictionary<Behaviour, bool>();
     private readonly Dictionary<Renderer, bool> rendererStates = new Dictionary<Renderer, bool>();
     private readonly Dictionary<Collider, bool> colliderStates = new Dictionary<Collider, bool>();
     private readonly Dictionary<CharacterController, bool> characterControllerStates = new Dictionary<CharacterController, bool>();
+    private readonly Dictionary<GameObject, bool> gameObjectStates = new Dictionary<GameObject, bool>();
 
     private void Awake()
     {
@@ -38,6 +45,12 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
         if (cooldownButton == null)
         {
             cooldownButton = FindFirstObjectByType<AbilityCooldownButton>();
+        }
+
+        ResolveCameraFollow();
+        if (avatarUIBridge == null)
+        {
+            avatarUIBridge = FindFirstObjectByType<SoulwoodAvatarUIBridge>();
         }
     }
 
@@ -116,6 +129,13 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
         activeAvatar = avatarController;
         ApplySurvivorHiddenState(true);
         avatarController.Initialize(transform, this, avatarDuration);
+        if (avatarUIBridge != null)
+        {
+            avatarUIBridge.SetActiveAvatar(avatarController);
+            avatarUIBridge.gameUI?.ShowAvatarPanel();
+        }
+
+        SetCameraTarget(avatarController.transform);
 
         if (localRoleController == null)
         {
@@ -147,6 +167,16 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
         }
 
         transform.position = returnPosition;
+        RestoreCameraTarget();
+        if (avatarUIBridge != null)
+        {
+            avatarUIBridge.ClearActiveAvatar(avatarController);
+        }
+        ManiaGameUI gameUI = FindFirstObjectByType<ManiaGameUI>();
+        if (gameUI != null)
+        {
+            gameUI.ShowSurvivorPanel();
+        }
         ApplySurvivorHiddenState(false);
         activeAvatar = null;
     }
@@ -185,6 +215,8 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
             survivorVisibilityStatus.SetHiddenFromMonster(hide);
         }
 
+        SetSurvivorObjectsActive(!hide);
+
         if (hide)
         {
             CacheAndDisableComponents();
@@ -201,6 +233,7 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
         rendererStates.Clear();
         colliderStates.Clear();
         characterControllerStates.Clear();
+        gameObjectStates.Clear();
 
         if (survivorComponentsToDisable != null && survivorComponentsToDisable.Length > 0)
         {
@@ -336,5 +369,90 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
         }
 
         characterControllerStates.Clear();
+        gameObjectStates.Clear();
+    }
+
+    private void SetSurvivorObjectsActive(bool active)
+    {
+        if (survivorObjectsToHideDuringAvatar != null)
+        {
+            for (int i = 0; i < survivorObjectsToHideDuringAvatar.Length; i++)
+            {
+                GameObject survivorObject = survivorObjectsToHideDuringAvatar[i];
+                if (survivorObject != null)
+                {
+                    if (!gameObjectStates.ContainsKey(survivorObject))
+                    {
+                        gameObjectStates[survivorObject] = survivorObject.activeSelf;
+                    }
+
+                    bool targetState = active ? gameObjectStates[survivorObject] : false;
+                    survivorObject.SetActive(targetState);
+                }
+            }
+        }
+
+        if (survivorHealthBarCanvas != null)
+        {
+            GameObject canvasObject = survivorHealthBarCanvas.gameObject;
+            if (!gameObjectStates.ContainsKey(canvasObject))
+            {
+                gameObjectStates[canvasObject] = canvasObject.activeSelf;
+            }
+
+            bool targetState = active ? gameObjectStates[canvasObject] : false;
+            canvasObject.SetActive(targetState);
+        }
+    }
+
+    private void ResolveCameraFollow()
+    {
+        if (cameraFollow == null && cameraRig != null)
+        {
+            cameraFollow = cameraRig.GetComponent<CameraFollow>();
+        }
+
+        if (cameraFollow == null)
+        {
+            cameraFollow = FindFirstObjectByType<CameraFollow>();
+        }
+    }
+
+    private void SetCameraTarget(Transform target)
+    {
+        ResolveCameraFollow();
+
+        if (cameraFollow == null)
+        {
+            return;
+        }
+
+        if (previousCameraTarget == null)
+        {
+            previousCameraTarget = cameraFollow.target;
+        }
+
+        cameraFollow.target = target;
+    }
+
+    private void RestoreCameraTarget()
+    {
+        ResolveCameraFollow();
+
+        if (cameraFollow == null)
+        {
+            return;
+        }
+
+        if (previousCameraTarget != null)
+        {
+            cameraFollow.target = previousCameraTarget;
+        }
+        else if (transform != null)
+        {
+            cameraFollow.target = transform;
+        }
+
+        previousCameraTarget = null;
     }
 }
