@@ -17,6 +17,7 @@ public class LocalRoleController : MonoBehaviour
     public MonsterPlayerMovement monsterMovement;
     public MonsterAI monsterAI;
     public MonsterAttack monsterAttack;
+    public SoulwoodAvatarController soulwoodAvatarController;
 
     private void Awake()
     {
@@ -74,6 +75,12 @@ public class LocalRoleController : MonoBehaviour
     {
         Vector2 filteredInput = ApplyDeadZone(input);
 
+        if (soulwoodAvatarController != null)
+        {
+            soulwoodAvatarController.SetMoveInput(filteredInput);
+            return;
+        }
+
         if (controlMode == PlayerControlMode.SurvivorControlled)
         {
             if (survivorMovement != null)
@@ -100,6 +107,21 @@ public class LocalRoleController : MonoBehaviour
         if (controlMode == PlayerControlMode.SurvivorControlled && survivorMovement != null)
         {
             survivorMovement.TryDodge();
+        }
+    }
+
+    public void SetSoulwoodAvatarController(SoulwoodAvatarController avatarController)
+    {
+        soulwoodAvatarController = avatarController;
+        SetMoveInput(Vector2.zero);
+    }
+
+    public void ClearSoulwoodAvatarController(SoulwoodAvatarController avatarController)
+    {
+        if (soulwoodAvatarController == avatarController)
+        {
+            soulwoodAvatarController = null;
+            SetMoveInput(Vector2.zero);
         }
     }
 
