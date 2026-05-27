@@ -164,4 +164,12 @@ public class LocalRoleController : MonoBehaviour
 
         return Vector2.ClampMagnitude(input, 1f);
     }
+
+    public void PressMonsterAttack()
+    {
+        if (controlMode == PlayerControlMode.MonsterControlled && monsterAttack != null)
+        {
+            monsterAttack.TryAttack();
+        }
+    }
 }

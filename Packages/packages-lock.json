@@ -1,5 +1,13 @@
 {
   "dependencies": {
+    "com.boxqkrtm.ide.cursor": {
+      "version": "file:com.boxqkrtm.ide.cursor",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.test-framework": "1.1.9"
+      }
+    },
     "com.unity.ai.navigation": {
       "version": "2.0.12",
       "depth": 0,
