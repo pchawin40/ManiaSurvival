@@ -4009,9 +4009,9 @@ MonoBehaviour:
   joystickDeadZone: 0.15
   survivorMovement: {fileID: 356814411}
   monsterMovement: {fileID: 8924335234456584559}
-  monsterAI: {fileID: 0}
-  monsterAttack: {fileID: 0}
-  soulwoodAvatarController: {fileID: 0}
+  monsterAI: {fileID: 8924335234456584561}
+  monsterAttack: {fileID: 8924335234456584560}
+  soulwoodAvatarController: {fileID: -3976061171102463217, guid: 63bb14b8995374041820fd9437e0735f, type: 3}
 --- !u!1001 &966300755
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9905,6 +9905,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c0356fd1c464434428c0439a598e541e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MonsterAttack
+--- !u!114 &8924335234456584561 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3695475764972523763, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
+  m_PrefabInstance: {fileID: 8924335234456584549}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8924335234456584550}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 85c2f5bc2853da4458db34cbdb387e61, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MonsterAI
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
