@@ -28,6 +28,8 @@ public class ManiaGameUI : MonoBehaviour
     public Button startButton;
     public Button restartButton;
     public Button attackButton;
+    public Button roarButton;
+    public Button stompButton;
 
     [Header("Mobile Joystick")]
     public bool enableSimpleMobileJoystick = true;
@@ -46,6 +48,8 @@ public class ManiaGameUI : MonoBehaviour
     public LocalRoleController localRoleController;
     public SurvivorMovement localSurvivorMovement;
     public MonsterAttack localMonsterAttack;
+    public MonsterRoarAbility localMonsterRoar;
+    public MonsterStompAbility localMonsterStomp;
     public SoulwoodAvatarUIBridge soulwoodAvatarUIBridge;
 
     private int activeTouchId = -1;
@@ -86,6 +90,16 @@ public class ManiaGameUI : MonoBehaviour
             localMonsterAttack = FindFirstObjectByType<MonsterAttack>();
         }
 
+        if (localMonsterRoar == null)
+        {
+            localMonsterRoar = FindFirstObjectByType<MonsterRoarAbility>();
+        }
+
+        if (localMonsterStomp == null)
+        {
+            localMonsterStomp = FindFirstObjectByType<MonsterStompAbility>();
+        }
+
         if (soulwoodAvatarUIBridge == null)
         {
             soulwoodAvatarUIBridge = FindFirstObjectByType<SoulwoodAvatarUIBridge>();
@@ -104,6 +118,16 @@ public class ManiaGameUI : MonoBehaviour
         if (attackButton != null)
         {
             attackButton.onClick.AddListener(OnMonsterAttackPressed);
+        }
+
+        if (roarButton != null)
+        {
+            roarButton.onClick.AddListener(OnMonsterRoarPressed);
+        }
+
+        if (stompButton != null)
+        {
+            stompButton.onClick.AddListener(OnMonsterStompPressed);
         }
 
         if (gameManager != null)
@@ -137,6 +161,16 @@ public class ManiaGameUI : MonoBehaviour
         if (attackButton != null)
         {
             attackButton.onClick.RemoveListener(OnMonsterAttackPressed);
+        }
+
+        if (roarButton != null)
+        {
+            roarButton.onClick.RemoveListener(OnMonsterRoarPressed);
+        }
+
+        if (stompButton != null)
+        {
+            stompButton.onClick.RemoveListener(OnMonsterStompPressed);
         }
     }
 
@@ -225,6 +259,16 @@ public class ManiaGameUI : MonoBehaviour
         if (attackButton != null)
         {
             attackButton.gameObject.SetActive(isPlaying && isMonsterControlled);
+        }
+
+        if (roarButton != null)
+        {
+            roarButton.gameObject.SetActive(isPlaying && isMonsterControlled);
+        }
+
+        if (stompButton != null)
+        {
+            stompButton.gameObject.SetActive(isPlaying && isMonsterControlled);
         }
     }
 
@@ -551,6 +595,44 @@ public class ManiaGameUI : MonoBehaviour
         if (localMonsterAttack != null)
         {
             localMonsterAttack.TryAttack();
+        }
+    }
+
+    public void OnMonsterRoarPressed()
+    {
+        if (localRoleController != null)
+        {
+            localRoleController.PressMonsterRoar();
+            return;
+        }
+
+        if (localMonsterRoar == null)
+        {
+            localMonsterRoar = FindFirstObjectByType<MonsterRoarAbility>();
+        }
+
+        if (localMonsterRoar != null)
+        {
+            localMonsterRoar.CastRoar();
+        }
+    }
+
+    public void OnMonsterStompPressed()
+    {
+        if (localRoleController != null)
+        {
+            localRoleController.PressMonsterStomp();
+            return;
+        }
+
+        if (localMonsterStomp == null)
+        {
+            localMonsterStomp = FindFirstObjectByType<MonsterStompAbility>();
+        }
+
+        if (localMonsterStomp != null)
+        {
+            localMonsterStomp.CastStomp();
         }
     }
 

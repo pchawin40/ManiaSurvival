@@ -17,6 +17,8 @@ public class LocalRoleController : MonoBehaviour
     public MonsterPlayerMovement monsterMovement;
     public MonsterAI monsterAI;
     public MonsterAttack monsterAttack;
+    public MonsterRoarAbility monsterRoar;
+    public MonsterStompAbility monsterStomp;
     public SoulwoodAvatarController soulwoodAvatarController;
 
     private void Awake()
@@ -153,6 +155,16 @@ public class LocalRoleController : MonoBehaviour
         {
             monsterAttack = FindFirstObjectByType<MonsterAttack>();
         }
+
+        if (monsterRoar == null)
+        {
+            monsterRoar = FindFirstObjectByType<MonsterRoarAbility>();
+        }
+
+        if (monsterStomp == null)
+        {
+            monsterStomp = FindFirstObjectByType<MonsterStompAbility>();
+        }
     }
 
     private Vector2 ApplyDeadZone(Vector2 input)
@@ -170,6 +182,42 @@ public class LocalRoleController : MonoBehaviour
         if (controlMode == PlayerControlMode.MonsterControlled && monsterAttack != null)
         {
             monsterAttack.TryAttack();
+        }
+    }
+
+    public void PressMonsterRoar()
+    {
+        if (controlMode != PlayerControlMode.MonsterControlled)
+        {
+            return;
+        }
+
+        if (monsterRoar == null)
+        {
+            monsterRoar = FindFirstObjectByType<MonsterRoarAbility>();
+        }
+
+        if (monsterRoar != null)
+        {
+            monsterRoar.CastRoar();
+        }
+    }
+
+    public void PressMonsterStomp()
+    {
+        if (controlMode != PlayerControlMode.MonsterControlled)
+        {
+            return;
+        }
+
+        if (monsterStomp == null)
+        {
+            monsterStomp = FindFirstObjectByType<MonsterStompAbility>();
+        }
+
+        if (monsterStomp != null)
+        {
+            monsterStomp.CastStomp();
         }
     }
 }
