@@ -1064,7 +1064,7 @@ GameObject:
   - component: {fileID: 164778728}
   - component: {fileID: 164778730}
   - component: {fileID: 164778729}
-  m_Layer: 5
+  m_Layer: 13
   m_Name: ManaText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1343,7 +1343,7 @@ GameObject:
   - component: {fileID: 1946147075}
   - component: {fileID: 1946147076}
   - component: {fileID: 1946147072}
-  m_Layer: 5
+  m_Layer: 14
   m_Name: ManaBar_Fill
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2210,7 +2210,7 @@ GameObject:
   - component: {fileID: 403637919}
   - component: {fileID: 403637921}
   - component: {fileID: 403637920}
-  m_Layer: 5
+  m_Layer: 13
   m_Name: ManaBar_Background
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4494,6 +4494,12 @@ MonoBehaviour:
   obstacleLayers:
     serializedVersion: 2
     m_Bits: 4168
+  pathBlockerLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  landingBlockerLayers:
+    serializedVersion: 2
+    m_Bits: 0
   hazardLayers:
     serializedVersion: 2
     m_Bits: 2304
@@ -4627,6 +4633,37 @@ MonoBehaviour:
   dropKey: 21
   bootsLocalOffset: {x: 0, y: -0.8, z: 0.2}
   showDebugLogs: 1
+--- !u!114 &637681184
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 637681156}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d9c2173d5d64b87afae3b0ad2ff2f6a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SurvivorSpiritBoltAbility
+  projectilePrefab: {fileID: 6184368784119664090, guid: 9b1efd4546ada0d4284bbf33ca6b1fe6, type: 3}
+  firePoint: {fileID: 8921644869013134311, guid: 7d33f03849c24d645b91d1ecf3c1f904, type: 3}
+  spawnOffset: {x: 0, y: 1, z: 0.8}
+  projectileSpeed: 10
+  damage: 8
+  knockbackDistance: 2
+  closeRangeHitRadius: 1.2
+  closeRangeForwardOffset: 1
+  cooldown: 10
+  projectileLifetime: 3
+  aimCamera: {fileID: 330585545}
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 512
+  aimLine: {fileID: 0}
+  aimLineLength: 8
+  abilityDisplayName: Spirit Bolt
+  manaCost: 4
+  cooldownButton: {fileID: 741436847}
 --- !u!1 &678400649
 GameObject:
   m_ObjectHideFlags: 0
@@ -4751,7 +4788,7 @@ GameObject:
   - component: {fileID: 738121899}
   - component: {fileID: 738121901}
   - component: {fileID: 738121900}
-  m_Layer: 5
+  m_Layer: 13
   m_Name: HPText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4892,6 +4929,7 @@ GameObject:
   - component: {fileID: 741436849}
   - component: {fileID: 741436848}
   - component: {fileID: 741436847}
+  - component: {fileID: 741436853}
   m_Layer: 0
   m_Name: Spirit Bolt
   m_TagString: Untagged
@@ -5034,19 +5072,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 741436851}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 637681174}
-        m_TargetAssemblyTypeName: SurvivorSpiritBoltAbility, Assembly-CSharp
-        m_MethodName: CastSpiritBolt
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &741436851
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5085,6 +5111,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 741436845}
   m_CullTransparentMesh: 1
+--- !u!114 &741436853
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 741436845}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 439274acaa8787840ae5fa12dcc9e4aa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HoldAimAbilityButton
+  spiritBoltAbility: {fileID: 637681174}
 --- !u!1 &757841856
 GameObject:
   m_ObjectHideFlags: 0
@@ -5396,7 +5435,7 @@ GameObject:
   - component: {fileID: 841754878}
   - component: {fileID: 841754880}
   - component: {fileID: 841754879}
-  m_Layer: 5
+  m_Layer: 13
   m_Name: ManaBar_Fill
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5585,7 +5624,7 @@ GameObject:
   - component: {fileID: 866867021}
   - component: {fileID: 866867023}
   - component: {fileID: 866867022}
-  m_Layer: 5
+  m_Layer: 14
   m_Name: HPText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -6008,7 +6047,7 @@ GameObject:
   - component: {fileID: 879210930}
   - component: {fileID: 879210932}
   - component: {fileID: 879210931}
-  m_Layer: 5
+  m_Layer: 14
   m_Name: ManaBar_Background
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -6085,7 +6124,7 @@ GameObject:
   - component: {fileID: 1946147073}
   - component: {fileID: 1946147074}
   - component: {fileID: 1946147071}
-  m_Layer: 5
+  m_Layer: 14
   m_Name: ManaText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -6836,7 +6875,7 @@ GameObject:
   - component: {fileID: 966300762}
   - component: {fileID: 966300761}
   - component: {fileID: 966300765}
-  m_Layer: 5
+  m_Layer: 13
   m_Name: MonsterHPBarCanvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7310,7 +7349,7 @@ GameObject:
   - component: {fileID: 1020778652}
   - component: {fileID: 1020778654}
   - component: {fileID: 1020778653}
-  m_Layer: 5
+  m_Layer: 13
   m_Name: HPBar_Background
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -10153,7 +10192,7 @@ GameObject:
   - component: {fileID: 1458796741}
   - component: {fileID: 1458796743}
   - component: {fileID: 1458796742}
-  m_Layer: 5
+  m_Layer: 14
   m_Name: HPBar_Background
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -11709,7 +11748,7 @@ GameObject:
   - component: {fileID: 1766467992}
   - component: {fileID: 1766467993}
   - component: {fileID: 966300758}
-  m_Layer: 5
+  m_Layer: 13
   m_Name: HPBar_Fill
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -11966,7 +12005,7 @@ GameObject:
   - component: {fileID: 1858986524}
   - component: {fileID: 1858986526}
   - component: {fileID: 1858986525}
-  m_Layer: 5
+  m_Layer: 14
   m_Name: HPBar_Fill
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -12795,7 +12834,7 @@ GameObject:
   - component: {fileID: 1948397543}
   - component: {fileID: 1948397535}
   - component: {fileID: 1948397544}
-  m_Layer: 5
+  m_Layer: 14
   m_Name: SurvivorHPBarCanvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -14344,7 +14383,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2112672050}
   - component: {fileID: 2112672051}
-  m_Layer: 0
+  m_Layer: 14
   m_Name: AimLine
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -14907,6 +14946,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Survivor
       objectReference: {fileID: 0}
+    - target: {fileID: 1935288733120376740, guid: 3d0c97f0a07bcc2438154cc20a88e933, type: 3}
+      propertyPath: m_Layer
+      value: 14
+      objectReference: {fileID: 0}
     - target: {fileID: 6225156878595133048, guid: 3d0c97f0a07bcc2438154cc20a88e933, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -14979,6 +15022,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1935288733120376740, guid: 3d0c97f0a07bcc2438154cc20a88e933, type: 3}
       insertIndex: -1
       addedObject: {fileID: 637681183}
+    - targetCorrespondingSourceObject: {fileID: 1935288733120376740, guid: 3d0c97f0a07bcc2438154cc20a88e933, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 637681184}
   m_SourcePrefab: {fileID: 100100000, guid: 3d0c97f0a07bcc2438154cc20a88e933, type: 3}
 --- !u!1001 &8409562036592895256
 PrefabInstance:
@@ -15072,6 +15118,10 @@ PrefabInstance:
     - target: {fileID: 1901775035134909915, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
       propertyPath: m_Name
       value: Monster
+      objectReference: {fileID: 0}
+    - target: {fileID: 1901775035134909915, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
+      propertyPath: m_Layer
+      value: 13
       objectReference: {fileID: 0}
     - target: {fileID: 3695475764972523763, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
       propertyPath: moveSpeed

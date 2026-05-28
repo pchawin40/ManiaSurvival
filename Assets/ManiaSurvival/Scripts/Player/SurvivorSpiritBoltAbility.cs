@@ -34,6 +34,9 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
     private float nextCastTime;
     private bool isAiming;
     private Vector3 currentAimDirection = Vector3.forward;
+    private bool isAimHeldByButton;
+    private bool hasAimPointerScreenPosition;
+    private Vector2 aimPointerScreenPosition;
 
     private void Awake()
     {
@@ -74,7 +77,7 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
                 return;
             }
 
-            if (Mouse.current.leftButton.wasPressedThisFrame)
+            if (!isAimHeldByButton && Mouse.current.leftButton.wasPressedThisFrame)
             {
                 FireAimedSpiritBolt();
                 return;
@@ -135,9 +138,38 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
         }
 
         isAiming = true;
+        currentAimDirection = Vector3.zero;
         SetAimLineVisible(true);
         UpdateAimPreview();
         Debug.Log("aiming started");
+    }
+
+    // Mobile/UI hold support: call on pointer down.
+    public void OnSpiritBoltButtonDown()
+    {
+        isAimHeldByButton = true;
+        BeginAimSpiritBolt();
+    }
+
+    // Mobile/UI drag support: pass pointer screen position from UI.
+    public void OnSpiritBoltButtonDrag(Vector2 screenPosition)
+    {
+        hasAimPointerScreenPosition = true;
+        aimPointerScreenPosition = screenPosition;
+    }
+
+    // Mobile/UI hold support: call on pointer up.
+    public void OnSpiritBoltButtonUp()
+    {
+        bool wasAiming = isAiming;
+        isAimHeldByButton = false;
+
+        if (!wasAiming)
+        {
+            return;
+        }
+
+        FireAimedSpiritBoltFromButton();
     }
 
     public void CastSpiritBolt()
@@ -152,8 +184,7 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
             return;
         }
 
-        isAiming = false;
-        SetAimLineVisible(false);
+        EndAimingState();
 
         if (currentAimDirection.sqrMagnitude <= 0.001f)
         {
@@ -169,6 +200,11 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
         {
             Debug.Log("aiming canceled");
         }
+    }
+
+    public void FireAimedSpiritBoltFromButton()
+    {
+        FireAimedSpiritBolt();
     }
 
     private bool FireSpiritBolt(Vector3 castDirection, bool aimedFire)
@@ -333,7 +369,25 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
             return;
         }
 
-        Ray ray = aimCamera.ScreenPointToRay(Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero);
+        bool hasScreenPoint = TryGetAimScreenPoint(out Vector2 screenPoint);
+        if (!hasScreenPoint)
+        {
+            // Safe fallback when no screen pointer exists.
+            Vector3 fallbackDirection = transform.forward;
+            fallbackDirection.y = 0f;
+            if (fallbackDirection.sqrMagnitude <= 0.001f)
+            {
+                currentAimDirection = Vector3.zero;
+                SetAimLineVisible(false);
+                return;
+            }
+
+            currentAimDirection = fallbackDirection.normalized;
+            DrawAimLine(currentAimDirection, aimLineLength);
+            return;
+        }
+
+        Ray ray = aimCamera.ScreenPointToRay(screenPoint);
         if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, groundMask, QueryTriggerInteraction.Ignore))
         {
             currentAimDirection = Vector3.zero;
@@ -354,16 +408,8 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
         }
 
         currentAimDirection = flatDirection.normalized;
-
-        if (aimLine != null)
-        {
-            aimLine.useWorldSpace = true;
-            aimLine.enabled = true;
-            aimLine.positionCount = 2;
-            aimLine.SetPosition(0, startPosition);
-            float lineDistance = Mathf.Min(Mathf.Max(0.01f, aimLineLength), Vector3.Distance(startPosition, hit.point));
-            aimLine.SetPosition(1, startPosition + currentAimDirection * lineDistance);
-        }
+        float lineDistance = Mathf.Min(Mathf.Max(0.01f, aimLineLength), Vector3.Distance(startPosition, hit.point));
+        DrawAimLine(currentAimDirection, lineDistance);
     }
 
     private void CancelAiming()
@@ -373,9 +419,8 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
             return;
         }
 
-        isAiming = false;
+        EndAimingState();
         currentAimDirection = Vector3.forward;
-        SetAimLineVisible(false);
         Debug.Log("aiming canceled");
     }
 
@@ -390,6 +435,47 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
                 aimLine.positionCount = 0;
             }
         }
+    }
+
+    private bool TryGetAimScreenPoint(out Vector2 screenPoint)
+    {
+        if (hasAimPointerScreenPosition)
+        {
+            screenPoint = aimPointerScreenPosition;
+            return true;
+        }
+
+        if (Mouse.current != null)
+        {
+            screenPoint = Mouse.current.position.ReadValue();
+            return true;
+        }
+
+        screenPoint = Vector2.zero;
+        return false;
+    }
+
+    private void DrawAimLine(Vector3 direction, float distance)
+    {
+        if (aimLine == null)
+        {
+            return;
+        }
+
+        Vector3 startPosition = GetSpawnPosition();
+        aimLine.useWorldSpace = true;
+        aimLine.enabled = true;
+        aimLine.positionCount = 2;
+        aimLine.SetPosition(0, startPosition);
+        aimLine.SetPosition(1, startPosition + direction.normalized * Mathf.Max(0.01f, distance));
+    }
+
+    private void EndAimingState()
+    {
+        isAiming = false;
+        isAimHeldByButton = false;
+        hasAimPointerScreenPosition = false;
+        SetAimLineVisible(false);
     }
 
     private void ApplyKnockback(UnitHealth targetHealth, Vector3 direction)
