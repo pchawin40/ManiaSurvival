@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 [RequireComponent(typeof(UnitHealth))]
 public class MonsterAbilityController : MonoBehaviour
@@ -18,6 +19,9 @@ public class MonsterAbilityController : MonoBehaviour
     [Header("Roar UI")]
     [Tooltip("Label shown on the Roar ability button. Change per predator type.")]
     public string roarDisplayName = "Roar";
+    [Tooltip("Assign the Button component on the Roar HUD button. It will grey out while on cooldown.")]
+    public Button roarButton;
+    [Tooltip("Optional: assign if the button also has an AbilityCooldownButton component for the countdown display.")]
     public AbilityCooldownButton roarCooldownButton;
 
     [Header("Leap")]
@@ -35,6 +39,9 @@ public class MonsterAbilityController : MonoBehaviour
     [Header("Leap UI")]
     [Tooltip("Label shown on the Leap ability button. Change per predator type.")]
     public string leapDisplayName = "Leap";
+    [Tooltip("Assign the Button component on the Leap HUD button. It will grey out while on cooldown.")]
+    public Button leapButton;
+    [Tooltip("Optional: assign if the button also has an AbilityCooldownButton component for the countdown display.")]
     public AbilityCooldownButton leapCooldownButton;
 
     [Header("Input")]
@@ -116,6 +123,28 @@ public class MonsterAbilityController : MonoBehaviour
         if (leapEnabled && leapKey != Key.None && Keyboard.current[leapKey].wasPressedThisFrame)
         {
             TryUseLeap();
+        }
+
+        UpdateButtonVisuals();
+    }
+
+    private void UpdateButtonVisuals()
+    {
+        bool roarReady = Time.time >= nextRoarTime
+            && (roarCooldownButton == null || !roarCooldownButton.IsCoolingDown);
+
+        bool leapReady = !isLeaping
+            && Time.time >= nextLeapTime
+            && (leapCooldownButton == null || !leapCooldownButton.IsCoolingDown);
+
+        if (roarButton != null)
+        {
+            roarButton.interactable = roarReady;
+        }
+
+        if (leapButton != null)
+        {
+            leapButton.interactable = leapReady;
         }
     }
 
