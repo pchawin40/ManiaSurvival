@@ -17,6 +17,7 @@ public class LocalRoleController : MonoBehaviour
     public MonsterPlayerMovement monsterMovement;
     public MonsterAI monsterAI;
     public MonsterAttack monsterAttack;
+    public MonsterAbilityController monsterAbilityController;
     public MonsterRoarAbility monsterRoar;
     public MonsterStompAbility monsterStomp;
     public SoulwoodAvatarController soulwoodAvatarController;
@@ -163,6 +164,11 @@ public class LocalRoleController : MonoBehaviour
             monsterAttack = FindFirstObjectByType<MonsterAttack>();
         }
 
+        if (monsterAbilityController == null)
+        {
+            monsterAbilityController = FindFirstObjectByType<MonsterAbilityController>();
+        }
+
         if (monsterRoar == null)
         {
             monsterRoar = FindFirstObjectByType<MonsterRoarAbility>();
@@ -248,6 +254,17 @@ public class LocalRoleController : MonoBehaviour
     {
         if (controlMode != PlayerControlMode.MonsterControlled)
         {
+            return;
+        }
+
+        if (monsterAbilityController == null)
+        {
+            monsterAbilityController = FindFirstObjectByType<MonsterAbilityController>();
+        }
+
+        if (monsterAbilityController != null)
+        {
+            monsterAbilityController.TryUseRoar();
             return;
         }
 

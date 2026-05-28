@@ -27,6 +27,11 @@ public class MonsterPlayerMovement : MonoBehaviour
 
     private void Update()
     {
+        if (ManiaGameManager.Instance != null && !ManiaGameManager.Instance.IsPlaying)
+        {
+            return;
+        }
+
         Vector2 input = GetMoveInput();
         Vector3 moveDirection = BuildWorldDirection(input);
 

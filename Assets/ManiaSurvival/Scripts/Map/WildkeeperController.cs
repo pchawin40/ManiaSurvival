@@ -27,6 +27,9 @@ public class WildkeeperController : MonoBehaviour
     [Header("Debug")]
     public bool enableDebugLogs = true;
 
+    [Header("Game Manager")]
+    public ManiaGameManager gameManager;
+
     private enum WildkeeperState
     {
         Waiting,
@@ -40,14 +43,39 @@ public class WildkeeperController : MonoBehaviour
 
     private void Start()
     {
+        if (gameManager == null)
+        {
+            gameManager = ManiaGameManager.Instance;
+        }
+
+        if (gameManager == null)
+        {
+            gameManager = FindFirstObjectByType<ManiaGameManager>();
+        }
+
         StartWaiting();
         ScheduleNextTreeSpawn();
     }
 
     private void Update()
     {
+        if (!IsGameplayActive())
+        {
+            return;
+        }
+
         UpdateMovement();
         UpdateTreeSpawning();
+    }
+
+    private bool IsGameplayActive()
+    {
+        if (gameManager == null)
+        {
+            gameManager = ManiaGameManager.Instance;
+        }
+
+        return gameManager != null && gameManager.IsPlaying;
     }
 
     private void UpdateMovement()

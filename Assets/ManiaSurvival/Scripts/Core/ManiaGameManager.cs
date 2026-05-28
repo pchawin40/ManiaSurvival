@@ -15,7 +15,12 @@ public class ManiaGameManager : MonoBehaviour
 
     [Header("Round")]
     public float roundDuration = 180f;
-    public bool startOnAwake = true;
+    [Tooltip("If true, the round starts immediately on scene load. Leave false so players must click Start first.")]
+    public bool startOnAwake = false;
+
+    [Header("Match Start")]
+    [Tooltip("How many players must click Start before the round begins. Use 1 for solo testing.")]
+    public int playersRequiredToStart = 1;
 
     [Header("Scene References")]
     public List<UnitHealth> survivors = new List<UnitHealth>();
@@ -27,6 +32,9 @@ public class ManiaGameManager : MonoBehaviour
     public ManiaGameState State { get; private set; } = ManiaGameState.WaitingToStart;
     public float TimeRemaining { get; private set; }
     public int MonsterKills { get; private set; }
+    public int PlayersReadyCount { get; private set; }
+    public int PlayersRequiredToStart => Mathf.Max(1, playersRequiredToStart);
+    public bool IsPlaying => State == ManiaGameState.Playing;
 
     public int AliveSurvivorCount
     {
@@ -106,12 +114,59 @@ public class ManiaGameManager : MonoBehaviour
         }
     }
 
+    public void ReturnToWaitingScreen()
+    {
+        RefreshSurvivorList();
+        TimeRemaining = roundDuration;
+        MonsterKills = 0;
+        PlayersReadyCount = 0;
+
+        for (int i = 0; i < survivors.Count; i++)
+        {
+            if (survivors[i] != null)
+            {
+                survivors[i].ResetHealth();
+            }
+        }
+
+        ChangeState(ManiaGameState.WaitingToStart);
+    }
+
+    public bool TryRegisterLocalPlayerReady()
+    {
+        if (State != ManiaGameState.WaitingToStart)
+        {
+            return false;
+        }
+
+        PlayersReadyCount++;
+
+        if (logStateChanges)
+        {
+            Debug.Log("Player ready: " + PlayersReadyCount + " / " + PlayersRequiredToStart);
+        }
+
+        if (PlayersReadyCount < PlayersRequiredToStart)
+        {
+            if (gameUI != null)
+            {
+                gameUI.Refresh(this);
+            }
+
+            return false;
+        }
+
+        BeginRound();
+        return true;
+    }
+
     public void BeginRound()
     {
         RefreshSurvivorList();
 
         TimeRemaining = roundDuration;
         MonsterKills = 0;
+        PlayersReadyCount = 0;
 
         for (int i = 0; i < survivors.Count; i++)
         {
@@ -184,6 +239,11 @@ public class ManiaGameManager : MonoBehaviour
     private void ChangeState(ManiaGameState newState)
     {
         State = newState;
+
+        if (newState == ManiaGameState.WaitingToStart)
+        {
+            PlayersReadyCount = 0;
+        }
 
         if (logStateChanges)
         {

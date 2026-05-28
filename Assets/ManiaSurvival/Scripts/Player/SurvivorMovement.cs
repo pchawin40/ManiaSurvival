@@ -44,6 +44,9 @@ public class SurvivorMovement : MonoBehaviour
 
     private float speedBoostMultiplier = 1f;
     private Coroutine speedBoostRoutine;
+    private float temporarySpeedMultiplier = 1f;
+    private float temporarySpeedEffectEndTime;
+    private Coroutine temporarySpeedEffectRoutine;
 
     private void Awake()
     {
@@ -61,6 +64,12 @@ public class SurvivorMovement : MonoBehaviour
         }
 
         if (health != null && health.IsDead)
+        {
+            IsSprinting = false;
+            return;
+        }
+
+        if (ManiaGameManager.Instance != null && !ManiaGameManager.Instance.IsPlaying)
         {
             IsSprinting = false;
             return;
@@ -85,7 +94,7 @@ public class SurvivorMovement : MonoBehaviour
         IsSprinting = wantsSprint && input.sqrMagnitude > 0.01f && CurrentStamina > minimumSprintStamina;
 
         float baseMoveSpeed = IsSprinting ? sprintSpeed : walkSpeed;
-        float moveSpeed = baseMoveSpeed * speedBoostMultiplier;
+        float moveSpeed = baseMoveSpeed * speedBoostMultiplier * temporarySpeedMultiplier;
 
         if (IsSprinting)
         {
@@ -236,6 +245,37 @@ public class SurvivorMovement : MonoBehaviour
         speedBoostRoutine = StartCoroutine(SpeedBoostRoutine(multiplier, duration));
     }
 
+    public void ApplyTemporarySpeedMultiplier(float multiplier, float duration)
+    {
+        float clampedMultiplier = Mathf.Clamp(multiplier, 0.1f, 2f);
+        float clampedDuration = Mathf.Max(0f, duration);
+
+        if (clampedDuration <= 0f)
+        {
+            return;
+        }
+
+        bool alreadySlowed = Time.time < temporarySpeedEffectEndTime;
+        if (!alreadySlowed)
+        {
+            temporarySpeedMultiplier = clampedMultiplier;
+        }
+        else
+        {
+            // Keep the stronger slow (smaller multiplier), never stack multiplicatively.
+            temporarySpeedMultiplier = Mathf.Min(temporarySpeedMultiplier, clampedMultiplier);
+        }
+
+        temporarySpeedEffectEndTime = Mathf.Max(temporarySpeedEffectEndTime, Time.time + clampedDuration);
+
+        if (temporarySpeedEffectRoutine != null)
+        {
+            StopCoroutine(temporarySpeedEffectRoutine);
+        }
+
+        temporarySpeedEffectRoutine = StartCoroutine(TemporarySpeedEffectRoutine());
+    }
+
     private System.Collections.IEnumerator SpeedBoostRoutine(float multiplier, float duration)
     {
         speedBoostMultiplier = Mathf.Max(1f, multiplier);
@@ -248,5 +288,19 @@ public class SurvivorMovement : MonoBehaviour
         speedBoostRoutine = null;
 
         Debug.Log("Speed boost ended");
+    }
+
+    private System.Collections.IEnumerator TemporarySpeedEffectRoutine()
+    {
+        while (Time.time < temporarySpeedEffectEndTime)
+        {
+            yield return null;
+        }
+
+        temporarySpeedMultiplier = 1f;
+        temporarySpeedEffectRoutine = null;
+        temporarySpeedEffectEndTime = 0f;
+
+        Debug.Log("Temporary movement slow ended");
     }
 }

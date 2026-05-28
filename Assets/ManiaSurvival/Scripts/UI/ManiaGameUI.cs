@@ -686,7 +686,16 @@ public class ManiaGameUI : MonoBehaviour
 
         if (gameManager != null)
         {
-            gameManager.BeginRound();
+            if (gameManager.State != ManiaGameState.WaitingToStart)
+            {
+                gameManager.ReturnToWaitingScreen();
+            }
+
+            if (!gameManager.TryRegisterLocalPlayerReady())
+            {
+                Debug.Log("Waiting for other players to click Start...");
+                return;
+            }
         }
 
         if (mode == PlayerControlMode.SurvivorControlled)
