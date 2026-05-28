@@ -9147,7 +9147,7 @@ MonoBehaviour:
   cooldownText: {fileID: 1300922273}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
-  abilityName: 
+  abilityName: Leap
   manaCost: 0
   manaCostLabelFormat: '{0}
 
@@ -9243,9 +9243,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 8924335234456584562}
-        m_TargetAssemblyTypeName: MonsterStompAbility, Assembly-CSharp
-        m_MethodName: CastStomp
+      - m_Target: {fileID: 8924335234456584568}
+        m_TargetAssemblyTypeName: MonsterAbilityController, Assembly-CSharp
+        m_MethodName: TryUseLeap
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -9395,7 +9395,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 
+  m_text: Leap
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -13798,7 +13798,7 @@ MonoBehaviour:
   cooldownText: {fileID: 1741807758}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
-  abilityName: 
+  abilityName: Roar
   manaCost: 0
   manaCostLabelFormat: '{0}
 
@@ -14655,6 +14655,13 @@ MonoBehaviour:
   spawnBlockerMask:
     serializedVersion: 2
     m_Bits: 0
+  groundLayerMask:
+    serializedVersion: 2
+    m_Bits: 0
+  groundRaycastStartHeight: 15
+  hazardLayerMask:
+    serializedVersion: 2
+    m_Bits: 0
   enableDebugLogs: 1
   gameManager: {fileID: 0}
 --- !u!1 &2140503040
@@ -15363,8 +15370,19 @@ MonoBehaviour:
   - Survivor
   - Camper
   - Player
+  roarDisplayName: Roar
+  roarCooldownButton: {fileID: 0}
+  leapEnabled: 1
+  leapDistance: 6
+  leapDuration: 0.22
+  leapCooldown: 10
+  leapLandingRadius: 1.75
+  leapDamage: 20
+  leapDisplayName: Leap
+  leapCooldownButton: {fileID: 0}
   keyboardInputEnabled: 1
   roarKey: 32
+  leapKey: 20
   requireMonsterControlled: 1
   localRoleController: {fileID: 0}
   gameManager: {fileID: 0}
