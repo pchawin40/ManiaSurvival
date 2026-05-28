@@ -6,8 +6,16 @@ using UnityEngine;
 public class HellPitHazard : MonoBehaviour
 {
     [Header("Damage")]
+    [Tooltip("If true, any eligible unit that touches the HellPit is killed instantly on contact. " +
+             "Recommended for pits that represent a bottomless drop.")]
+    public bool instantKill = true;
+
+    [Tooltip("Fallback damage-per-second applied while inside the pit (used when instantKill is false).")]
     public float survivorDamagePerSecond = 15f;
+
+    [Tooltip("Fallback damage-per-second applied to the monster while inside the pit (used when instantKill is false).")]
     public float monsterDamagePerSecond = 80f;
+
     public float tickInterval = 0.25f;
     public bool instantKillMonster = false;
     public bool destroyOnMonsterDeath = false;
@@ -157,7 +165,13 @@ public class HellPitHazard : MonoBehaviour
         if (occupants.Add(unitHealth))
         {
             tickTimers[unitHealth] = 0f;
-            Debug.Log("unit entered HellPit: " + unitHealth.name);
+            Debug.Log("[HellPit] " + unitHealth.name + " fell into HellPit.");
+
+            if (instantKill)
+            {
+                // Deal enough damage to guarantee death regardless of current HP.
+                unitHealth.TakeDamage(unitHealth.maxHealth * 2 + 1, gameObject);
+            }
         }
     }
 

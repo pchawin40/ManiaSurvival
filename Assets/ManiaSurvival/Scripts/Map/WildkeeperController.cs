@@ -1,9 +1,14 @@
 using UnityEngine;
 
 [DisallowMultipleComponent]
+[RequireComponent(typeof(CharacterController))]
 public class WildkeeperController : MonoBehaviour
 {
     private const float unitExclusionRadius = 2.5f;
+
+    // Maximum seconds the NPC spends trying to reach a target before
+    // giving up and picking a new one (prevents permanent wall-sticking).
+    private const float maxMoveTimeout = 8f;
 
     [Header("Movement")]
     public float moveSpeed = 2f;
@@ -18,20 +23,30 @@ public class WildkeeperController : MonoBehaviour
     public int maxTrees = 20;
     public float treeSpawnIntervalMin = 8f;
     public float treeSpawnIntervalMax = 15f;
-    public float treeSpawnRadius = 8f;
     public float minTreeSpacing = 2f;
-    [Tooltip("Fallback Y used only when groundLayerMask is not assigned.")]
-    public float treeSpawnHeight = 0f;
     public int maxSpawnAttempts = 20;
-    public LayerMask spawnBlockerMask;
 
-    [Header("Ground Raycast")]
-    [Tooltip("Layers that count as valid ground. Assign your terrain/ground layer here. If empty, falls back to treeSpawnHeight.")]
+    [Header("Tree Patch")]
+    [Tooltip("Minimum trees spawned per patch attempt.")]
+    public int treePatchMinCount = 4;
+    [Tooltip("Maximum trees spawned per patch attempt.")]
+    public int treePatchMaxCount = 6;
+    [Tooltip("Radius within which individual trees scatter from the patch centre.")]
+    public float treePatchRadius = 3f;
+
+    [Header("Spawn Validation")]
+    [Tooltip("How far inward from the map edge spawn candidates must be.")]
+    public float innerMapMargin = 3f;
+    [Tooltip("Layers that count as valid ground. Leave empty to skip downward raycast.")]
     public LayerMask groundLayerMask;
-    [Tooltip("How far above the candidate XZ point the downward raycast starts.")]
+    [Tooltip("How far above the candidate the downward raycast starts.")]
     public float groundRaycastStartHeight = 15f;
-    [Tooltip("Layers that are hazards (WaterZone, HellPit, etc). Trees will not spawn here.")]
+    [Tooltip("Layers that are hazards (WaterZone, HellPit). Trees will not spawn here.")]
     public LayerMask hazardLayerMask;
+    [Tooltip("Layers for solid blockers (walls). Trees will not spawn inside them.")]
+    public LayerMask spawnBlockerMask;
+    [Tooltip("Radius checked for NoSpawnZone components around each candidate. Set 0 to disable.")]
+    public float noSpawnZoneCheckRadius = 1.5f;
 
     [Header("Debug")]
     public bool enableDebugLogs = true;
@@ -45,13 +60,19 @@ public class WildkeeperController : MonoBehaviour
         Moving
     }
 
+    private CharacterController _cc;
+    private float _verticalVelocity;
+
     private WildkeeperState state = WildkeeperState.Waiting;
     private Vector3 moveTarget;
     private float stateEndTime;
     private float nextTreeSpawnTime;
+    private float moveStartTime;
 
     private void Start()
     {
+        _cc = GetComponent<CharacterController>();
+
         if (gameManager == null)
         {
             gameManager = ManiaGameManager.Instance;
@@ -96,13 +117,28 @@ public class WildkeeperController : MonoBehaviour
                 StartMovingToRandomPoint();
             }
 
+            // Still apply gravity while waiting so the NPC stays on the ground.
+            ApplyGravityOnly();
             return;
         }
 
-        Vector3 currentPosition = transform.position;
-        Vector3 targetPosition = new Vector3(moveTarget.x, currentPosition.y, moveTarget.z);
-        Vector3 toTarget = targetPosition - currentPosition;
-        toTarget.y = 0f;
+        // Timeout: if the NPC has been trying to reach this target too long
+        // (e.g. blocked by a wall on all sides), give up and pick a new destination.
+        if (Time.time - moveStartTime > maxMoveTimeout)
+        {
+            if (enableDebugLogs)
+            {
+                Debug.Log("[Wildkeeper] Move timed out — picking new target.");
+            }
+
+            StartWaiting();
+            return;
+        }
+
+        Vector3 toTarget = new Vector3(
+            moveTarget.x - transform.position.x,
+            0f,
+            moveTarget.z - transform.position.z);
 
         if (toTarget.sqrMagnitude <= 0.04f)
         {
@@ -110,13 +146,43 @@ public class WildkeeperController : MonoBehaviour
             return;
         }
 
-        Vector3 moveStep = toTarget.normalized * moveSpeed * Time.deltaTime;
-        transform.position = Vector3.MoveTowards(currentPosition, targetPosition, moveStep.magnitude);
+        // Gravity: stay grounded; apply downward acceleration when airborne.
+        if (_cc.isGrounded)
+        {
+            _verticalVelocity = -0.5f; // small constant push keeps isGrounded reliable
+        }
+        else
+        {
+            _verticalVelocity += Physics.gravity.y * Time.deltaTime;
+        }
+
+        Vector3 horizontal = toTarget.normalized * moveSpeed;
+        Vector3 motion = new Vector3(horizontal.x, _verticalVelocity, horizontal.z) * Time.deltaTime;
+        _cc.Move(motion);
 
         if (toTarget.sqrMagnitude > 0.001f)
         {
             transform.rotation = Quaternion.LookRotation(toTarget.normalized);
         }
+    }
+
+    private void ApplyGravityOnly()
+    {
+        if (_cc == null)
+        {
+            return;
+        }
+
+        if (_cc.isGrounded)
+        {
+            _verticalVelocity = -0.5f;
+        }
+        else
+        {
+            _verticalVelocity += Physics.gravity.y * Time.deltaTime;
+        }
+
+        _cc.Move(new Vector3(0f, _verticalVelocity * Time.deltaTime, 0f));
     }
 
     private void UpdateTreeSpawning()
@@ -152,6 +218,7 @@ public class WildkeeperController : MonoBehaviour
     {
         state = WildkeeperState.Moving;
         moveTarget = GetRandomPointInMap();
+        moveStartTime = Time.time;
 
         if (enableDebugLogs)
         {
@@ -182,51 +249,67 @@ public class WildkeeperController : MonoBehaviour
         NeutralTree[] existingTrees = FindObjectsByType<NeutralTree>(FindObjectsSortMode.None);
         if (existingTrees.Length >= maxTrees)
         {
-            LogTreeSkip("max trees reached");
+            LogTreeSkip("max trees reached (" + existingTrees.Length + "/" + maxTrees + ")");
             return;
         }
 
-        for (int attempt = 0; attempt < Mathf.Max(1, maxSpawnAttempts); attempt++)
+        MapSpawnSettings settings = BuildSpawnSettings();
+
+        // Find a valid patch centre well inside the map.
+        if (!MapSpawnUtility.TryGetValidPosition(settings, out Vector3 patchCenter))
         {
-            Vector3 candidate = GetRandomTreeSpawnPoint();
+            LogTreeSkip("no valid patch centre found — check groundLayerMask and innerMapMargin");
+            return;
+        }
 
-            if (enableDebugLogs)
+        int targetCount = Random.Range(
+            Mathf.Max(1, treePatchMinCount),
+            Mathf.Max(1, treePatchMaxCount) + 1);
+
+        int spawned = 0;
+        // Track positions we already placed this batch so trees don't stack.
+        Vector3[] batchPositions = new Vector3[targetCount];
+
+        for (int i = 0; i < targetCount; i++)
+        {
+            if (existingTrees.Length + spawned >= maxTrees)
             {
-                Debug.Log("[Wildkeeper] tree spawn candidate XZ: " + candidate);
+                break;
             }
 
-            if (!TryFindGroundPosition(candidate, out Vector3 groundPosition))
+            if (!MapSpawnUtility.TryGetValidPositionNear(patchCenter, treePatchRadius, settings, out Vector3 treePos))
             {
                 if (enableDebugLogs)
                 {
-                    Debug.Log("[Wildkeeper] tree spawn rejected: no ground found below candidate");
+                    Debug.Log("[Wildkeeper] patch tree " + (i + 1) + ": no valid position found, skipping.");
                 }
 
                 continue;
             }
 
-            if (!IsSpawnPointValid(groundPosition, out string failReason))
+            // Reject if too close to an already-existing tree or one placed this batch.
+            if (IsTooCloseToTrees(treePos, existingTrees) || IsTooCloseToBatch(treePos, batchPositions, spawned))
             {
                 if (enableDebugLogs)
                 {
-                    Debug.Log("[Wildkeeper] tree spawn rejected: " + failReason);
+                    Debug.Log("[Wildkeeper] patch tree " + (i + 1) + ": too close to neighbouring tree, skipping.");
                 }
 
                 continue;
             }
 
-            if (enableDebugLogs)
-            {
-                Debug.Log("[Wildkeeper] tree spawned at: " + groundPosition);
-            }
-
-            NeutralTree spawnedTree = Instantiate(treePrefab, groundPosition, Quaternion.identity, treeParent);
+            NeutralTree spawnedTree = Instantiate(treePrefab, treePos, Quaternion.identity, treeParent);
             spawnedTree.name = "NeutralTree_Spawned";
             spawnedTree.SetBlocksMovement(true);
-            return;
+            batchPositions[spawned] = treePos;
+            spawned++;
         }
 
-        LogTreeSkip("no valid tree position found after " + Mathf.Max(1, maxSpawnAttempts) + " attempts");
+        if (enableDebugLogs)
+        {
+            Debug.Log("[Wildkeeper] Tree patch: spawned " + spawned + "/" + targetCount +
+                      " trees near " + patchCenter.ToString("F2"));
+        }
     }
 
     private Vector3 GetRandomPointInMap()
@@ -238,42 +321,55 @@ public class WildkeeperController : MonoBehaviour
         return new Vector3(x, transform.position.y, z);
     }
 
-    private Vector3 GetRandomTreeSpawnPoint()
+    /// <summary>
+    /// Builds a MapSpawnSettings from this component's Inspector fields.
+    /// The patch centre must land inside the map minus innerMapMargin on every side.
+    /// </summary>
+    private MapSpawnSettings BuildSpawnSettings()
     {
-        float angle = Random.Range(0f, Mathf.PI * 2f);
-        float radius = Random.Range(0f, Mathf.Max(0f, treeSpawnRadius));
-        Vector3 offset = new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
-        Vector3 candidate = transform.position + offset;
-        candidate = ClampToMap(candidate);
-        // Y is intentionally left as-is; TryFindGroundPosition will resolve the correct ground Y.
-        return candidate;
+        return new MapSpawnSettings
+        {
+            mapCenter = mapCenter,
+            mapSize = mapSize,
+            innerMargin = innerMapMargin,
+            groundLayerMask = groundLayerMask,
+            groundRaycastStartHeight = groundRaycastStartHeight,
+            hazardLayerMask = hazardLayerMask,
+            blockerLayerMask = spawnBlockerMask,
+            overlapCheckRadius = Mathf.Max(0.25f, minTreeSpacing * 0.5f),
+            minDistanceFromUnits = unitExclusionRadius,
+            maxAttempts = Mathf.Max(1, maxSpawnAttempts),
+            noSpawnZoneCheckRadius = noSpawnZoneCheckRadius,
+            noSpawnFilter = NoSpawnFilter.Trees,
+        };
     }
 
-    /// <summary>
-    /// Shoots a downward ray from above <paramref name="candidate"/> to locate the ground.
-    /// When <see cref="groundLayerMask"/> is assigned the ray must hit that layer.
-    /// Falls back to <see cref="treeSpawnHeight"/> when no mask is configured.
-    /// Returns false (no spawn) when a mask is set but no hit is found.
-    /// </summary>
-    private bool TryFindGroundPosition(Vector3 candidate, out Vector3 groundPosition)
+    private bool IsTooCloseToTrees(Vector3 pos, NeutralTree[] trees)
     {
-        groundPosition = candidate;
-
-        if (groundLayerMask.value == 0)
+        for (int i = 0; i < trees.Length; i++)
         {
-            // No ground mask configured — use the fixed treeSpawnHeight as fallback.
-            groundPosition.y = treeSpawnHeight;
-            return true;
+            if (trees[i] == null)
+            {
+                continue;
+            }
+
+            if (Vector3.Distance(trees[i].transform.position, pos) < minTreeSpacing)
+            {
+                return true;
+            }
         }
 
-        float rayStart = groundRaycastStartHeight > 0f ? groundRaycastStartHeight : 15f;
-        Vector3 origin = new Vector3(candidate.x, candidate.y + rayStart, candidate.z);
-        float maxDist = rayStart + 30f;
+        return false;
+    }
 
-        if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, maxDist, groundLayerMask, QueryTriggerInteraction.Ignore))
+    private bool IsTooCloseToBatch(Vector3 pos, Vector3[] batch, int count)
+    {
+        for (int i = 0; i < count; i++)
         {
-            groundPosition = hit.point;
-            return true;
+            if (Vector3.Distance(batch[i], pos) < minTreeSpacing)
+            {
+                return true;
+            }
         }
 
         return false;
@@ -286,79 +382,6 @@ public class WildkeeperController : MonoBehaviour
         float x = Mathf.Clamp(position.x, mapCenter.x - halfWidth, mapCenter.x + halfWidth);
         float z = Mathf.Clamp(position.z, mapCenter.z - halfLength, mapCenter.z + halfLength);
         return new Vector3(x, position.y, z);
-    }
-
-    private bool IsSpawnPointValid(Vector3 position, out string failReason)
-    {
-        failReason = string.Empty;
-
-        // Reject positions inside hazard volumes (WaterZone, HellPit, etc.).
-        if (hazardLayerMask.value != 0 && Physics.CheckSphere(position, 0.5f, hazardLayerMask, QueryTriggerInteraction.Collide))
-        {
-            failReason = "inside hazard zone";
-            return false;
-        }
-
-        NeutralTree[] existingTrees = FindObjectsByType<NeutralTree>(FindObjectsSortMode.None);
-        for (int i = 0; i < existingTrees.Length; i++)
-        {
-            NeutralTree tree = existingTrees[i];
-            if (tree == null)
-            {
-                continue;
-            }
-
-            if (Vector3.Distance(tree.transform.position, position) < minTreeSpacing)
-            {
-                failReason = "too close to existing tree";
-                return false;
-            }
-        }
-
-        Collider[] nearbyUnits = Physics.OverlapSphere(position, unitExclusionRadius, ~0, QueryTriggerInteraction.Ignore);
-        for (int i = 0; i < nearbyUnits.Length; i++)
-        {
-            UnitHealth unitHealth = nearbyUnits[i].GetComponentInParent<UnitHealth>();
-            if (unitHealth == null || unitHealth.IsDead)
-            {
-                continue;
-            }
-
-            if (unitHealth.CompareTag("Survivor") || unitHealth.CompareTag("Monster"))
-            {
-                failReason = "too close to player/monster";
-                return false;
-            }
-        }
-
-        if (spawnBlockerMask.value != 0)
-        {
-            float solidCheckRadius = Mathf.Max(0.25f, minTreeSpacing * 0.5f);
-            Collider[] solidColliders = Physics.OverlapSphere(position, solidCheckRadius, spawnBlockerMask, QueryTriggerInteraction.Ignore);
-            for (int i = 0; i < solidColliders.Length; i++)
-            {
-                Collider collider = solidColliders[i];
-                if (collider == null || collider.isTrigger)
-                {
-                    continue;
-                }
-
-                if (collider.GetComponentInParent<NeutralTree>() != null)
-                {
-                    continue;
-                }
-
-                if (collider.GetComponentInParent<UnitHealth>() != null)
-                {
-                    continue;
-                }
-
-                failReason = "blocked by " + collider.name;
-                return false;
-            }
-        }
-
-        return true;
     }
 
     private void LogTreeSkip(string reason)
