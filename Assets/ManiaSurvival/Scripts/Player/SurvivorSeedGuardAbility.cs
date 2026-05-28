@@ -9,6 +9,20 @@ public class SurvivorSeedGuardAbility : MonoBehaviour
     public int maxActiveTreants = 2;
     public float cooldown = 20f;
 
+    [Header("Fallback Summon (No Nearby Tree)")]
+    [Tooltip("If true, cast can still succeed by summoning a treant near the survivor when no tree is nearby.")]
+    public bool allowFallbackSummonIfNoTree = true;
+    [Tooltip("How far from the survivor to try placing a fallback treant.")]
+    public float fallbackSummonDistance = 1.8f;
+    [Tooltip("How many candidate points to test for fallback placement.")]
+    public int fallbackPlacementAttempts = 8;
+    [Tooltip("Radius used when checking if fallback placement is clear.")]
+    public float fallbackClearanceRadius = 0.45f;
+    [Tooltip("Solid blockers for fallback placement checks.")]
+    public LayerMask fallbackBlockerLayers = ~0;
+    [Tooltip("Hazard layers for fallback placement checks.")]
+    public LayerMask fallbackHazardLayers;
+
     [Header("Mana")]
     public string abilityDisplayName = "Seed Guard";
     [Min(0)] public int manaCost = 6;
@@ -69,10 +83,22 @@ public class SurvivorSeedGuardAbility : MonoBehaviour
         }
 
         NeutralTree tree = FindNearestTree();
-        if (tree == null)
+
+        Vector3 spawnPosition;
+        Quaternion spawnRotation;
+
+        if (tree != null)
         {
-            Debug.Log("No nearby tree");
-            return;
+            spawnPosition = tree.transform.position;
+            spawnRotation = tree.transform.rotation;
+        }
+        else
+        {
+            if (!allowFallbackSummonIfNoTree || !TryGetFallbackSpawnPosition(out spawnPosition, out spawnRotation))
+            {
+                Debug.Log("No nearby tree");
+                return;
+            }
         }
 
         if (manaCost > 0)
@@ -89,10 +115,10 @@ public class SurvivorSeedGuardAbility : MonoBehaviour
             }
         }
 
-        Vector3 spawnPosition = tree.transform.position;
-        Quaternion spawnRotation = tree.transform.rotation;
-
-        Destroy(tree.gameObject);
+        if (tree != null)
+        {
+            Destroy(tree.gameObject);
+        }
 
         GameObject treantObject = Instantiate(treantPrefab, spawnPosition, spawnRotation);
         TreantMinion treant = treantObject.GetComponent<TreantMinion>();
@@ -155,5 +181,45 @@ public class SurvivorSeedGuardAbility : MonoBehaviour
         }
 
         return activeCount;
+    }
+
+    private bool TryGetFallbackSpawnPosition(out Vector3 spawnPosition, out Quaternion spawnRotation)
+    {
+        spawnPosition = transform.position;
+        spawnRotation = transform.rotation;
+
+        float distance = Mathf.Max(0.5f, fallbackSummonDistance);
+        float clearance = Mathf.Max(0.1f, fallbackClearanceRadius);
+        int attempts = Mathf.Max(1, fallbackPlacementAttempts);
+
+        for (int i = 0; i < attempts; i++)
+        {
+            float t = (float)i / attempts;
+            float angle = t * Mathf.PI * 2f;
+            Vector3 offset = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * distance;
+            Vector3 candidate = transform.position + offset;
+
+            if (fallbackHazardLayers.value != 0 &&
+                Physics.CheckSphere(candidate, clearance, fallbackHazardLayers, QueryTriggerInteraction.Collide))
+            {
+                continue;
+            }
+
+            if (fallbackBlockerLayers.value != 0 &&
+                Physics.CheckSphere(candidate, clearance, fallbackBlockerLayers, QueryTriggerInteraction.Ignore))
+            {
+                continue;
+            }
+
+            spawnPosition = candidate;
+            Vector3 lookDirection = (candidate - transform.position);
+            lookDirection.y = 0f;
+            spawnRotation = lookDirection.sqrMagnitude > 0.001f
+                ? Quaternion.LookRotation(lookDirection.normalized)
+                : transform.rotation;
+            return true;
+        }
+
+        return false;
     }
 }

@@ -3371,6 +3371,81 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 513038988}
   m_CullTransparentMesh: 1
+--- !u!1 &516091005
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 516091006}
+  - component: {fileID: 516091008}
+  - component: {fileID: 516091007}
+  m_Layer: 0
+  m_Name: HeavenRecoveryTrigger
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &516091006
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 516091005}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 607457742}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &516091007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 516091005}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3afd326b9ea56654780775b3594cc7f0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HeavenRecoveryZone
+  survivorTag: Survivor
+  healPerSecond: 10
+  staminaPerSecond: 1.5
+  tickInterval: 0.25
+  showDebugLogs: 1
+--- !u!65 &516091008
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 516091005}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &542943680
 GameObject:
   m_ObjectHideFlags: 0
@@ -3874,6 +3949,7 @@ RectTransform:
   m_Children:
   - {fileID: 2081617075}
   - {fileID: 333940608}
+  - {fileID: 516091006}
   m_Father: {fileID: 1554863088}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -4385,6 +4461,7 @@ MonoBehaviour:
   onDeath:
     m_PersistentCalls:
       m_Calls: []
+  logSurvivorDamage: 1
 --- !u!114 &637681167 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1154864873043892012, guid: 3d0c97f0a07bcc2438154cc20a88e933, type: 3}
@@ -4408,15 +4485,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0d1f2d7e4d5c4dddb3a8a2fb8b5dd8f1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SurvivorBlinkAbility
-  blinkDistance: 5
-  blinkCooldown: 10
+  blinkDistance: 5.5
+  blinkCooldown: 9
   collisionCheckRadius: 0.4
   abilityDisplayName: Blink
   manaCost: 3
   cooldownButton: {fileID: 1543053238}
   obstacleLayers:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 4168
+  hazardLayers:
+    serializedVersion: 2
+    m_Bits: 2304
 --- !u!114 &637681174
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4461,9 +4541,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SurvivorSeedGuardAbility
   treantPrefab: {fileID: 708986611937617645, guid: b895dac05877ae742b3c0470a2d8bc5c, type: 3}
-  treeSearchRadius: 6
-  maxActiveTreants: 2
+  treeSearchRadius: 7
+  maxActiveTreants: 3
   cooldown: 20
+  allowFallbackSummonIfNoTree: 1
+  fallbackSummonDistance: 1.8
+  fallbackPlacementAttempts: 8
+  fallbackClearanceRadius: 0.45
+  fallbackBlockerLayers:
+    serializedVersion: 2
+    m_Bits: 72
+  fallbackHazardLayers:
+    serializedVersion: 2
+    m_Bits: 2320
   abilityDisplayName: Seed Guard
   manaCost: 6
   cooldownButton: {fileID: 2013123244}
@@ -6773,6 +6863,9 @@ MonoBehaviour:
   highHealthColor: {r: 0, g: 1, b: 0, a: 1}
   mediumHealthColor: {r: 1, g: 0.5, b: 0, a: 1}
   lowHealthColor: {r: 1, g: 0, b: 0, a: 1}
+  enableDamageFlash: 1
+  damageFlashDuration: 0.12
+  damageFlashColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &966300762
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12731,6 +12824,7 @@ MonoBehaviour:
   onDeath:
     m_PersistentCalls:
       m_Calls: []
+  logSurvivorDamage: 1
 --- !u!223 &1948397539
 Canvas:
   m_ObjectHideFlags: 0
@@ -12774,6 +12868,9 @@ MonoBehaviour:
   highHealthColor: {r: 0, g: 1, b: 0, a: 1}
   mediumHealthColor: {r: 1, g: 0.5, b: 0, a: 1}
   lowHealthColor: {r: 1, g: 0, b: 0, a: 1}
+  enableDamageFlash: 1
+  damageFlashDuration: 0.12
+  damageFlashColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &1948397541
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12836,6 +12933,7 @@ MonoBehaviour:
   onDeath:
     m_PersistentCalls:
       m_Calls: []
+  logSurvivorDamage: 1
 --- !u!114 &1948397544
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14524,6 +14622,31 @@ MonoBehaviour:
     noSpawnZoneCheckRadius: 1.5
     noSpawnFilter: 0
   enableDebugLogs: 1
+--- !u!143 &2138584740
+CharacterController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2138584729}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Height: 2
+  m_Radius: 0.5
+  m_SlopeLimit: 45
+  m_StepOffset: 0.3
+  m_SkinWidth: 0.08
+  m_MinMoveDistance: 0.001
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &2140503040
 GameObject:
   m_ObjectHideFlags: 0
@@ -14703,6 +14826,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7292674713616853678, guid: 86584f94d53d1e9419dbca7a11e78439, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2138584739}
+    - targetCorrespondingSourceObject: {fileID: 7292674713616853678, guid: 86584f94d53d1e9419dbca7a11e78439, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2138584740}
   m_SourcePrefab: {fileID: 100100000, guid: 86584f94d53d1e9419dbca7a11e78439, type: 3}
 --- !u!1001 &6597087808021532032
 PrefabInstance:
@@ -15047,6 +15173,7 @@ MonoBehaviour:
   onDeath:
     m_PersistentCalls:
       m_Calls: []
+  logSurvivorDamage: 1
 --- !u!114 &8924335234456584558
 MonoBehaviour:
   m_ObjectHideFlags: 0

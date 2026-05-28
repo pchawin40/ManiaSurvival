@@ -4,8 +4,8 @@ using UnityEngine;
 public class SurvivorBlinkAbility : MonoBehaviour
 {
     [Header("Blink")]
-    public float blinkDistance = 5f;
-    public float blinkCooldown = 10f;
+    public float blinkDistance = 5.5f;
+    public float blinkCooldown = 9f;
     public float collisionCheckRadius = 0.4f;
 
     [Header("Mana")]
@@ -17,6 +17,8 @@ public class SurvivorBlinkAbility : MonoBehaviour
 
     [Header("Collision")]
     public LayerMask obstacleLayers = ~0;
+    [Tooltip("Hazard layers like HellPit/Water. Blink destination is rejected if inside these volumes.")]
+    public LayerMask hazardLayers;
 
     private UnitHealth unitHealth;
     private CharacterController characterController;
@@ -149,10 +151,43 @@ public class SurvivorBlinkAbility : MonoBehaviour
             }
 
             destination = origin + blinkDirection * safeDistance;
-            return true;
+            return IsDestinationSafe(destination, radius);
         }
 
         destination = origin + blinkDirection * maxDistance;
+        return IsDestinationSafe(destination, radius);
+    }
+
+    private bool IsDestinationSafe(Vector3 destination, float radius)
+    {
+        if (hazardLayers.value != 0 &&
+            Physics.CheckSphere(destination, radius, hazardLayers, QueryTriggerInteraction.Collide))
+        {
+            return false;
+        }
+
+        if (obstacleLayers.value == 0)
+        {
+            return true;
+        }
+
+        Collider[] hits = Physics.OverlapSphere(destination, radius, obstacleLayers, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider hit = hits[i];
+            if (hit == null)
+            {
+                continue;
+            }
+
+            if (hit.transform == transform || hit.transform.IsChildOf(transform))
+            {
+                continue;
+            }
+
+            return false;
+        }
+
         return true;
     }
 }

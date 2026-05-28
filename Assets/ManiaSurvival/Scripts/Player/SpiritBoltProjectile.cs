@@ -91,7 +91,7 @@ public class SpiritBoltProjectile : MonoBehaviour
         }
 
         UnitHealth targetHealth = hit.collider.GetComponentInParent<UnitHealth>();
-        if (targetHealth == null || targetHealth.IsDead || !targetHealth.CompareTag(targetTag))
+        if (targetHealth == null || targetHealth.IsDead || !IsValidTarget(targetHealth))
         {
             return false;
         }
@@ -107,6 +107,28 @@ public class SpiritBoltProjectile : MonoBehaviour
         Debug.Log("Spirit Bolt hit Monster");
         Destroy(gameObject);
         return true;
+    }
+
+    private bool IsValidTarget(UnitHealth targetHealth)
+    {
+        if (targetHealth == null)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrEmpty(targetTag))
+        {
+            return true;
+        }
+
+        if (targetHealth.CompareTag(targetTag))
+        {
+            return true;
+        }
+
+        // Keep legacy setup compatible: default targetTag is "Monster",
+        // but many maps use "Predator" for the same unit.
+        return targetTag == "Monster" && targetHealth.CompareTag("Predator");
     }
 
     private void ApplyKnockback(UnitHealth targetHealth, Vector3 direction)

@@ -299,7 +299,7 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
                 continue;
             }
 
-            if (!targetHealth.CompareTag("Monster"))
+            if (!IsMonsterTarget(targetHealth))
             {
                 continue;
             }
@@ -316,6 +316,12 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
         }
 
         return false;
+    }
+
+    private bool IsMonsterTarget(UnitHealth targetHealth)
+    {
+        return targetHealth != null
+            && (targetHealth.CompareTag("Monster") || targetHealth.CompareTag("Predator"));
     }
 
     private void UpdateAimPreview()

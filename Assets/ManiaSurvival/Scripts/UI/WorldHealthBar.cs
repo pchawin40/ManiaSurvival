@@ -20,25 +20,66 @@ public class WorldHealthBar : MonoBehaviour
     public Color mediumHealthColor = new Color(1f, 0.5f, 0f); // orange
     public Color lowHealthColor = Color.red;
 
-    void LateUpdate()
+    [Header("Damage Feedback")]
+    [Tooltip("Tiny placeholder flash when this unit takes damage.")]
+    public bool enableDamageFlash = true;
+    [Tooltip("How long the damage flash lasts.")]
+    public float damageFlashDuration = 0.12f;
+    public Color damageFlashColor = Color.white;
+
+    private float damageFlashUntil;
+
+    private void OnEnable()
+    {
+        if (unitHealth != null)
+        {
+            unitHealth.onDamaged.AddListener(OnUnitDamaged);
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (unitHealth != null)
+        {
+            unitHealth.onDamaged.RemoveListener(OnUnitDamaged);
+        }
+    }
+
+    private void LateUpdate()
     {
         if (unitHealth != null)
         {
             float percent = unitHealth.GetHealthPercent();
+            Color baseHealthColor = GetHealthColor(percent);
 
             if (fillImage != null)
             {
                 fillImage.fillAmount = percent;
-                fillImage.color = GetHealthColor(percent);
+                fillImage.color = (enableDamageFlash && Time.time < damageFlashUntil)
+                    ? damageFlashColor
+                    : baseHealthColor;
             }
 
             if (healthText != null)
             {
                 healthText.text = $"{unitHealth.currentHealth} / {unitHealth.maxHealth}";
+                healthText.color = (enableDamageFlash && Time.time < damageFlashUntil)
+                    ? lowHealthColor
+                    : Color.white;
             }
         }
 
         transform.rotation = Quaternion.Euler(60f, 0f, 0f);
+    }
+
+    private void OnUnitDamaged()
+    {
+        if (!enableDamageFlash)
+        {
+            return;
+        }
+
+        damageFlashUntil = Time.time + Mathf.Max(0.01f, damageFlashDuration);
     }
 
     Color GetHealthColor(float percent)

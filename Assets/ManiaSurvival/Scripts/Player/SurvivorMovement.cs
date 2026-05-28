@@ -122,6 +122,16 @@ public class SurvivorMovement : MonoBehaviour
         mobileSprintHeld = isHeld;
     }
 
+    public void RestoreStamina(float amount)
+    {
+        if (amount <= 0f)
+        {
+            return;
+        }
+
+        CurrentStamina = Mathf.Min(maxStamina, CurrentStamina + amount);
+    }
+
     public void TryDodge()
     {
         if (gameObject == null || !gameObject.activeInHierarchy || !enabled || characterController == null || !characterController.enabled)

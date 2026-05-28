@@ -17,6 +17,10 @@ public class UnitHealth : MonoBehaviour
 
     public bool IsDead { get; private set; }
 
+    [Header("Debug")]
+    [Tooltip("Logs a clear damage line for survivors to improve combat readability while testing.")]
+    public bool logSurvivorDamage = true;
+
     void Awake()
     {
         currentHealth = maxHealth;
@@ -28,10 +32,18 @@ public class UnitHealth : MonoBehaviour
         if (IsDead) return;
         if (amount <= 0) return;
 
+        int previousHealth = currentHealth;
         currentHealth -= amount;
         currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
 
         onDamaged?.Invoke();
+
+        if (logSurvivorDamage && CompareTag("Survivor"))
+        {
+            string sourceName = damageSource != null ? damageSource.name : "Unknown";
+            Debug.Log("[SurvivorHit] " + name + " took " + amount + " damage from " + sourceName +
+                      " (" + previousHealth + " -> " + currentHealth + ").");
+        }
 
         if (currentHealth <= 0)
         {
