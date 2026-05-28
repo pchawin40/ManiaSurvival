@@ -8,6 +8,10 @@ public class SurvivorBlinkAbility : MonoBehaviour
     public float blinkCooldown = 10f;
     public float collisionCheckRadius = 0.4f;
 
+    [Header("Mana")]
+    public string abilityDisplayName = "Blink";
+    [Min(0)] public int manaCost = 3;
+
     [Header("UI")]
     public AbilityCooldownButton cooldownButton;
 
@@ -17,6 +21,7 @@ public class SurvivorBlinkAbility : MonoBehaviour
     private UnitHealth unitHealth;
     private CharacterController characterController;
     private SurvivorMovement survivorMovement;
+    private SurvivorMana mana;
     private float nextBlinkTime;
 
     private void Awake()
@@ -24,9 +29,10 @@ public class SurvivorBlinkAbility : MonoBehaviour
         unitHealth = GetComponent<UnitHealth>();
         characterController = GetComponent<CharacterController>();
         survivorMovement = GetComponent<SurvivorMovement>();
-        if (cooldownButton == null)
+        mana = SurvivorMana.EnsureOn(gameObject, manaCost);
+        if (cooldownButton != null)
         {
-            cooldownButton = FindFirstObjectByType<AbilityCooldownButton>();
+            cooldownButton.SetAbilityInfo(abilityDisplayName, manaCost);
         }
     }
 
@@ -66,6 +72,20 @@ public class SurvivorBlinkAbility : MonoBehaviour
         {
             Debug.Log("blink blocked");
             return;
+        }
+
+        if (manaCost > 0)
+        {
+            if (mana == null)
+            {
+                mana = SurvivorMana.EnsureOn(gameObject, manaCost);
+            }
+
+            if (mana == null || !mana.SpendMana(manaCost))
+            {
+                Debug.Log("blink blocked: not enough mana");
+                return;
+            }
         }
 
         if (characterController != null)

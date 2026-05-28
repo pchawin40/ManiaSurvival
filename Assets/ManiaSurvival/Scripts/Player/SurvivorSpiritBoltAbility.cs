@@ -22,10 +22,15 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
     public LineRenderer aimLine;
     public float aimLineLength = 8f;
 
+    [Header("Mana")]
+    public string abilityDisplayName = "Spirit Bolt";
+    [Min(0)] public int manaCost = 4;
+
     [Header("UI")]
     public AbilityCooldownButton cooldownButton;
 
     private UnitHealth unitHealth;
+    private SurvivorMana mana;
     private float nextCastTime;
     private bool isAiming;
     private Vector3 currentAimDirection = Vector3.forward;
@@ -33,15 +38,16 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
     private void Awake()
     {
         unitHealth = GetComponent<UnitHealth>();
+        mana = SurvivorMana.EnsureOn(gameObject, manaCost);
 
         if (aimCamera == null)
         {
             aimCamera = Camera.main;
         }
 
-        if (cooldownButton == null)
+        if (cooldownButton != null)
         {
-            cooldownButton = FindFirstObjectByType<AbilityCooldownButton>();
+            cooldownButton.SetAbilityInfo(abilityDisplayName, manaCost);
         }
 
         SetAimLineVisible(false);
@@ -95,6 +101,20 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
         {
             Debug.Log("Spirit Bolt blocked");
             return;
+        }
+
+        if (manaCost > 0)
+        {
+            if (mana == null)
+            {
+                mana = SurvivorMana.EnsureOn(gameObject, manaCost);
+            }
+
+            if (mana == null || !mana.HasMana(manaCost))
+            {
+                Debug.Log("Spirit Bolt blocked: not enough mana");
+                return;
+            }
         }
 
         if (aimCamera == null)
@@ -186,6 +206,20 @@ public class SurvivorSpiritBoltAbility : MonoBehaviour
         {
             Debug.Log("Spirit Bolt blocked");
             return false;
+        }
+
+        if (manaCost > 0)
+        {
+            if (mana == null)
+            {
+                mana = SurvivorMana.EnsureOn(gameObject, manaCost);
+            }
+
+            if (mana == null || !mana.SpendMana(manaCost))
+            {
+                Debug.Log("Spirit Bolt blocked: not enough mana");
+                return false;
+            }
         }
 
         Debug.Log("close range check");

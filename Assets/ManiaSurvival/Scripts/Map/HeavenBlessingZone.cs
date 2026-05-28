@@ -1,43 +1,180 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class HeavenBlessingZone : MonoBehaviour
 {
+    [Header("Targeting")]
+    [Tooltip("Only objects with this tag are blessed. The rest of the project uses 'Survivor'.")]
+    public string survivorTag = "Survivor";
+
     [Header("Blessing Settings")]
-    public bool giveSpeedBoots = true;
     public bool healHealth = true;
     public bool restoreMana = true;
+    public bool giveSpeedBoots = true;
+
+    [Header("Heal While Inside")]
+    [Tooltip("Health points restored per second while standing inside the zone.")]
+    public int healPerSecond = 10;
+
+    [Header("Mana While Inside")]
+    [Tooltip("Mana points restored per second while standing inside the zone. Heaven default is 6 (vs 1 baseline, vs 2 in Water).")]
+    public int manaPerSecond = 6;
+    [Tooltip("If a survivor has no SurvivorMana, add one automatically on enter.")]
+    public bool autoAddManaComponent = true;
+    [Tooltip("Used when auto-adding a SurvivorMana component.")]
+    public int defaultMaxMana = 100;
+
+    [Header("Speed Boost While Inside")]
+    public float speedMultiplier = 1.5f;
+    [Tooltip("Each refresh of the speed boost lasts this many seconds. The boost ends naturally this many seconds after leaving Heaven.")]
+    public float speedRefreshSeconds = 1f;
 
     [Header("Debug")]
     public bool showDebugMessages = true;
 
+    private class BlessedSurvivor
+    {
+        public UnitHealth health;
+        public SurvivorMana mana;
+        public SurvivorMovement movement;
+        public float healCarry;
+        public float manaCarry;
+        public float nextSpeedRefreshTime;
+    }
+
+    private readonly Dictionary<UnitHealth, BlessedSurvivor> blessed = new Dictionary<UnitHealth, BlessedSurvivor>();
+    private readonly List<UnitHealth> staleKeys = new List<UnitHealth>();
+
     private void OnTriggerEnter(Collider other)
     {
-        if (!other.CompareTag("Player"))
+        UnitHealth health = other.GetComponentInParent<UnitHealth>();
+        if (health == null)
+        {
             return;
+        }
+
+        if (!string.IsNullOrEmpty(survivorTag) && !health.CompareTag(survivorTag))
+        {
+            return;
+        }
+
+        if (blessed.ContainsKey(health))
+        {
+            return;
+        }
+
+        SurvivorMana mana = health.GetComponent<SurvivorMana>();
+        if (restoreMana && mana == null && autoAddManaComponent)
+        {
+            mana = health.gameObject.AddComponent<SurvivorMana>();
+            mana.maxMana = defaultMaxMana;
+            mana.currentMana = defaultMaxMana;
+
+            if (showDebugMessages)
+            {
+                Debug.Log("[HeavenBlessingZone] Auto-added SurvivorMana to " + health.name);
+            }
+        }
+
+        SurvivorMovement movement = health.GetComponent<SurvivorMovement>();
+
+        BlessedSurvivor entry = new BlessedSurvivor
+        {
+            health = health,
+            mana = mana,
+            movement = movement,
+            healCarry = 0f,
+            manaCarry = 0f,
+            nextSpeedRefreshTime = 0f
+        };
+
+        blessed.Add(health, entry);
 
         if (showDebugMessages)
         {
-            Debug.Log("Player entered Heaven blessing zone.");
+            Debug.Log("[HeavenBlessingZone] " + health.name + " entered Heaven.");
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        UnitHealth health = other.GetComponentInParent<UnitHealth>();
+        if (health == null)
+        {
+            return;
         }
 
-        if (healHealth)
+        if (!blessed.Remove(health))
         {
-            // Later we connect this to CamperHealth or PlayerHealth.
-            other.SendMessage("HealToFull", SendMessageOptions.DontRequireReceiver);
-            other.SendMessage("Heal", 9999, SendMessageOptions.DontRequireReceiver);
+            return;
         }
 
-        if (restoreMana)
+        if (showDebugMessages)
         {
-            // Later we connect this to your mana system.
-            other.SendMessage("RestoreManaToFull", SendMessageOptions.DontRequireReceiver);
-            other.SendMessage("RestoreMana", 9999, SendMessageOptions.DontRequireReceiver);
+            Debug.Log("[HeavenBlessingZone] " + health.name + " left Heaven.");
+        }
+    }
+
+    private void Update()
+    {
+        if (blessed.Count == 0)
+        {
+            return;
         }
 
-        if (giveSpeedBoots)
+        float dt = Time.deltaTime;
+        float refreshInterval = Mathf.Max(0.1f, speedRefreshSeconds * 0.5f);
+
+        staleKeys.Clear();
+
+        foreach (KeyValuePair<UnitHealth, BlessedSurvivor> pair in blessed)
         {
-            // Later we connect this to your real speed boots pickup/effect.
-            other.SendMessage("GiveSpeedBoots", SendMessageOptions.DontRequireReceiver);
+            BlessedSurvivor entry = pair.Value;
+
+            if (entry.health == null || entry.health.IsDead)
+            {
+                staleKeys.Add(pair.Key);
+                continue;
+            }
+
+            if (healHealth)
+            {
+                entry.healCarry += healPerSecond * dt;
+                int healAmount = Mathf.FloorToInt(entry.healCarry);
+                if (healAmount > 0)
+                {
+                    entry.healCarry -= healAmount;
+                    entry.health.Heal(healAmount);
+                }
+            }
+
+            if (restoreMana && entry.mana != null)
+            {
+                entry.manaCarry += manaPerSecond * dt;
+                int manaAmount = Mathf.FloorToInt(entry.manaCarry);
+                if (manaAmount > 0)
+                {
+                    entry.manaCarry -= manaAmount;
+                    entry.mana.RestoreMana(manaAmount);
+                }
+            }
+
+            if (giveSpeedBoots && entry.movement != null && Time.time >= entry.nextSpeedRefreshTime)
+            {
+                entry.movement.ApplySpeedBoost(speedMultiplier, speedRefreshSeconds);
+                entry.nextSpeedRefreshTime = Time.time + refreshInterval;
+            }
         }
+
+        for (int i = 0; i < staleKeys.Count; i++)
+        {
+            blessed.Remove(staleKeys[i]);
+        }
+    }
+
+    private void OnDisable()
+    {
+        blessed.Clear();
+        staleKeys.Clear();
     }
 }

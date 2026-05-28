@@ -10,30 +10,48 @@ public class MonsterStompAbility : MonoBehaviour
     public string targetTag = "Survivor";
     public LayerMask survivorLayers = ~0;
 
+    [Header("Mana")]
+    public string abilityDisplayName = "Stomp";
+    [Min(0)] public int manaCost = 6;
+
+    [Header("Auto Mana Pool (Monster Defaults)")]
+    [Tooltip("Used only if no SurvivorMana exists on this monster yet. Attach SurvivorMana manually to override.")]
+    [Min(1)] public int autoMaxMana = 100;
+    [Tooltip("Used only if no SurvivorMana exists on this monster yet. Attach SurvivorMana manually to override.")]
+    [Min(0f)] public float autoPassiveRegenPerSecond = 5f;
+
     [Header("UI")]
     public AbilityCooldownButton cooldownButton;
 
     [Header("Game Manager")]
     public ManiaGameManager gameManager;
+    public LocalRoleController localRoleController;
 
     [Header("Debug")]
     public bool drawStompRange = true;
 
     private UnitHealth unitHealth;
+    private SurvivorMana mana;
     private float nextCastTime;
 
     private void Awake()
     {
         unitHealth = GetComponent<UnitHealth>();
+        mana = SurvivorMana.EnsureOn(gameObject, manaCost, autoMaxMana, autoPassiveRegenPerSecond);
 
-        if (cooldownButton == null)
+        if (cooldownButton != null)
         {
-            cooldownButton = FindFirstObjectByType<AbilityCooldownButton>();
+            cooldownButton.SetAbilityInfo(abilityDisplayName, manaCost);
         }
 
         if (gameManager == null)
         {
             gameManager = ManiaGameManager.Instance;
+        }
+
+        if (localRoleController == null)
+        {
+            localRoleController = FindFirstObjectByType<LocalRoleController>();
         }
     }
 
@@ -42,6 +60,11 @@ public class MonsterStompAbility : MonoBehaviour
         if (gameManager == null)
         {
             gameManager = FindFirstObjectByType<ManiaGameManager>();
+        }
+
+        if (localRoleController == null)
+        {
+            localRoleController = FindFirstObjectByType<LocalRoleController>();
         }
     }
 
@@ -74,6 +97,26 @@ public class MonsterStompAbility : MonoBehaviour
         {
             Debug.Log("Stomp blocked: game not in play");
             return;
+        }
+
+        if (localRoleController != null && localRoleController.controlMode != PlayerControlMode.MonsterControlled)
+        {
+            Debug.Log("Stomp blocked: not playing as Monster");
+            return;
+        }
+
+        if (manaCost > 0)
+        {
+            if (mana == null)
+            {
+                mana = SurvivorMana.EnsureOn(gameObject, manaCost, autoMaxMana, autoPassiveRegenPerSecond);
+            }
+
+            if (mana == null || !mana.SpendMana(manaCost))
+            {
+                Debug.Log("Stomp blocked: not enough mana");
+                return;
+            }
         }
 
         int hitCount = ApplyStompDamage();

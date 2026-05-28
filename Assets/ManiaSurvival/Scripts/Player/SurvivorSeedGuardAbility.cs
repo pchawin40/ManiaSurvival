@@ -9,19 +9,25 @@ public class SurvivorSeedGuardAbility : MonoBehaviour
     public int maxActiveTreants = 2;
     public float cooldown = 20f;
 
+    [Header("Mana")]
+    public string abilityDisplayName = "Seed Guard";
+    [Min(0)] public int manaCost = 6;
+
     [Header("UI")]
     public AbilityCooldownButton cooldownButton;
 
     private UnitHealth unitHealth;
+    private SurvivorMana mana;
     private float nextCastTime;
 
     private void Awake()
     {
         unitHealth = GetComponent<UnitHealth>();
+        mana = SurvivorMana.EnsureOn(gameObject, manaCost);
 
-        if (cooldownButton == null)
+        if (cooldownButton != null)
         {
-            cooldownButton = FindFirstObjectByType<AbilityCooldownButton>();
+            cooldownButton.SetAbilityInfo(abilityDisplayName, manaCost);
         }
     }
 
@@ -67,6 +73,20 @@ public class SurvivorSeedGuardAbility : MonoBehaviour
         {
             Debug.Log("No nearby tree");
             return;
+        }
+
+        if (manaCost > 0)
+        {
+            if (mana == null)
+            {
+                mana = SurvivorMana.EnsureOn(gameObject, manaCost);
+            }
+
+            if (mana == null || !mana.SpendMana(manaCost))
+            {
+                Debug.Log("Seed Guard blocked: not enough mana");
+                return;
+            }
         }
 
         Vector3 spawnPosition = tree.transform.position;

@@ -18,14 +18,21 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
     public SoulwoodAvatarUIBridge avatarUIBridge;
     public ManiaGameUI gameUI;
 
+    [Header("Mana")]
+    public string abilityDisplayName = "Summon Soulwood Avatar";
+    [Min(0)] public int manaCost = 10;
+
     [Header("Hide Survivor")]
     public GameObject[] survivorObjectsToHideDuringAvatar;
     public Canvas survivorHealthBarCanvas;
+    [Tooltip("Optional. If your mana bar lives on a separate canvas (not under the HP canvas), assign it here so it also hides while in avatar mode.")]
+    public Canvas survivorManaBarCanvas;
     public Behaviour[] survivorComponentsToDisable;
     public Renderer[] survivorRenderersToHide;
     public Collider[] survivorCollidersToDisable;
 
     private UnitHealth unitHealth;
+    private SurvivorMana survivorMana;
     private CharacterController survivorCharacterController;
     private SurvivorMovement survivorMovement;
     private SurvivorVisibilityStatus survivorVisibilityStatus;
@@ -45,15 +52,16 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
     private void Awake()
     {
         unitHealth = GetComponent<UnitHealth>();
+        survivorMana = SurvivorMana.EnsureOn(gameObject, manaCost);
         survivorCharacterController = GetComponent<CharacterController>();
         survivorMovement = GetComponent<SurvivorMovement>();
         survivorVisibilityStatus = GetComponent<SurvivorVisibilityStatus>();
         localRoleController = FindFirstObjectByType<LocalRoleController>();
         gameUI = FindFirstObjectByType<ManiaGameUI>();
 
-        if (cooldownButton == null)
+        if (cooldownButton != null)
         {
-            cooldownButton = FindFirstObjectByType<AbilityCooldownButton>();
+            cooldownButton.SetAbilityInfo(abilityDisplayName, manaCost);
         }
 
         ResolveCameraFollow();
@@ -107,6 +115,20 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
             return;
         }
 
+        if (manaCost > 0)
+        {
+            if (survivorMana == null)
+            {
+                survivorMana = SurvivorMana.EnsureOn(gameObject, manaCost);
+            }
+
+            if (survivorMana == null || !survivorMana.HasMana(manaCost))
+            {
+                Debug.Log("Soulwood Avatar blocked: not enough mana");
+                return;
+            }
+        }
+
         Vector3 spawnPosition = tree.transform.position;
         Quaternion spawnRotation = tree.transform.rotation;
 
@@ -131,6 +153,11 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
             Debug.Log("Soulwood Avatar blocked");
             Destroy(avatarObject);
             return;
+        }
+
+        if (manaCost > 0 && survivorMana != null)
+        {
+            survivorMana.SpendMana(manaCost);
         }
 
         Destroy(tree.gameObject);
@@ -484,14 +511,14 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
             survivorVisibilityStatus.SetHiddenFromMonster(hide);
         }
 
-        SetSurvivorObjectsActive(!hide);
-
         if (hide)
         {
             CacheAndDisableComponents();
+            SetSurvivorObjectsActive(false);
         }
         else
         {
+            SetSurvivorObjectsActive(true);
             RestoreComponents();
         }
     }
@@ -694,6 +721,18 @@ public class SurvivorSoulwoodAvatarAbility : MonoBehaviour
 
             bool targetState = active ? gameObjectStates[canvasObject] : false;
             canvasObject.SetActive(targetState);
+        }
+
+        if (survivorManaBarCanvas != null)
+        {
+            GameObject manaCanvasObject = survivorManaBarCanvas.gameObject;
+            if (!gameObjectStates.ContainsKey(manaCanvasObject))
+            {
+                gameObjectStates[manaCanvasObject] = manaCanvasObject.activeSelf;
+            }
+
+            bool targetState = active ? gameObjectStates[manaCanvasObject] : false;
+            manaCanvasObject.SetActive(targetState);
         }
     }
 

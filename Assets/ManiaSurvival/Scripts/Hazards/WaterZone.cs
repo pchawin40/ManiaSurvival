@@ -9,13 +9,22 @@ public class WaterZone : MonoBehaviour
     [Min(0f)]
     public float survivorHealPerSecond = 5f;
     [Min(0f)]
+    public float survivorManaPerSecond = 2f;
+    [Min(0f)]
     public float hellBruteDamagePerSecond = 8f;
     [Min(0.05f)]
     public float tickInterval = 0.5f;
 
+    [Header("Mana Setup")]
+    [Tooltip("If a survivor has no SurvivorMana, add one automatically on enter so Water can refill it.")]
+    public bool autoAddManaComponent = true;
+    public int defaultMaxMana = 100;
+
     private readonly HashSet<UnitHealth> occupants = new HashSet<UnitHealth>();
     private readonly Dictionary<UnitHealth, float> healProgress = new Dictionary<UnitHealth, float>();
+    private readonly Dictionary<UnitHealth, float> manaProgress = new Dictionary<UnitHealth, float>();
     private readonly Dictionary<UnitHealth, float> damageProgress = new Dictionary<UnitHealth, float>();
+    private readonly Dictionary<UnitHealth, SurvivorMana> manaLookup = new Dictionary<UnitHealth, SurvivorMana>();
     private Coroutine tickRoutine;
 
     private void OnEnable()
@@ -33,7 +42,9 @@ public class WaterZone : MonoBehaviour
 
         occupants.Clear();
         healProgress.Clear();
+        manaProgress.Clear();
         damageProgress.Clear();
+        manaLookup.Clear();
     }
 
     private void OnTriggerEnter(Collider other)
@@ -78,12 +89,42 @@ public class WaterZone : MonoBehaviour
             if (unitHealth.CompareTag("Survivor"))
             {
                 ApplyOverTime(unitHealth, survivorHealPerSecond, healProgress, true);
+                ApplyManaOverTime(unitHealth);
             }
             else if (IsHellBrute(unitHealth))
             {
                 ApplyOverTime(unitHealth, hellBruteDamagePerSecond, damageProgress, false);
             }
         }
+    }
+
+    private void ApplyManaOverTime(UnitHealth unitHealth)
+    {
+        if (survivorManaPerSecond <= 0f)
+        {
+            return;
+        }
+
+        if (!manaLookup.TryGetValue(unitHealth, out SurvivorMana mana) || mana == null)
+        {
+            return;
+        }
+
+        float progress = 0f;
+        manaProgress.TryGetValue(unitHealth, out progress);
+        progress += survivorManaPerSecond * tickInterval;
+
+        int wholePoints = Mathf.FloorToInt(progress);
+        if (wholePoints <= 0)
+        {
+            manaProgress[unitHealth] = progress;
+            return;
+        }
+
+        progress -= wholePoints;
+        manaProgress[unitHealth] = progress;
+
+        mana.RestoreMana(wholePoints);
     }
 
     private void ApplyOverTime(UnitHealth unitHealth, float ratePerSecond, Dictionary<UnitHealth, float> progressMap, bool isHealing)
@@ -127,12 +168,34 @@ public class WaterZone : MonoBehaviour
         if (unitHealth.CompareTag("Survivor"))
         {
             occupants.Add(unitHealth);
+            CacheSurvivorMana(unitHealth);
             return;
         }
 
         if (unitHealth.CompareTag("Monster") || unitHealth.CompareTag("Predator"))
         {
             occupants.Add(unitHealth);
+        }
+    }
+
+    private void CacheSurvivorMana(UnitHealth unitHealth)
+    {
+        if (manaLookup.ContainsKey(unitHealth))
+        {
+            return;
+        }
+
+        SurvivorMana mana = unitHealth.GetComponent<SurvivorMana>();
+        if (mana == null && autoAddManaComponent)
+        {
+            mana = unitHealth.gameObject.AddComponent<SurvivorMana>();
+            mana.maxMana = defaultMaxMana;
+            mana.currentMana = defaultMaxMana;
+        }
+
+        if (mana != null)
+        {
+            manaLookup[unitHealth] = mana;
         }
     }
 
@@ -145,7 +208,9 @@ public class WaterZone : MonoBehaviour
 
         occupants.Remove(unitHealth);
         healProgress.Remove(unitHealth);
+        manaProgress.Remove(unitHealth);
         damageProgress.Remove(unitHealth);
+        manaLookup.Remove(unitHealth);
     }
 
     private bool IsHellBrute(UnitHealth unitHealth)

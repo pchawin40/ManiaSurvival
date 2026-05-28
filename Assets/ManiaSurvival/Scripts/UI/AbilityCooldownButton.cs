@@ -17,6 +17,16 @@ public class AbilityCooldownButton : MonoBehaviour
     public Color readyColor = Color.white;
     public Color cooldownColor = Color.gray;
 
+    [Header("Ability Info")]
+    [Tooltip("Display name shown on the button (e.g. 'Roar'). Abilities will overwrite this on Awake.")]
+    public string abilityName = "";
+    [Tooltip("Mana the ability costs. 0 means no mana label is shown.")]
+    [Min(0)] public int manaCost = 0;
+    [Tooltip("Format used to combine name + mana cost. {0} = name, {1} = cost.")]
+    public string manaCostLabelFormat = "{0}\n{1} mana";
+    [Tooltip("If true, the Ability Name Text is overwritten with the formatted label. Turn off if you want to author the label manually.")]
+    public bool useAbilityLabel = true;
+
     private float cooldownEndTime;
 
     public bool IsCoolingDown => cooldownEndTime > Time.time;
@@ -24,7 +34,33 @@ public class AbilityCooldownButton : MonoBehaviour
     private void Awake()
     {
         CacheReferences();
+        ApplyAbilityLabel();
         ApplyReadyVisuals();
+    }
+
+    public void SetAbilityInfo(string name, int cost)
+    {
+        abilityName = name;
+        manaCost = Mathf.Max(0, cost);
+        CacheReferences();
+        ApplyAbilityLabel();
+    }
+
+    public void ApplyAbilityLabel()
+    {
+        if (!useAbilityLabel || abilityNameText == null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrEmpty(abilityName))
+        {
+            return;
+        }
+
+        abilityNameText.text = manaCost > 0
+            ? string.Format(manaCostLabelFormat, abilityName, manaCost)
+            : abilityName;
     }
 
     private void Update()

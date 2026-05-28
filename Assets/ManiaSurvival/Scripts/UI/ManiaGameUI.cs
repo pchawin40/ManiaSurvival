@@ -31,6 +31,12 @@ public class ManiaGameUI : MonoBehaviour
     public Button roarButton;
     public Button stompButton;
 
+    [Header("Role-Specific Visibility")]
+    [Tooltip("Any GameObject dragged here is only visible while playing as Survivor (hidden in Monster mode and Avatar mode).")]
+    public GameObject[] survivorOnlyObjects;
+    [Tooltip("Any GameObject dragged here is only visible while playing as Monster.")]
+    public GameObject[] monsterOnlyObjects;
+
     [Header("Mobile Joystick")]
     public bool enableSimpleMobileJoystick = true;
     public RectTransform joystickArea;
@@ -269,6 +275,34 @@ public class ManiaGameUI : MonoBehaviour
         if (stompButton != null)
         {
             stompButton.gameObject.SetActive(isPlaying && isMonsterControlled);
+        }
+
+        bool showSurvivorOnly = isPlaying && !isMonsterControlled && !isAvatarControlled;
+        bool showMonsterOnly = isPlaying && isMonsterControlled;
+
+        SetGameObjectsActive(survivorOnlyObjects, showSurvivorOnly);
+        SetGameObjectsActive(monsterOnlyObjects, showMonsterOnly);
+    }
+
+    private void SetGameObjectsActive(GameObject[] objects, bool active)
+    {
+        if (objects == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < objects.Length; i++)
+        {
+            GameObject target = objects[i];
+            if (target == null)
+            {
+                continue;
+            }
+
+            if (target.activeSelf != active)
+            {
+                target.SetActive(active);
+            }
         }
     }
 
