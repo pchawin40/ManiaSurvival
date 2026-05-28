@@ -19,6 +19,7 @@ public class MonsterPlayerMovement : MonoBehaviour
     private CharacterController characterController;
     private Vector2 mobileMoveInput;
     private float verticalVelocity;
+    private float carriedItemSpeedMultiplier = 1f;
 
     private void Awake()
     {
@@ -38,7 +39,7 @@ public class MonsterPlayerMovement : MonoBehaviour
         if (moveDirection.sqrMagnitude > 0.001f)
         {
             ApplyGravity();
-            characterController.Move((moveDirection * moveSpeed + Vector3.up * verticalVelocity) * Time.deltaTime);
+            characterController.Move((moveDirection * moveSpeed * carriedItemSpeedMultiplier + Vector3.up * verticalVelocity) * Time.deltaTime);
             RotateToward(moveDirection);
             return;
         }
@@ -126,6 +127,16 @@ public class MonsterPlayerMovement : MonoBehaviour
         }
 
         verticalVelocity += gravity * Time.deltaTime;
+    }
+
+    public void SetCarriedSpeedBoost(float multiplier)
+    {
+        carriedItemSpeedMultiplier = Mathf.Max(0.1f, multiplier);
+    }
+
+    public void ClearCarriedSpeedBoost()
+    {
+        carriedItemSpeedMultiplier = 1f;
     }
 
     private void RotateToward(Vector3 moveDirection)

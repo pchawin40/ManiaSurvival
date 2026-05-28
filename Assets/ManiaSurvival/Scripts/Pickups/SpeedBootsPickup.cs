@@ -2,59 +2,131 @@ using UnityEngine;
 
 public class SpeedBootsPickup : MonoBehaviour
 {
-    [Header("Boost")]
-    public float duration = 8f;
-    public float speedMultiplier = 1.5f;
+    [Header("Visual")]
+    [Tooltip("Optional prefab used as the equipped boot visual on the holder. If empty, a placeholder cube is created.")]
+    public GameObject bootVisualPrefab;
+    [Tooltip("Where the boot visual attaches relative to the holder root.")]
+    public Vector3 equippedLocalOffset = new Vector3(0f, -0.8f, 0.2f);
 
-    [Header("Pickup")]
-    public bool destroyOnCollect = true;
+    [Header("Debug")]
+    public bool showDebugLogs = true;
 
-    private bool collected;
+    private Collider pickupCollider;
+    private Renderer pickupRenderer;
+    private GameObject equippedVisual;
+    private bool isHeld;
+
+    private void Awake()
+    {
+        pickupCollider = GetComponent<Collider>();
+        pickupRenderer = GetComponent<Renderer>();
+    }
 
     private void OnTriggerEnter(Collider other)
     {
-        if (collected) return;
-
-        Debug.Log($"SpeedBootsPickup trigger entered by: {other.name}");
-
-        Transform root = other.transform.root;
-
-        bool isSurvivor =
-            other.CompareTag("Survivor") ||
-            other.GetComponentInParent<UnitHealth>() != null && other.GetComponentInParent<UnitHealth>().CompareTag("Survivor") ||
-            root.CompareTag("Survivor");
-
-        if (!isSurvivor)
+        if (isHeld)
         {
-            Debug.Log("SpeedBootsPickup rejected: not Survivor.");
             return;
         }
 
-        UnitHealth health = other.GetComponentInParent<UnitHealth>();
-
-        if (health == null)
+        CarriedItemHolder holder = other.GetComponentInParent<CarriedItemHolder>();
+        if (holder == null)
         {
-            Debug.LogWarning("SpeedBootsPickup rejected: Survivor has no UnitHealth.");
             return;
         }
 
-        SurvivorMovement movement = other.GetComponentInParent<SurvivorMovement>();
+        holder.SetNearbySpeedBoots(this);
 
-        if (movement == null)
+        if (showDebugLogs)
         {
-            Debug.LogWarning("SpeedBootsPickup found Survivor, but no SurvivorMovement was found.");
+            Debug.Log("[SpeedBootsPickup] In range of " + holder.name + " — press E to pick up.");
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        CarriedItemHolder holder = other.GetComponentInParent<CarriedItemHolder>();
+        if (holder == null)
+        {
             return;
         }
 
-        collected = true;
+        holder.ClearNearbySpeedBoots(this);
+    }
 
-        movement.ApplySpeedBoost(speedMultiplier, duration);
+    // Called by CarriedItemHolder when this item is picked up.
+    public void AttachToHolder(Transform holderRoot, Vector3 localOffset)
+    {
+        isHeld = true;
 
-        Debug.Log($"SpeedBootsPickup collected by {movement.gameObject.name}. Boost x{speedMultiplier} for {duration} seconds.");
+        SetWorldVisible(false);
 
-        if (destroyOnCollect)
+        equippedVisual = CreateOrInstantiateVisual();
+        equippedVisual.transform.SetParent(holderRoot, false);
+        equippedVisual.transform.localPosition = localOffset;
+        equippedVisual.transform.localRotation = Quaternion.identity;
+        equippedVisual.name = "SpeedBoots_EquippedVisual";
+
+        transform.SetParent(holderRoot, false);
+        transform.localPosition = Vector3.zero;
+
+        if (showDebugLogs)
         {
-            Destroy(gameObject);
+            Debug.Log("[SpeedBootsPickup] Attached to " + holderRoot.name);
         }
+    }
+
+    // Called by CarriedItemHolder when the item is dropped.
+    public void DropAt(Vector3 worldPosition)
+    {
+        isHeld = false;
+
+        if (equippedVisual != null)
+        {
+            Destroy(equippedVisual);
+            equippedVisual = null;
+        }
+
+        transform.SetParent(null);
+        transform.position = worldPosition;
+        transform.rotation = Quaternion.identity;
+
+        SetWorldVisible(true);
+
+        if (showDebugLogs)
+        {
+            Debug.Log("[SpeedBootsPickup] Dropped at " + worldPosition);
+        }
+    }
+
+    private void SetWorldVisible(bool visible)
+    {
+        if (pickupCollider != null)
+        {
+            pickupCollider.enabled = visible;
+        }
+
+        if (pickupRenderer != null)
+        {
+            pickupRenderer.enabled = visible;
+        }
+    }
+
+    private GameObject CreateOrInstantiateVisual()
+    {
+        if (bootVisualPrefab != null)
+        {
+            return Instantiate(bootVisualPrefab);
+        }
+
+        GameObject placeholder = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        Collider col = placeholder.GetComponent<Collider>();
+        if (col != null)
+        {
+            Destroy(col);
+        }
+
+        placeholder.transform.localScale = new Vector3(0.2f, 0.1f, 0.35f);
+        return placeholder;
     }
 }

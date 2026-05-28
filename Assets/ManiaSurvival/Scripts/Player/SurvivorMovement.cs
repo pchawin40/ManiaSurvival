@@ -45,6 +45,7 @@ public class SurvivorMovement : MonoBehaviour
     private float speedBoostMultiplier = 1f;
     private Coroutine speedBoostRoutine;
     private float temporarySpeedMultiplier = 1f;
+    private float carriedItemSpeedMultiplier = 1f;
     private float temporarySpeedEffectEndTime;
     private Coroutine temporarySpeedEffectRoutine;
 
@@ -94,7 +95,7 @@ public class SurvivorMovement : MonoBehaviour
         IsSprinting = wantsSprint && input.sqrMagnitude > 0.01f && CurrentStamina > minimumSprintStamina;
 
         float baseMoveSpeed = IsSprinting ? sprintSpeed : walkSpeed;
-        float moveSpeed = baseMoveSpeed * speedBoostMultiplier * temporarySpeedMultiplier;
+        float moveSpeed = baseMoveSpeed * speedBoostMultiplier * temporarySpeedMultiplier * carriedItemSpeedMultiplier;
 
         if (IsSprinting)
         {
@@ -233,6 +234,16 @@ public class SurvivorMovement : MonoBehaviour
 
         Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
         transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+    }
+
+    public void SetCarriedSpeedBoost(float multiplier)
+    {
+        carriedItemSpeedMultiplier = Mathf.Max(0.1f, multiplier);
+    }
+
+    public void ClearCarriedSpeedBoost()
+    {
+        carriedItemSpeedMultiplier = 1f;
     }
 
     public void ApplySpeedBoost(float multiplier, float duration)
