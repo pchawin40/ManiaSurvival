@@ -223,15 +223,18 @@ public class LocalRoleController : MonoBehaviour
             survivorMovement = FindFirstObjectByType<SurvivorMovement>();
         }
 
-        if (survivorClassManager == null)
-        {
-            survivorClassManager = FindFirstObjectByType<SurvivorClassManager>();
-        }
+        survivorClassManager = survivorMovement != null
+            ? survivorMovement.GetComponent<SurvivorClassManager>()
+            : FindFirstObjectByType<SurvivorClassManager>();
 
         if (monsterMovement == null)
         {
             monsterMovement = FindFirstObjectByType<MonsterPlayerMovement>();
         }
+
+        predatorClassManager = monsterMovement != null
+            ? monsterMovement.GetComponent<PredatorClassManager>()
+            : FindFirstObjectByType<PredatorClassManager>();
 
         if (monsterAI == null)
         {
@@ -241,11 +244,6 @@ public class LocalRoleController : MonoBehaviour
         if (monsterAttack == null)
         {
             monsterAttack = FindFirstObjectByType<MonsterAttack>();
-        }
-
-        if (predatorClassManager == null)
-        {
-            predatorClassManager = FindFirstObjectByType<PredatorClassManager>();
         }
 
         if (monsterAbilityController == null)

@@ -116,6 +116,8 @@ public class SurvivorClassManager : MonoBehaviour
 
     public void ExecutePrimary()
     {
+        Debug.Log($"[SurvivorClassManager] {activeClass} executing Primary Ability!");
+
         if (!CanExecute())
         {
             return;
@@ -139,6 +141,8 @@ public class SurvivorClassManager : MonoBehaviour
 
     public void ExecuteAbility2()
     {
+        Debug.Log($"[SurvivorClassManager] {activeClass} executing Ability2!");
+
         if (!CanExecute())
         {
             return;
@@ -162,6 +166,8 @@ public class SurvivorClassManager : MonoBehaviour
 
     public void ExecuteAbility3()
     {
+        Debug.Log($"[SurvivorClassManager] {activeClass} executing Ability3!");
+
         if (!CanExecute())
         {
             return;
@@ -185,6 +191,8 @@ public class SurvivorClassManager : MonoBehaviour
 
     public void ExecuteUltimate()
     {
+        Debug.Log($"[SurvivorClassManager] {activeClass} executing Ultimate Ability!");
+
         if (!CanExecute())
         {
             return;

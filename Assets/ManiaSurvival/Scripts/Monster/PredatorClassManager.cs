@@ -191,18 +191,44 @@ public class PredatorClassManager : MonoBehaviour
 
     private bool TryConsumeSharedGcd(int triggerHash)
     {
-        if (unitHealth == null || unitHealth.IsDead)
+        if (unitHealth == null)
         {
+            if (showDebugLogs)
+            {
+                Debug.Log("[PredatorClassManager] Cast rejected: UnitHealth reference is missing.");
+            }
+
+            return false;
+        }
+
+        if (unitHealth.IsDead)
+        {
+            if (showDebugLogs)
+            {
+                Debug.Log("[PredatorClassManager] Cast rejected: Unit is dead.");
+            }
+
             return false;
         }
 
         if (gameManager != null && gameManager.State != ManiaGameState.Playing)
         {
+            if (showDebugLogs)
+            {
+                Debug.Log("[PredatorClassManager] Cast rejected: Game state is not Playing (" + gameManager.State + ").");
+            }
+
             return false;
         }
 
         if (Time.time < nextGlobalCastTime)
         {
+            if (showDebugLogs)
+            {
+                float remaining = Mathf.Max(0f, nextGlobalCastTime - Time.time);
+                Debug.Log("[PredatorClassManager] Cast rejected: Global Cooldown Active (" + remaining.ToString("0.00") + "s).");
+            }
+
             return false;
         }
 

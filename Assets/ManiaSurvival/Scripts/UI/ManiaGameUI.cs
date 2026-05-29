@@ -194,6 +194,8 @@ public class ManiaGameUI : MonoBehaviour
             predatorUltimateButton.onClick.AddListener(OnPredatorUltimatePressed);
         }
 
+        ValidateAbilityButtonReferences();
+
         if (gameManager != null)
         {
             Refresh(gameManager);
@@ -966,5 +968,30 @@ public class ManiaGameUI : MonoBehaviour
         int minutes = totalSeconds / 60;
         int remainingSeconds = totalSeconds % 60;
         return minutes.ToString("0") + ":" + remainingSeconds.ToString("00");
+    }
+
+    private void ValidateAbilityButtonReferences()
+    {
+        ValidateButtonReference(survivorPrimaryButton, "survivorPrimaryButton");
+        ValidateButtonReference(survivorAbility2Button, "survivorAbility2Button");
+        ValidateButtonReference(survivorAbility3Button, "survivorAbility3Button");
+        ValidateButtonReference(survivorUltimateButton, "survivorUltimateButton");
+
+        ValidateButtonReference(predatorMeleeButton, "predatorMeleeButton");
+        ValidateButtonReference(predatorAbility1Button, "predatorAbility1Button");
+        ValidateButtonReference(predatorAbility2Button, "predatorAbility2Button");
+        ValidateButtonReference(predatorAbility3Button, "predatorAbility3Button");
+        ValidateButtonReference(predatorUltimateButton, "predatorUltimateButton");
+    }
+
+    private void ValidateButtonReference(Button button, string fieldName)
+    {
+        if (button != null)
+        {
+            return;
+        }
+
+        Debug.LogWarning("[ManiaGameUI] Missing Inspector button reference: " + fieldName +
+                         ". Assign it on ManiaGameUI to enable class ability input.");
     }
 }
