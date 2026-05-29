@@ -14,9 +14,11 @@ public class LocalRoleController : MonoBehaviour
 
     [Header("References")]
     public SurvivorMovement survivorMovement;
+    public SurvivorClassManager survivorClassManager;
     public MonsterPlayerMovement monsterMovement;
     public MonsterAI monsterAI;
     public MonsterAttack monsterAttack;
+    public PredatorClassManager predatorClassManager;
     public MonsterAbilityController monsterAbilityController;
     public MonsterRoarAbility monsterRoar;
     public MonsterStompAbility monsterStomp;
@@ -117,6 +119,78 @@ public class LocalRoleController : MonoBehaviour
         }
     }
 
+    public void PressSurvivorPrimary()
+    {
+        if (controlMode != PlayerControlMode.SurvivorControlled)
+        {
+            return;
+        }
+
+        if (survivorClassManager == null)
+        {
+            survivorClassManager = FindFirstObjectByType<SurvivorClassManager>();
+        }
+
+        if (survivorClassManager != null)
+        {
+            survivorClassManager.ExecutePrimary();
+        }
+    }
+
+    public void PressSurvivorAbility2()
+    {
+        if (controlMode != PlayerControlMode.SurvivorControlled)
+        {
+            return;
+        }
+
+        if (survivorClassManager == null)
+        {
+            survivorClassManager = FindFirstObjectByType<SurvivorClassManager>();
+        }
+
+        if (survivorClassManager != null)
+        {
+            survivorClassManager.ExecuteAbility2();
+        }
+    }
+
+    public void PressSurvivorAbility3()
+    {
+        if (controlMode != PlayerControlMode.SurvivorControlled)
+        {
+            return;
+        }
+
+        if (survivorClassManager == null)
+        {
+            survivorClassManager = FindFirstObjectByType<SurvivorClassManager>();
+        }
+
+        if (survivorClassManager != null)
+        {
+            survivorClassManager.ExecuteAbility3();
+        }
+    }
+
+    public void PressSurvivorUltimate()
+    {
+        if (controlMode != PlayerControlMode.SurvivorControlled)
+        {
+            return;
+        }
+
+        if (survivorClassManager == null)
+        {
+            survivorClassManager = FindFirstObjectByType<SurvivorClassManager>();
+        }
+
+        if (survivorClassManager != null)
+        {
+            survivorClassManager.ExecuteUltimate();
+        }
+    }
+
     public void SetSoulwoodAvatarController(SoulwoodAvatarController avatarController)
     {
         soulwoodAvatarController = avatarController;
@@ -149,6 +223,11 @@ public class LocalRoleController : MonoBehaviour
             survivorMovement = FindFirstObjectByType<SurvivorMovement>();
         }
 
+        if (survivorClassManager == null)
+        {
+            survivorClassManager = FindFirstObjectByType<SurvivorClassManager>();
+        }
+
         if (monsterMovement == null)
         {
             monsterMovement = FindFirstObjectByType<MonsterPlayerMovement>();
@@ -162,6 +241,11 @@ public class LocalRoleController : MonoBehaviour
         if (monsterAttack == null)
         {
             monsterAttack = FindFirstObjectByType<MonsterAttack>();
+        }
+
+        if (predatorClassManager == null)
+        {
+            predatorClassManager = FindFirstObjectByType<PredatorClassManager>();
         }
 
         if (monsterAbilityController == null)
@@ -247,6 +331,96 @@ public class LocalRoleController : MonoBehaviour
         if (controlMode == PlayerControlMode.MonsterControlled && monsterAttack != null)
         {
             monsterAttack.TryAttack();
+        }
+    }
+
+    public void PressPredatorMeleeAttack()
+    {
+        if (controlMode != PlayerControlMode.MonsterControlled)
+        {
+            return;
+        }
+
+        if (predatorClassManager == null)
+        {
+            predatorClassManager = FindFirstObjectByType<PredatorClassManager>();
+        }
+
+        if (predatorClassManager != null)
+        {
+            predatorClassManager.CastMeleeAttack();
+        }
+    }
+
+    public void PressPredatorAbility1()
+    {
+        if (controlMode != PlayerControlMode.MonsterControlled)
+        {
+            return;
+        }
+
+        if (predatorClassManager == null)
+        {
+            predatorClassManager = FindFirstObjectByType<PredatorClassManager>();
+        }
+
+        if (predatorClassManager != null)
+        {
+            predatorClassManager.CastAbility1();
+        }
+    }
+
+    public void PressPredatorAbility2()
+    {
+        if (controlMode != PlayerControlMode.MonsterControlled)
+        {
+            return;
+        }
+
+        if (predatorClassManager == null)
+        {
+            predatorClassManager = FindFirstObjectByType<PredatorClassManager>();
+        }
+
+        if (predatorClassManager != null)
+        {
+            predatorClassManager.CastAbility2();
+        }
+    }
+
+    public void PressPredatorAbility3()
+    {
+        if (controlMode != PlayerControlMode.MonsterControlled)
+        {
+            return;
+        }
+
+        if (predatorClassManager == null)
+        {
+            predatorClassManager = FindFirstObjectByType<PredatorClassManager>();
+        }
+
+        if (predatorClassManager != null)
+        {
+            predatorClassManager.CastAbility3();
+        }
+    }
+
+    public void PressPredatorUltimate()
+    {
+        if (controlMode != PlayerControlMode.MonsterControlled)
+        {
+            return;
+        }
+
+        if (predatorClassManager == null)
+        {
+            predatorClassManager = FindFirstObjectByType<PredatorClassManager>();
+        }
+
+        if (predatorClassManager != null)
+        {
+            predatorClassManager.CastUltimate();
         }
     }
 

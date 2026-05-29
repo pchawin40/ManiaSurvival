@@ -31,6 +31,19 @@ public class ManiaGameUI : MonoBehaviour
     public Button roarButton;
     public Button stompButton;
 
+    [Header("Survivor Class Buttons")]
+    public Button survivorPrimaryButton;
+    public Button survivorAbility2Button;
+    public Button survivorAbility3Button;
+    public Button survivorUltimateButton;
+
+    [Header("Predator Class Buttons")]
+    public Button predatorMeleeButton;
+    public Button predatorAbility1Button;
+    public Button predatorAbility2Button;
+    public Button predatorAbility3Button;
+    public Button predatorUltimateButton;
+
     [Header("Role-Specific Visibility")]
     [Tooltip("Any GameObject dragged here is only visible while playing as Survivor (hidden in Monster mode and Avatar mode).")]
     public GameObject[] survivorOnlyObjects;
@@ -136,6 +149,51 @@ public class ManiaGameUI : MonoBehaviour
             stompButton.onClick.AddListener(OnMonsterStompPressed);
         }
 
+        if (survivorPrimaryButton != null)
+        {
+            survivorPrimaryButton.onClick.AddListener(OnSurvivorPrimaryPressed);
+        }
+
+        if (survivorAbility2Button != null)
+        {
+            survivorAbility2Button.onClick.AddListener(OnSurvivorAbility2Pressed);
+        }
+
+        if (survivorAbility3Button != null)
+        {
+            survivorAbility3Button.onClick.AddListener(OnSurvivorAbility3Pressed);
+        }
+
+        if (survivorUltimateButton != null)
+        {
+            survivorUltimateButton.onClick.AddListener(OnSurvivorUltimatePressed);
+        }
+
+        if (predatorMeleeButton != null)
+        {
+            predatorMeleeButton.onClick.AddListener(OnPredatorMeleePressed);
+        }
+
+        if (predatorAbility1Button != null)
+        {
+            predatorAbility1Button.onClick.AddListener(OnPredatorAbility1Pressed);
+        }
+
+        if (predatorAbility2Button != null)
+        {
+            predatorAbility2Button.onClick.AddListener(OnPredatorAbility2Pressed);
+        }
+
+        if (predatorAbility3Button != null)
+        {
+            predatorAbility3Button.onClick.AddListener(OnPredatorAbility3Pressed);
+        }
+
+        if (predatorUltimateButton != null)
+        {
+            predatorUltimateButton.onClick.AddListener(OnPredatorUltimatePressed);
+        }
+
         if (gameManager != null)
         {
             Refresh(gameManager);
@@ -177,6 +235,51 @@ public class ManiaGameUI : MonoBehaviour
         if (stompButton != null)
         {
             stompButton.onClick.RemoveListener(OnMonsterStompPressed);
+        }
+
+        if (survivorPrimaryButton != null)
+        {
+            survivorPrimaryButton.onClick.RemoveListener(OnSurvivorPrimaryPressed);
+        }
+
+        if (survivorAbility2Button != null)
+        {
+            survivorAbility2Button.onClick.RemoveListener(OnSurvivorAbility2Pressed);
+        }
+
+        if (survivorAbility3Button != null)
+        {
+            survivorAbility3Button.onClick.RemoveListener(OnSurvivorAbility3Pressed);
+        }
+
+        if (survivorUltimateButton != null)
+        {
+            survivorUltimateButton.onClick.RemoveListener(OnSurvivorUltimatePressed);
+        }
+
+        if (predatorMeleeButton != null)
+        {
+            predatorMeleeButton.onClick.RemoveListener(OnPredatorMeleePressed);
+        }
+
+        if (predatorAbility1Button != null)
+        {
+            predatorAbility1Button.onClick.RemoveListener(OnPredatorAbility1Pressed);
+        }
+
+        if (predatorAbility2Button != null)
+        {
+            predatorAbility2Button.onClick.RemoveListener(OnPredatorAbility2Pressed);
+        }
+
+        if (predatorAbility3Button != null)
+        {
+            predatorAbility3Button.onClick.RemoveListener(OnPredatorAbility3Pressed);
+        }
+
+        if (predatorUltimateButton != null)
+        {
+            predatorUltimateButton.onClick.RemoveListener(OnPredatorUltimatePressed);
         }
     }
 
@@ -275,6 +378,51 @@ public class ManiaGameUI : MonoBehaviour
         if (stompButton != null)
         {
             stompButton.gameObject.SetActive(isPlaying && isMonsterControlled);
+        }
+
+        if (survivorPrimaryButton != null)
+        {
+            survivorPrimaryButton.gameObject.SetActive(isPlaying && !isMonsterControlled && !isAvatarControlled);
+        }
+
+        if (survivorAbility2Button != null)
+        {
+            survivorAbility2Button.gameObject.SetActive(isPlaying && !isMonsterControlled && !isAvatarControlled);
+        }
+
+        if (survivorAbility3Button != null)
+        {
+            survivorAbility3Button.gameObject.SetActive(isPlaying && !isMonsterControlled && !isAvatarControlled);
+        }
+
+        if (survivorUltimateButton != null)
+        {
+            survivorUltimateButton.gameObject.SetActive(isPlaying && !isMonsterControlled && !isAvatarControlled);
+        }
+
+        if (predatorMeleeButton != null)
+        {
+            predatorMeleeButton.gameObject.SetActive(isPlaying && isMonsterControlled);
+        }
+
+        if (predatorAbility1Button != null)
+        {
+            predatorAbility1Button.gameObject.SetActive(isPlaying && isMonsterControlled);
+        }
+
+        if (predatorAbility2Button != null)
+        {
+            predatorAbility2Button.gameObject.SetActive(isPlaying && isMonsterControlled);
+        }
+
+        if (predatorAbility3Button != null)
+        {
+            predatorAbility3Button.gameObject.SetActive(isPlaying && isMonsterControlled);
+        }
+
+        if (predatorUltimateButton != null)
+        {
+            predatorUltimateButton.gameObject.SetActive(isPlaying && isMonsterControlled);
         }
 
         bool showSurvivorOnly = isPlaying && !isMonsterControlled && !isAvatarControlled;
@@ -668,6 +816,96 @@ public class ManiaGameUI : MonoBehaviour
         {
             localMonsterStomp.CastStomp();
         }
+    }
+
+    public void OnSurvivorPrimaryPressed()
+    {
+        if (localRoleController == null)
+        {
+            return;
+        }
+
+        localRoleController.PressSurvivorPrimary();
+    }
+
+    public void OnSurvivorAbility2Pressed()
+    {
+        if (localRoleController == null)
+        {
+            return;
+        }
+
+        localRoleController.PressSurvivorAbility2();
+    }
+
+    public void OnSurvivorAbility3Pressed()
+    {
+        if (localRoleController == null)
+        {
+            return;
+        }
+
+        localRoleController.PressSurvivorAbility3();
+    }
+
+    public void OnSurvivorUltimatePressed()
+    {
+        if (localRoleController == null)
+        {
+            return;
+        }
+
+        localRoleController.PressSurvivorUltimate();
+    }
+
+    public void OnPredatorMeleePressed()
+    {
+        if (localRoleController == null)
+        {
+            return;
+        }
+
+        localRoleController.PressPredatorMeleeAttack();
+    }
+
+    public void OnPredatorAbility1Pressed()
+    {
+        if (localRoleController == null)
+        {
+            return;
+        }
+
+        localRoleController.PressPredatorAbility1();
+    }
+
+    public void OnPredatorAbility2Pressed()
+    {
+        if (localRoleController == null)
+        {
+            return;
+        }
+
+        localRoleController.PressPredatorAbility2();
+    }
+
+    public void OnPredatorAbility3Pressed()
+    {
+        if (localRoleController == null)
+        {
+            return;
+        }
+
+        localRoleController.PressPredatorAbility3();
+    }
+
+    public void OnPredatorUltimatePressed()
+    {
+        if (localRoleController == null)
+        {
+            return;
+        }
+
+        localRoleController.PressPredatorUltimate();
     }
 
     private void StartGameWithMode(PlayerControlMode mode)
