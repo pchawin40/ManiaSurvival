@@ -17,7 +17,6 @@ public class MonsterPlayerMovement : MonoBehaviour
     public float gravity = -20f;
 
     private CharacterController characterController;
-    private MonsterAbilityController abilityController;
     private Vector2 mobileMoveInput;
     private float verticalVelocity;
     private float carriedItemSpeedMultiplier = 1f;
@@ -25,18 +24,11 @@ public class MonsterPlayerMovement : MonoBehaviour
     private void Awake()
     {
         characterController = GetComponent<CharacterController>();
-        abilityController = GetComponent<MonsterAbilityController>();
     }
 
     private void Update()
     {
         if (ManiaGameManager.Instance != null && !ManiaGameManager.Instance.IsPlaying)
-        {
-            return;
-        }
-
-        // Leap coroutine drives movement directly — skip normal input while active.
-        if (abilityController != null && abilityController.IsLeaping)
         {
             return;
         }

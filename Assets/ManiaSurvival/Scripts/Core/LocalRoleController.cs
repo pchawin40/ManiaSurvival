@@ -17,11 +17,7 @@ public class LocalRoleController : MonoBehaviour
     public SurvivorClassManager survivorClassManager;
     public MonsterPlayerMovement monsterMovement;
     public MonsterAI monsterAI;
-    public MonsterAttack monsterAttack;
     public PredatorClassManager predatorClassManager;
-    public MonsterAbilityController monsterAbilityController;
-    public MonsterRoarAbility monsterRoar;
-    public MonsterStompAbility monsterStomp;
     public SoulwoodAvatarController soulwoodAvatarController;
     public CameraFollow cameraFollow;
     public bool logCameraTargetChanges = true;
@@ -70,11 +66,6 @@ public class LocalRoleController : MonoBehaviour
         if (monsterAI != null)
         {
             monsterAI.enabled = controlMode != PlayerControlMode.MonsterControlled;
-        }
-
-        if (monsterAttack != null)
-        {
-            monsterAttack.autoAttack = controlMode != PlayerControlMode.MonsterControlled;
         }
 
         UpdateCameraTarget();
@@ -241,26 +232,6 @@ public class LocalRoleController : MonoBehaviour
             monsterAI = FindFirstObjectByType<MonsterAI>();
         }
 
-        if (monsterAttack == null)
-        {
-            monsterAttack = FindFirstObjectByType<MonsterAttack>();
-        }
-
-        if (monsterAbilityController == null)
-        {
-            monsterAbilityController = FindFirstObjectByType<MonsterAbilityController>();
-        }
-
-        if (monsterRoar == null)
-        {
-            monsterRoar = FindFirstObjectByType<MonsterRoarAbility>();
-        }
-
-        if (monsterStomp == null)
-        {
-            monsterStomp = FindFirstObjectByType<MonsterStompAbility>();
-        }
-
         if (cameraFollow == null)
         {
             cameraFollow = FindFirstObjectByType<CameraFollow>();
@@ -322,14 +293,6 @@ public class LocalRoleController : MonoBehaviour
         }
 
         return Vector2.ClampMagnitude(input, 1f);
-    }
-
-    public void PressMonsterAttack()
-    {
-        if (controlMode == PlayerControlMode.MonsterControlled && monsterAttack != null)
-        {
-            monsterAttack.TryAttack();
-        }
     }
 
     public void PressPredatorMeleeAttack()
@@ -419,53 +382,6 @@ public class LocalRoleController : MonoBehaviour
         if (predatorClassManager != null)
         {
             predatorClassManager.CastUltimate();
-        }
-    }
-
-    public void PressMonsterRoar()
-    {
-        if (controlMode != PlayerControlMode.MonsterControlled)
-        {
-            return;
-        }
-
-        if (monsterAbilityController == null)
-        {
-            monsterAbilityController = FindFirstObjectByType<MonsterAbilityController>();
-        }
-
-        if (monsterAbilityController != null)
-        {
-            monsterAbilityController.TryUseRoar();
-            return;
-        }
-
-        if (monsterRoar == null)
-        {
-            monsterRoar = FindFirstObjectByType<MonsterRoarAbility>();
-        }
-
-        if (monsterRoar != null)
-        {
-            monsterRoar.CastRoar();
-        }
-    }
-
-    public void PressMonsterStomp()
-    {
-        if (controlMode != PlayerControlMode.MonsterControlled)
-        {
-            return;
-        }
-
-        if (monsterStomp == null)
-        {
-            monsterStomp = FindFirstObjectByType<MonsterStompAbility>();
-        }
-
-        if (monsterStomp != null)
-        {
-            monsterStomp.CastStomp();
         }
     }
 }

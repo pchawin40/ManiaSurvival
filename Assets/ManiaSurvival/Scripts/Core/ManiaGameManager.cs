@@ -191,7 +191,12 @@ public class ManiaGameManager : MonoBehaviour
 
     public void ReportSurvivorDeath(UnitHealth survivor, GameObject damageSource)
     {
-        if (damageSource != null && damageSource.GetComponentInParent<MonsterAttack>() != null)
+        bool killerIsMonster = damageSource != null
+            && (damageSource.GetComponentInParent<PredatorClassManager>() != null
+                || damageSource.CompareTag("Monster")
+                || damageSource.CompareTag("Predator"));
+
+        if (killerIsMonster)
         {
             MonsterKills++;
         }

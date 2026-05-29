@@ -39,6 +39,7 @@ public class PredatorClassManager : MonoBehaviour
     public GameObject shurikenProjectilePrefab;
     public GameObject fireStrikeProjectilePrefab;
     public GameObject hookProjectilePrefab;
+    public GameObject tremorShockwavePrefab;
 
     [Header("Durations / Scalars")]
     public float burrowMoveBonusMultiplier = 1.5f;
@@ -51,7 +52,6 @@ public class PredatorClassManager : MonoBehaviour
     private CharacterController characterController;
     private Animator animator;
     private MonsterPlayerMovement monsterMovement;
-    private MonsterAttack monsterAttack;
     private ManiaGameManager gameManager;
 
     private float nextGlobalCastTime;
@@ -70,7 +70,6 @@ public class PredatorClassManager : MonoBehaviour
         characterController = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
         monsterMovement = GetComponent<MonsterPlayerMovement>();
-        monsterAttack = GetComponent<MonsterAttack>();
         gameManager = ManiaGameManager.Instance;
         cachedHealthForReduction = unitHealth != null ? unitHealth.currentHealth : 0;
     }
@@ -393,6 +392,12 @@ public class PredatorClassManager : MonoBehaviour
         for (float d = 1f; d <= maxDistance; d += step)
         {
             Vector3 p = start + dir * d;
+            if (tremorShockwavePrefab != null)
+            {
+                GameObject wave = Instantiate(tremorShockwavePrefab, p, Quaternion.LookRotation(dir));
+                Destroy(wave, 0.35f);
+            }
+
             UnitHealth[] hits = GetSurvivorsInRange(p, 1.2f);
             for (int i = 0; i < hits.Length; i++)
             {

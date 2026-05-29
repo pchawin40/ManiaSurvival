@@ -27,9 +27,6 @@ public class ManiaGameUI : MonoBehaviour
     [Header("Buttons")]
     public Button startButton;
     public Button restartButton;
-    public Button attackButton;
-    public Button roarButton;
-    public Button stompButton;
 
     [Header("Survivor Class Buttons")]
     public Button survivorPrimaryButton;
@@ -66,9 +63,6 @@ public class ManiaGameUI : MonoBehaviour
     public ManiaGameManager gameManager;
     public LocalRoleController localRoleController;
     public SurvivorMovement localSurvivorMovement;
-    public MonsterAttack localMonsterAttack;
-    public MonsterRoarAbility localMonsterRoar;
-    public MonsterStompAbility localMonsterStomp;
     public SoulwoodAvatarUIBridge soulwoodAvatarUIBridge;
 
     private int activeTouchId = -1;
@@ -104,21 +98,6 @@ public class ManiaGameUI : MonoBehaviour
             localRoleController = FindFirstObjectByType<LocalRoleController>();
         }
 
-        if (localMonsterAttack == null)
-        {
-            localMonsterAttack = FindFirstObjectByType<MonsterAttack>();
-        }
-
-        if (localMonsterRoar == null)
-        {
-            localMonsterRoar = FindFirstObjectByType<MonsterRoarAbility>();
-        }
-
-        if (localMonsterStomp == null)
-        {
-            localMonsterStomp = FindFirstObjectByType<MonsterStompAbility>();
-        }
-
         if (soulwoodAvatarUIBridge == null)
         {
             soulwoodAvatarUIBridge = FindFirstObjectByType<SoulwoodAvatarUIBridge>();
@@ -132,21 +111,6 @@ public class ManiaGameUI : MonoBehaviour
         if (restartButton != null)
         {
             restartButton.onClick.AddListener(HandleStartPressed);
-        }
-
-        if (attackButton != null)
-        {
-            attackButton.onClick.AddListener(OnMonsterAttackPressed);
-        }
-
-        if (roarButton != null)
-        {
-            roarButton.onClick.AddListener(OnMonsterRoarPressed);
-        }
-
-        if (stompButton != null)
-        {
-            stompButton.onClick.AddListener(OnMonsterStompPressed);
         }
 
         if (survivorPrimaryButton != null)
@@ -194,8 +158,6 @@ public class ManiaGameUI : MonoBehaviour
             predatorUltimateButton.onClick.AddListener(OnPredatorUltimatePressed);
         }
 
-        ValidateAbilityButtonReferences();
-
         if (gameManager != null)
         {
             Refresh(gameManager);
@@ -222,21 +184,6 @@ public class ManiaGameUI : MonoBehaviour
         if (restartButton != null)
         {
             restartButton.onClick.RemoveListener(HandleStartPressed);
-        }
-
-        if (attackButton != null)
-        {
-            attackButton.onClick.RemoveListener(OnMonsterAttackPressed);
-        }
-
-        if (roarButton != null)
-        {
-            roarButton.onClick.RemoveListener(OnMonsterRoarPressed);
-        }
-
-        if (stompButton != null)
-        {
-            stompButton.onClick.RemoveListener(OnMonsterStompPressed);
         }
 
         if (survivorPrimaryButton != null)
@@ -365,21 +312,6 @@ public class ManiaGameUI : MonoBehaviour
         if (monsterPanel != null)
         {
             monsterPanel.SetActive(isPlaying && isMonsterControlled);
-        }
-
-        if (attackButton != null)
-        {
-            attackButton.gameObject.SetActive(isPlaying && isMonsterControlled);
-        }
-
-        if (roarButton != null)
-        {
-            roarButton.gameObject.SetActive(isPlaying && isMonsterControlled);
-        }
-
-        if (stompButton != null)
-        {
-            stompButton.gameObject.SetActive(isPlaying && isMonsterControlled);
         }
 
         if (survivorPrimaryButton != null)
@@ -764,62 +696,6 @@ public class ManiaGameUI : MonoBehaviour
         StartGameWithMode(PlayerControlMode.MonsterControlled);
     }
 
-    public void OnMonsterAttackPressed()
-    {
-        if (localRoleController == null || localRoleController.controlMode != PlayerControlMode.MonsterControlled)
-        {
-            return;
-        }
-
-        if (localMonsterAttack == null)
-        {
-            localMonsterAttack = FindFirstObjectByType<MonsterAttack>();
-        }
-
-        if (localMonsterAttack != null)
-        {
-            localMonsterAttack.TryAttack();
-        }
-    }
-
-    public void OnMonsterRoarPressed()
-    {
-        if (localRoleController != null)
-        {
-            localRoleController.PressMonsterRoar();
-            return;
-        }
-
-        if (localMonsterRoar == null)
-        {
-            localMonsterRoar = FindFirstObjectByType<MonsterRoarAbility>();
-        }
-
-        if (localMonsterRoar != null)
-        {
-            localMonsterRoar.CastRoar();
-        }
-    }
-
-    public void OnMonsterStompPressed()
-    {
-        if (localRoleController != null)
-        {
-            localRoleController.PressMonsterStomp();
-            return;
-        }
-
-        if (localMonsterStomp == null)
-        {
-            localMonsterStomp = FindFirstObjectByType<MonsterStompAbility>();
-        }
-
-        if (localMonsterStomp != null)
-        {
-            localMonsterStomp.CastStomp();
-        }
-    }
-
     public void OnSurvivorPrimaryPressed()
     {
         if (localRoleController == null)
@@ -970,28 +846,4 @@ public class ManiaGameUI : MonoBehaviour
         return minutes.ToString("0") + ":" + remainingSeconds.ToString("00");
     }
 
-    private void ValidateAbilityButtonReferences()
-    {
-        ValidateButtonReference(survivorPrimaryButton, "survivorPrimaryButton");
-        ValidateButtonReference(survivorAbility2Button, "survivorAbility2Button");
-        ValidateButtonReference(survivorAbility3Button, "survivorAbility3Button");
-        ValidateButtonReference(survivorUltimateButton, "survivorUltimateButton");
-
-        ValidateButtonReference(predatorMeleeButton, "predatorMeleeButton");
-        ValidateButtonReference(predatorAbility1Button, "predatorAbility1Button");
-        ValidateButtonReference(predatorAbility2Button, "predatorAbility2Button");
-        ValidateButtonReference(predatorAbility3Button, "predatorAbility3Button");
-        ValidateButtonReference(predatorUltimateButton, "predatorUltimateButton");
-    }
-
-    private void ValidateButtonReference(Button button, string fieldName)
-    {
-        if (button != null)
-        {
-            return;
-        }
-
-        Debug.LogWarning("[ManiaGameUI] Missing Inspector button reference: " + fieldName +
-                         ". Assign it on ManiaGameUI to enable class ability input.");
-    }
 }

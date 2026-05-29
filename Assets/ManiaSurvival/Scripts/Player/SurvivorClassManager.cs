@@ -15,6 +15,11 @@ public enum SurvivorClass
 [RequireComponent(typeof(Animator))]
 public class SurvivorClassManager : MonoBehaviour
 {
+    private static readonly int AttackHash = Animator.StringToHash("Attack");
+    private static readonly int Ability2Hash = Animator.StringToHash("Ability2");
+    private static readonly int Ability3Hash = Animator.StringToHash("Ability3");
+    private static readonly int UltimateHash = Animator.StringToHash("Ultimate");
+
     [Header("Class")]
     public SurvivorClass activeClass = SurvivorClass.Medic;
 
@@ -24,11 +29,13 @@ public class SurvivorClassManager : MonoBehaviour
     public LayerMask targetLayers = ~0;
     public bool showDebugLogs = true;
 
-    [Header("Animator Triggers")]
-    public string primaryTrigger = "Attack";
-    public string ability2Trigger = "Ability2";
-    public string ability3Trigger = "Ability3";
-    public string ultimateTrigger = "Ultimate";
+    [Header("Global Cooldowns (30% Nerf Applied)")]
+    [Tooltip("All base cooldowns are multiplied by this value.")]
+    public float globalCooldownMultiplier = 1.3f;
+    public float primaryCooldown = 2.5f;
+    public float ability2Cooldown = 8f;
+    public float ability3Cooldown = 10f;
+    public float ultimateCooldown = 20f;
 
     [Header("Medic - Biotic Dart")]
     public GameObject bioticDartProjectilePrefab;
@@ -39,10 +46,10 @@ public class SurvivorClassManager : MonoBehaviour
     public int bioticDartPredatorDamage = 6;
 
     [Header("Medic - Regen Burst")]
-    public float regenBurstDuration = 5f;
+    public float regenBurstDuration = 3f;
     public float regenBurstRadius = 6f;
     public int regenBurstHealPerTick = 4;
-    public float regenBurstTickInterval = 0.5f;
+    public float regenBurstTickInterval = 0.85f;
 
     [Header("Medic - Guardian Angel")]
     public float guardianAngelRange = 18f;
@@ -69,13 +76,14 @@ public class SurvivorClassManager : MonoBehaviour
 
     [Header("Warden - Amp It Up")]
     public float ampItUpRadius = 7f;
-    public float ampItUpMultiplier = 1.4f;
-    public float ampItUpDuration = 3f;
+    public float ampItUpMultiplier = 1.2f;
+    public float ampItUpDuration = 2.5f;
 
     [Header("Warden - Sound Barrier")]
     public float soundBarrierRadius = 8f;
     public int soundBarrierBonusHealth = 35;
     public float soundBarrierDuration = 4f;
+    public GameObject echoingShieldZonePrefab;
 
     [Header("Weaver - Healing Blossom")]
     public GameObject healingBlossomProjectilePrefab;
@@ -86,7 +94,7 @@ public class SurvivorClassManager : MonoBehaviour
     public float healingBlossomTargetRange = 16f;
 
     [Header("Weaver - Life Grip")]
-    public float lifeGripRange = 18f;
+    public float lifeGripRange = 12f;
     public float lifeGripPullDuration = 0.25f;
     public float lifeGripEndOffset = 1.3f;
     public float lifeGripBubbleDuration = 1.0f;
@@ -95,6 +103,7 @@ public class SurvivorClassManager : MonoBehaviour
     [Header("Weaver - Swift Step")]
     public float swiftStepDistance = 5f;
     public LayerMask swiftStepBlockerLayers = ~0;
+    public float swiftStepWallBuffer = 0.5f;
 
     [Header("Weaver - Protection Suzu")]
     public GameObject suzuProjectilePrefab;
@@ -106,6 +115,12 @@ public class SurvivorClassManager : MonoBehaviour
     private UnitHealth unitHealth;
     private CharacterController characterController;
     private Animator animator;
+    private float nextPrimaryReadyAt;
+    private float nextAbility2ReadyAt;
+    private float nextAbility3ReadyAt;
+    private float nextUltimateReadyAt;
+    private float battleCadenceGizmoUntil;
+    private Vector3 battleCadenceGizmoCenter;
 
     private void Awake()
     {
@@ -123,7 +138,12 @@ public class SurvivorClassManager : MonoBehaviour
             return;
         }
 
-        TriggerAnimation(primaryTrigger);
+        if (!TryConsumeCooldown("Primary", primaryCooldown, ref nextPrimaryReadyAt))
+        {
+            return;
+        }
+
+        TriggerAnimation(AttackHash);
 
         switch (activeClass)
         {
@@ -148,7 +168,12 @@ public class SurvivorClassManager : MonoBehaviour
             return;
         }
 
-        TriggerAnimation(ability2Trigger);
+        if (!TryConsumeCooldown("Ability2", ability2Cooldown, ref nextAbility2ReadyAt))
+        {
+            return;
+        }
+
+        TriggerAnimation(Ability2Hash);
 
         switch (activeClass)
         {
@@ -173,7 +198,12 @@ public class SurvivorClassManager : MonoBehaviour
             return;
         }
 
-        TriggerAnimation(ability3Trigger);
+        if (!TryConsumeCooldown("Ability3", ability3Cooldown, ref nextAbility3ReadyAt))
+        {
+            return;
+        }
+
+        TriggerAnimation(Ability3Hash);
 
         switch (activeClass)
         {
@@ -181,6 +211,8 @@ public class SurvivorClassManager : MonoBehaviour
                 StartCoroutine(MedicGuardianAngelCoroutine());
                 break;
             case SurvivorClass.Warden:
+                TriggerAnimation(Ability3Hash);
+                Debug.Log("Warden activated Battle Cadence!");
                 ExecuteWardenAmpItUp();
                 break;
             case SurvivorClass.Weaver:
@@ -198,7 +230,12 @@ public class SurvivorClassManager : MonoBehaviour
             return;
         }
 
-        TriggerAnimation(ultimateTrigger);
+        if (!TryConsumeCooldown("Ultimate", ultimateCooldown, ref nextUltimateReadyAt))
+        {
+            return;
+        }
+
+        TriggerAnimation(UltimateHash);
 
         switch (activeClass)
         {
@@ -224,17 +261,36 @@ public class SurvivorClassManager : MonoBehaviour
         return unitHealth != null && !unitHealth.IsDead;
     }
 
-    private void TriggerAnimation(string triggerName)
+    private void TriggerAnimation(int triggerHash)
     {
         if (animator == null)
         {
             animator = GetComponent<Animator>();
         }
 
-        if (animator != null && !string.IsNullOrEmpty(triggerName))
+        if (animator != null)
         {
-            animator.SetTrigger(triggerName);
+            animator.SetTrigger(triggerHash);
         }
+    }
+
+    private bool TryConsumeCooldown(string abilityName, float baseCooldown, ref float nextReadyAt)
+    {
+        float now = Time.time;
+        if (now < nextReadyAt)
+        {
+            if (showDebugLogs)
+            {
+                float remaining = nextReadyAt - now;
+                Debug.Log($"[SurvivorClassManager] {activeClass} {abilityName} on cooldown ({remaining:0.00}s remaining).");
+            }
+
+            return false;
+        }
+
+        float scaledCooldown = Mathf.Max(0f, baseCooldown) * Mathf.Max(0f, globalCooldownMultiplier);
+        nextReadyAt = now + scaledCooldown;
+        return true;
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -417,6 +473,9 @@ public class SurvivorClassManager : MonoBehaviour
 
     private void ExecuteWardenAmpItUp()
     {
+        battleCadenceGizmoCenter = transform.position;
+        battleCadenceGizmoUntil = Time.time + 1f;
+
         UnitHealth[] allies = FindAlliesInRange(transform.position, ampItUpRadius);
         for (int i = 0; i < allies.Length; i++)
         {
@@ -430,6 +489,12 @@ public class SurvivorClassManager : MonoBehaviour
 
     private void ExecuteWardenSoundBarrier()
     {
+        if (echoingShieldZonePrefab != null)
+        {
+            GameObject zone = Instantiate(echoingShieldZonePrefab, transform.position, Quaternion.identity);
+            Destroy(zone, Mathf.Max(0.1f, soundBarrierDuration));
+        }
+
         UnitHealth[] allies = FindAlliesInRange(transform.position, soundBarrierRadius);
         for (int i = 0; i < allies.Length; i++)
         {
@@ -505,17 +570,27 @@ public class SurvivorClassManager : MonoBehaviour
 
     private void ExecuteWeaverPrimary()
     {
+        Debug.Log("[SurvivorClassManager] Weaver cast Healing Blossom.");
+        TriggerAnimation(AttackHash);
+
         UnitHealth ally = FindClosestAlly(transform.position, healingBlossomTargetRange, requireDamaged: true);
         if (ally == null)
         {
+            if (showDebugLogs)
+            {
+                Debug.Log("[SurvivorClassManager] Weaver Healing Blossom found no damaged ally target.");
+            }
             return;
         }
 
         Vector3 spawn = GetProjectileSpawnPosition();
 
-        if (healingBlossomProjectilePrefab != null)
+        GameObject obj = healingBlossomProjectilePrefab != null
+            ? Instantiate(healingBlossomProjectilePrefab, spawn, Quaternion.identity)
+            : CreateFallbackProjectileVisual("HealingBlossomFallback", Color.cyan, 0.24f, spawn, Quaternion.identity);
+
+        if (obj != null)
         {
-            GameObject obj = Instantiate(healingBlossomProjectilePrefab, spawn, Quaternion.identity);
             HealingBlossomProjectile projectile = obj.GetComponent<HealingBlossomProjectile>();
             if (projectile == null)
             {
@@ -531,6 +606,9 @@ public class SurvivorClassManager : MonoBehaviour
 
     private IEnumerator WeaverLifeGripCoroutine()
     {
+        Debug.Log("[SurvivorClassManager] Weaver cast Spatial Extraction.");
+        TriggerAnimation(Ability2Hash);
+
         UnitHealth ally = FindClosestAlly(transform.position, lifeGripRange, requireDamaged: false);
         if (ally == null)
         {
@@ -573,6 +651,8 @@ public class SurvivorClassManager : MonoBehaviour
 
     private void ExecuteWeaverSwiftStep()
     {
+        Debug.Log("[SurvivorClassManager] Weaver activated Swift Step.");
+
         Vector3 direction = characterController != null ? characterController.velocity : Vector3.zero;
         direction.y = 0f;
         if (direction.sqrMagnitude <= 0.001f)
@@ -582,26 +662,35 @@ public class SurvivorClassManager : MonoBehaviour
 
         direction = direction.normalized;
         Vector3 start = transform.position;
-        float radius = Mathf.Max(0.1f, characterController != null ? characterController.radius : 0.4f);
-
-        if (Physics.SphereCast(start, radius, direction, out RaycastHit hit, swiftStepDistance, swiftStepBlockerLayers, QueryTriggerInteraction.Ignore))
+        float maxDistance = Mathf.Max(0.1f, swiftStepDistance);
+        float travelDistance = maxDistance;
+        Vector3 rayStart = start + Vector3.up * 0.25f;
+        if (Physics.Raycast(rayStart, direction, out RaycastHit hit, maxDistance, swiftStepBlockerLayers, QueryTriggerInteraction.Ignore))
         {
-            float safeDistance = Mathf.Max(0f, hit.distance - radius);
-            transform.position = start + direction * safeDistance;
-            return;
+            travelDistance = Mathf.Max(0f, hit.distance - Mathf.Max(0f, swiftStepWallBuffer));
+            if (showDebugLogs)
+            {
+                Debug.Log($"[SurvivorClassManager] Swift Step truncated by blocker '{hit.collider.name}' at {travelDistance:0.00}m.");
+            }
         }
 
-        transform.position = start + direction * swiftStepDistance;
+        transform.position = start + direction * travelDistance;
     }
 
     private void ExecuteWeaverProtectionSuzu()
     {
+        Debug.Log("[SurvivorClassManager] Weaver cast Protection Suzu.");
+        TriggerAnimation(UltimateHash);
+
         Vector3 spawn = GetProjectileSpawnPosition();
         Vector3 dir = GetForwardDirection();
 
-        if (suzuProjectilePrefab != null)
+        GameObject obj = suzuProjectilePrefab != null
+            ? Instantiate(suzuProjectilePrefab, spawn, Quaternion.LookRotation(dir))
+            : CreateFallbackProjectileVisual("SuzuFallback", Color.yellow, 0.28f, spawn, Quaternion.LookRotation(dir));
+
+        if (obj != null)
         {
-            GameObject obj = Instantiate(suzuProjectilePrefab, spawn, Quaternion.LookRotation(dir));
             ProtectionSuzuProjectile projectile = obj.GetComponent<ProtectionSuzuProjectile>();
             if (projectile == null)
             {
@@ -613,6 +702,41 @@ public class SurvivorClassManager : MonoBehaviour
         }
 
         ApplySuzuAtPosition(transform.position + dir * 2f);
+    }
+
+    private GameObject CreateFallbackProjectileVisual(string objectName, Color tint, float scale, Vector3 position, Quaternion rotation)
+    {
+        GameObject fallback = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        fallback.name = objectName;
+        fallback.transform.localScale = Vector3.one * Mathf.Max(0.1f, scale);
+        fallback.transform.SetPositionAndRotation(position, rotation);
+
+        Collider fallbackCollider = fallback.GetComponent<Collider>();
+        if (fallbackCollider != null)
+        {
+            Destroy(fallbackCollider);
+        }
+
+        MeshRenderer renderer = fallback.GetComponent<MeshRenderer>();
+        if (renderer != null)
+        {
+            Material material = new Material(Shader.Find("Standard"));
+            material.color = tint;
+            renderer.material = material;
+        }
+
+        return fallback;
+    }
+
+    private void OnDrawGizmos()
+    {
+        if (Time.time > battleCadenceGizmoUntil || ampItUpRadius <= 0f)
+        {
+            return;
+        }
+
+        Gizmos.color = new Color(0.2f, 0.8f, 1f, 0.65f);
+        Gizmos.DrawWireSphere(battleCadenceGizmoCenter, ampItUpRadius);
     }
 
     public void ApplySuzuAtPosition(Vector3 position)
