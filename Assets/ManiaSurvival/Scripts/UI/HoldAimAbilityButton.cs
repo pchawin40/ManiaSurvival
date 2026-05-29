@@ -6,6 +6,8 @@ public class HoldAimAbilityButton : MonoBehaviour, IPointerDownHandler, IDragHan
 {
     [Header("References")]
     public SurvivorSpiritBoltAbility spiritBoltAbility;
+    private float pressTime;
+    private bool isPressed;
 
     public void OnPointerDown(PointerEventData eventData)
     {
@@ -14,8 +16,9 @@ public class HoldAimAbilityButton : MonoBehaviour, IPointerDownHandler, IDragHan
             return;
         }
 
-        spiritBoltAbility.OnSpiritBoltButtonDrag(eventData.position);
-        spiritBoltAbility.OnSpiritBoltButtonDown();
+        isPressed = true;
+        pressTime = Time.time;
+        spiritBoltAbility.OnSpiritBoltButtonPressed(eventData.position);
     }
 
     public void OnDrag(PointerEventData eventData)
@@ -25,7 +28,7 @@ public class HoldAimAbilityButton : MonoBehaviour, IPointerDownHandler, IDragHan
             return;
         }
 
-        spiritBoltAbility.OnSpiritBoltButtonDrag(eventData.position);
+        spiritBoltAbility.OnSpiritBoltButtonDragged(eventData.position);
     }
 
     public void OnPointerUp(PointerEventData eventData)
@@ -35,7 +38,8 @@ public class HoldAimAbilityButton : MonoBehaviour, IPointerDownHandler, IDragHan
             return;
         }
 
-        spiritBoltAbility.OnSpiritBoltButtonDrag(eventData.position);
-        spiritBoltAbility.OnSpiritBoltButtonUp();
+        float heldDuration = isPressed ? Mathf.Max(0f, Time.time - pressTime) : 0f;
+        isPressed = false;
+        spiritBoltAbility.OnSpiritBoltButtonReleased(eventData.position, heldDuration);
     }
 }
