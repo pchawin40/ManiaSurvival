@@ -13,9 +13,17 @@ public class OfflineSurvivorBotAI : MonoBehaviour
     public float wanderMoveSpeed = 3.5f;
     public float waypointReachDistance = 0.8f;
 
+    [Header("Flee")]
+    public float fleeRadius = 11f;
+    public float fleeMoveSpeed = 5f;
+    public float lowHealthFleeThreshold = 0.4f;
+    public float woundedFleeSpeedMultiplier = 1.25f;
+    public float hellfireAvoidRadius = 4f;
+
     [Header("Combat")]
     public float minAbilityInterval = 4f;
     public float maxAbilityInterval = 7f;
+    public float medicHealTargetPercent = 0.7f;
 
     [Header("Rotation")]
     [Tooltip("Keep the unit's play-start rotation. Useful for test anchors/dummies that should wander without turning.")]
@@ -76,7 +84,6 @@ public class OfflineSurvivorBotAI : MonoBehaviour
     private IEnumerator WanderRoutine()
     {
         float retargetTime = Mathf.Max(0.1f, wanderRetargetInterval);
-        float moveSpeed = Mathf.Max(0.1f, wanderMoveSpeed);
         float stopDistance = Mathf.Max(0.1f, waypointReachDistance);
 
         while (isActiveAndEnabled)
@@ -95,10 +102,21 @@ public class OfflineSurvivorBotAI : MonoBehaviour
                     continue;
                 }
 
+                Transform predator = FindPredatorTransform();
+                Vector3 moveDirection = GetMoveDirection(destination, predator);
+                float moveSpeed = GetMoveSpeed(predator);
+
+                if (moveDirection.sqrMagnitude <= 0.001f)
+                {
+                    TrySimpleMove(Vector3.zero);
+                    stuckTimer = 0f;
+                    yield return null;
+                    continue;
+                }
+
                 Vector3 toDestination = destination - transform.position;
                 toDestination.y = 0f;
-
-                if (toDestination.sqrMagnitude <= stopDistance * stopDistance)
+                if (toDestination.sqrMagnitude <= stopDistance * stopDistance && predator == null)
                 {
                     TrySimpleMove(Vector3.zero);
                     stuckTimer = 0f;
@@ -106,7 +124,7 @@ public class OfflineSurvivorBotAI : MonoBehaviour
                 }
 
                 Vector3 beforeMove = transform.position;
-                TrySimpleMove(toDestination.normalized * moveSpeed);
+                TrySimpleMove(moveDirection.normalized * moveSpeed);
                 float movedSqr = (transform.position - beforeMove).sqrMagnitude;
                 if (movedSqr < 0.0004f)
                 {
@@ -127,6 +145,138 @@ public class OfflineSurvivorBotAI : MonoBehaviour
         }
     }
 
+    private Vector3 GetMoveDirection(Vector3 wanderDestination, Transform predator)
+    {
+        Vector3 direction = Vector3.zero;
+
+        if (predator != null)
+        {
+            Vector3 toPredator = predator.position - transform.position;
+            toPredator.y = 0f;
+            float predatorDistance = toPredator.magnitude;
+            bool lowHealth = IsLowHealth();
+            float effectiveFleeRadius = lowHealth ? fleeRadius * 1.15f : fleeRadius;
+
+            if (predatorDistance <= effectiveFleeRadius && predatorDistance > 0.05f)
+            {
+                direction = -toPredator.normalized;
+            }
+        }
+
+        if (direction.sqrMagnitude <= 0.001f)
+        {
+            Vector3 toDestination = wanderDestination - transform.position;
+            toDestination.y = 0f;
+            if (toDestination.sqrMagnitude > 0.05f)
+            {
+                direction = toDestination.normalized;
+            }
+        }
+
+        direction = ApplyHellfireAvoidance(direction);
+        return direction;
+    }
+
+    private float GetMoveSpeed(Transform predator)
+    {
+        if (predator == null)
+        {
+            return Mathf.Max(0.1f, wanderMoveSpeed);
+        }
+
+        Vector3 toPredator = predator.position - transform.position;
+        toPredator.y = 0f;
+        if (toPredator.magnitude > fleeRadius)
+        {
+            return Mathf.Max(0.1f, wanderMoveSpeed);
+        }
+
+        float speed = Mathf.Max(0.1f, fleeMoveSpeed);
+        if (IsLowHealth())
+        {
+            speed *= woundedFleeSpeedMultiplier;
+        }
+
+        return speed;
+    }
+
+    private Vector3 ApplyHellfireAvoidance(Vector3 direction)
+    {
+        if (direction.sqrMagnitude <= 0.001f)
+        {
+            return direction;
+        }
+
+        Vector3 hellfirePush = GetHellfireAvoidanceVector();
+        if (hellfirePush.sqrMagnitude <= 0.001f)
+        {
+            return direction;
+        }
+
+        Vector3 blended = (direction.normalized + hellfirePush).normalized;
+        return blended.sqrMagnitude > 0.001f ? blended : direction;
+    }
+
+    private Vector3 GetHellfireAvoidanceVector()
+    {
+        HellfirePitDamageZone[] pits = FindObjectsByType<HellfirePitDamageZone>(FindObjectsSortMode.None);
+        Vector3 push = Vector3.zero;
+
+        for (int i = 0; i < pits.Length; i++)
+        {
+            HellfirePitDamageZone pit = pits[i];
+            if (pit == null)
+            {
+                continue;
+            }
+
+            Vector3 pitCenter = pit.transform.TransformPoint(pit.localDamageCenter);
+            Vector3 away = transform.position - pitCenter;
+            away.y = 0f;
+            float distance = away.magnitude;
+            if (distance <= hellfireAvoidRadius && distance > 0.05f)
+            {
+                push += away.normalized * (hellfireAvoidRadius - distance);
+            }
+        }
+
+        return push;
+    }
+
+    private bool IsLowHealth()
+    {
+        return unitHealth != null
+            && unitHealth.maxHealth > 0
+            && (float)unitHealth.currentHealth / unitHealth.maxHealth <= lowHealthFleeThreshold;
+    }
+
+    private Transform FindPredatorTransform()
+    {
+        LocalRoleController roleController = FindFirstObjectByType<LocalRoleController>();
+        if (roleController != null && roleController.controlMode == PlayerControlMode.MonsterControlled)
+        {
+            if (roleController.monsterMovement != null && roleController.monsterMovement.enabled)
+            {
+                return roleController.monsterMovement.transform;
+            }
+        }
+
+        MonsterPlayerMovement monster = FindFirstObjectByType<MonsterPlayerMovement>();
+        if (monster != null && monster.enabled)
+        {
+            return monster.transform;
+        }
+
+        GameObject taggedMonster = GameObject.FindGameObjectWithTag("Monster");
+        if (taggedMonster != null)
+        {
+            return taggedMonster.transform;
+        }
+
+        MonsterAI monsterAi = FindFirstObjectByType<MonsterAI>();
+        return monsterAi != null && monsterAi.enabled ? monsterAi.transform : null;
+    }
+
     private IEnumerator CombatRoutine()
     {
         while (isActiveAndEnabled)
@@ -135,6 +285,11 @@ public class OfflineSurvivorBotAI : MonoBehaviour
             yield return new WaitForSeconds(delay);
 
             if (!CanMoveAsAi())
+            {
+                continue;
+            }
+
+            if (TryMedicSupport())
             {
                 continue;
             }
@@ -159,6 +314,117 @@ public class OfflineSurvivorBotAI : MonoBehaviour
                 default: survivorClassManager.ExecuteUltimate(); break;
             }
         }
+    }
+
+    private bool TryMedicSupport()
+    {
+        if (survivorClassManager == null || survivorClassManager.activeClass != SurvivorClass.Medic)
+        {
+            return false;
+        }
+
+        if (abilityController == null)
+        {
+            return false;
+        }
+
+        if (abilityController.GetCooldownRemaining(2) <= 0f)
+        {
+            int alliesNeedingHeal = CountAlliesBelowHealthPercent(survivorClassManager.healPulseRadius, medicHealTargetPercent);
+            if (alliesNeedingHeal > 0)
+            {
+                abilityController.UseAbilitySlot(2);
+                Debug.Log("[SurvivorAI] Medic used Heal Pulse on " + alliesNeedingHeal + " allies");
+                return true;
+            }
+        }
+
+        if (abilityController.GetCooldownRemaining(1) <= 0f)
+        {
+            UnitHealth woundedAlly = FindNearestWoundedAlly(survivorClassManager.bioticDartRange, medicHealTargetPercent);
+            if (woundedAlly != null)
+            {
+                abilityController.UseAbilitySlot(1);
+                Debug.Log("[SurvivorAI] Medic used Heal Dart on " + woundedAlly.name);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private int CountAlliesBelowHealthPercent(float radius, float healthPercent)
+    {
+        int count = 0;
+        UnitHealth[] allies = FindAllies(radius);
+        for (int i = 0; i < allies.Length; i++)
+        {
+            UnitHealth ally = allies[i];
+            if (ally == null || ally.IsDead || ally.maxHealth <= 0)
+            {
+                continue;
+            }
+
+            if ((float)ally.currentHealth / ally.maxHealth < healthPercent)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private UnitHealth FindNearestWoundedAlly(float radius, float healthPercent)
+    {
+        UnitHealth[] allies = FindAllies(radius);
+        UnitHealth nearest = null;
+        float nearestSqr = float.MaxValue;
+
+        for (int i = 0; i < allies.Length; i++)
+        {
+            UnitHealth ally = allies[i];
+            if (ally == null || ally.IsDead || ally.maxHealth <= 0)
+            {
+                continue;
+            }
+
+            if ((float)ally.currentHealth / ally.maxHealth >= healthPercent)
+            {
+                continue;
+            }
+
+            float sqr = (ally.transform.position - transform.position).sqrMagnitude;
+            if (sqr < nearestSqr)
+            {
+                nearestSqr = sqr;
+                nearest = ally;
+            }
+        }
+
+        return nearest;
+    }
+
+    private UnitHealth[] FindAllies(float radius)
+    {
+        UnitHealth[] all = FindObjectsByType<UnitHealth>(FindObjectsSortMode.None);
+        System.Collections.Generic.List<UnitHealth> allies = new System.Collections.Generic.List<UnitHealth>();
+
+        for (int i = 0; i < all.Length; i++)
+        {
+            UnitHealth candidate = all[i];
+            if (candidate == null || candidate.IsDead || !candidate.CompareTag("Survivor"))
+            {
+                continue;
+            }
+
+            float sqr = (candidate.transform.position - transform.position).sqrMagnitude;
+            if (sqr <= radius * radius)
+            {
+                allies.Add(candidate);
+            }
+        }
+
+        return allies.ToArray();
     }
 
     private Vector3 GetRandomWanderDestination()

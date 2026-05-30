@@ -164,6 +164,12 @@ public class ManiaGameManager : MonoBehaviour
     {
         RefreshSurvivorList();
 
+        LocalRoleController roleController = FindFirstObjectByType<LocalRoleController>();
+        if (roleController != null)
+        {
+            roleController.ApplyControlMode();
+        }
+
         TimeRemaining = roundDuration;
         MonsterKills = 0;
         PlayersReadyCount = 0;

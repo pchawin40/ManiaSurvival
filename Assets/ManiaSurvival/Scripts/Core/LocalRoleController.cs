@@ -23,6 +23,7 @@ public class LocalRoleController : MonoBehaviour
     public SoulwoodAvatarController soulwoodAvatarController;
     public CameraFollow cameraFollow;
     public bool logCameraTargetChanges = true;
+    public SoloMonsterSurvivorSpawner soloMonsterSurvivorSpawner;
 
     private void Awake()
     {
@@ -51,12 +52,33 @@ public class LocalRoleController : MonoBehaviour
     public void ApplyControlMode()
     {
         AutoFindReferences();
+        EnsureMonsterModeSurvivors();
         ApplyAllSurvivorControl();
         ApplyStandaloneSurvivorBots();
         ApplyMonsterControl();
         ResetAbilityCooldownsForRoundStart();
         UpdateCameraTarget();
         RefreshAbilityUiLabels();
+    }
+
+    private void EnsureMonsterModeSurvivors()
+    {
+        if (controlMode != PlayerControlMode.MonsterControlled)
+        {
+            return;
+        }
+
+        if (soloMonsterSurvivorSpawner == null)
+        {
+            soloMonsterSurvivorSpawner = GetComponent<SoloMonsterSurvivorSpawner>();
+        }
+
+        if (soloMonsterSurvivorSpawner == null)
+        {
+            soloMonsterSurvivorSpawner = gameObject.AddComponent<SoloMonsterSurvivorSpawner>();
+        }
+
+        soloMonsterSurvivorSpawner.EnsureMonsterModeSurvivors();
     }
 
     private void RefreshAbilityUiLabels()
@@ -107,7 +129,7 @@ public class LocalRoleController : MonoBehaviour
             }
             else if (isLocalPlayerSurvivor)
             {
-                Debug.Log("[RoleControl] Survivor mode: local survivor controlled by player, bot disabled on " + movement.name);
+                Debug.Log("[RoleControl] Survivor mode: player controls " + movement.name);
             }
         }
     }
