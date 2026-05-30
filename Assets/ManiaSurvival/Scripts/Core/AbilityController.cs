@@ -47,7 +47,7 @@ public class AbilityController : MonoBehaviour
     public float survivorSlot4Cooldown = 28f;
 
     [Header("Predator Slot Cooldowns")]
-    public float predatorSlot1Cooldown = 2.5f;
+    public float predatorSlot1Cooldown = 3.75f;
     public float predatorSlot2Cooldown = 10f;
     public float predatorSlot3Cooldown = 14f;
     public float predatorSlot4Cooldown = 35f;
@@ -129,6 +129,8 @@ public class AbilityController : MonoBehaviour
             unitMana = UnitMana.EnsureOn(gameObject, controlsPredator);
         }
 
+        PurgeLegacySurvivorMana();
+
         if (disableLegacyAbilityComponents)
         {
             DisableLegacyComponentsOnHost();
@@ -179,6 +181,8 @@ public class AbilityController : MonoBehaviour
         lastProcessedFrame = Time.frameCount;
         lastProcessedSlot = clampedSlot;
 
+        ResolveUnitMana();
+
         LogFlow($"[AbilityController] Slot pressed: {clampedSlot}");
         LogFlow($"[AbilityController] Received slot {clampedSlot}");
         LogFlow($"[AbilityController] Current role: {GetCurrentRoleLabel()}");
@@ -216,20 +220,30 @@ public class AbilityController : MonoBehaviour
         }
 
         float manaCost = GetSlotManaCostInternal(clampedSlot);
-        if (unitMana == null)
+        if (manaCost > 0f)
+        {
+            if (unitMana == null)
+            {
+                LogAbilityBlocked(clampedSlot, "UnitMana missing — cannot spend mana");
+                LogFlow("[AbilityController] Ability succeeded/failed: failed (UnitMana missing)");
+                PlayNoManaSound();
+                return;
+            }
+
+            if (!unitMana.HasMana(manaCost))
+            {
+                LogAbilityBlocked(clampedSlot, "insufficient mana (have " + unitMana.currentMana.ToString("0")
+                    + ", need " + manaCost.ToString("0") + ")");
+                LogAbilityManaBlocked(clampedSlot, unitMana.currentMana, manaCost, "insufficient mana");
+                LogFlow($"[AbilityController] Insufficient mana for slot {clampedSlot}: need {manaCost:0.0}, have {unitMana.currentMana:0.0}");
+                LogFlow("[AbilityController] Ability succeeded/failed: failed (insufficient mana)");
+                PlayNoManaSound();
+                return;
+            }
+        }
+        else if (unitMana == null)
         {
             unitMana = GetComponent<UnitMana>();
-        }
-
-        if (unitMana != null && !unitMana.HasMana(manaCost))
-        {
-            LogAbilityBlocked(clampedSlot, "insufficient mana (have " + unitMana.currentMana.ToString("0")
-                + ", need " + manaCost.ToString("0") + ")");
-            LogAbilityManaBlocked(clampedSlot, unitMana.currentMana, manaCost, "insufficient mana");
-            LogFlow($"[AbilityController] Insufficient mana for slot {clampedSlot}: need {manaCost:0.0}, have {unitMana.currentMana:0.0}");
-            LogFlow("[AbilityController] Ability succeeded/failed: failed (insufficient mana)");
-            PlayNoManaSound();
-            return;
         }
 
         bool targetFound = HasLikelyTarget(clampedSlot);
@@ -249,9 +263,9 @@ public class AbilityController : MonoBehaviour
         if (succeeded)
         {
             float manaBefore = unitMana != null ? unitMana.currentMana : 0f;
-            if (unitMana != null && manaCost > 0f)
+            if (manaCost > 0f)
             {
-                if (!unitMana.SpendMana(manaCost))
+                if (unitMana == null || !unitMana.SpendMana(manaCost))
                 {
                     LogFlow("[AbilityController] Ability succeeded but mana spend failed — cooldown not started.");
                     LogFlow("[AbilityController] Ability succeeded/failed: failed (mana spend)");
@@ -331,6 +345,23 @@ public class AbilityController : MonoBehaviour
 
     public bool HasSufficientMana(int slotNumber)
     {
+        float cost = GetSlotManaCostInternal(slotNumber);
+        if (cost <= 0f)
+        {
+            return true;
+        }
+
+        ResolveUnitMana();
+        if (unitMana == null)
+        {
+            return false;
+        }
+
+        return unitMana.HasMana(cost);
+    }
+
+    private UnitMana ResolveUnitMana()
+    {
         if (unitMana == null)
         {
             unitMana = GetComponent<UnitMana>();
@@ -338,10 +369,24 @@ public class AbilityController : MonoBehaviour
 
         if (unitMana == null)
         {
-            return true;
+            unitMana = UnitMana.EnsureOn(gameObject, controlsPredator);
         }
 
-        return unitMana.HasMana(GetSlotManaCostInternal(slotNumber));
+        return unitMana;
+    }
+
+    private void PurgeLegacySurvivorMana()
+    {
+        if (controlsPredator)
+        {
+            return;
+        }
+
+        SurvivorMana legacy = GetComponent<SurvivorMana>();
+        if (legacy != null)
+        {
+            Destroy(legacy);
+        }
     }
 
     private float GetSlotManaCostInternal(int slotNumber)

@@ -49,6 +49,7 @@ public class SurvivorMovement : MonoBehaviour
     private float carriedItemSpeedMultiplier = 1f;
     private float temporarySpeedEffectEndTime;
     private Coroutine temporarySpeedEffectRoutine;
+    private float externalMovementLockUntil;
 
     private void Awake()
     {
@@ -72,6 +73,12 @@ public class SurvivorMovement : MonoBehaviour
         }
 
         if (ManiaGameManager.Instance != null && !ManiaGameManager.Instance.IsPlaying)
+        {
+            IsSprinting = false;
+            return;
+        }
+
+        if (Time.time < externalMovementLockUntil)
         {
             IsSprinting = false;
             return;
@@ -355,6 +362,21 @@ public class SurvivorMovement : MonoBehaviour
         }
 
         temporarySpeedEffectRoutine = StartCoroutine(TemporarySpeedEffectRoutine());
+    }
+
+    public float GetTemporarySpeedMultiplier()
+    {
+        return Time.time < temporarySpeedEffectEndTime ? temporarySpeedMultiplier : 1f;
+    }
+
+    public void ApplyExternalMovementLock(float duration)
+    {
+        if (duration <= 0f)
+        {
+            return;
+        }
+
+        externalMovementLockUntil = Mathf.Max(externalMovementLockUntil, Time.time + duration);
     }
 
     private System.Collections.IEnumerator SpeedBoostRoutine(float multiplier, float duration)

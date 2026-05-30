@@ -69,8 +69,8 @@ public class PredatorClassManager : MonoBehaviour
     [Tooltip("Short-range cone poke. Softens survivors between Hook setups; keep damage modest.")]
     public float sprayRange = 8f;
     public float sprayHalfAngle = 45f;
-    public int sprayDamage = 8;
-    public float sprayKnockback = 2.6f;
+    public int sprayDamage = 16;
+    public float sprayKnockback = 6.5f;
     public float sprayCloseRangeForgiveness = 2f;
     public float sprayCloseRangeMaxAngle = 140f;
 
@@ -102,13 +102,18 @@ public class PredatorClassManager : MonoBehaviour
     public float tonicGasRadius = 4.5f;
     public float tonicGasDamagePerSecond = 5f;
     public float tonicGasPropDamagePerSecond = 5f;
+    [Tooltip("Survivor move speed multiplier while poisoned by Tonic gas (lower = slower).")]
+    public float tonicGasSlowMultiplier = 0.275f;
+    [Tooltip("How long the poison slow lasts after touching Tonic gas.")]
+    public float tonicGasSlowDuration = 2.5f;
 
     [Header("Relentless Hook - Barrage (ultimate / big burst)")]
     [Tooltip("Telegraphed ultimate. Warning strip + long cooldown — scary, but survivors can react.")]
     public float barrageDuration = 3.5f;
     public float barragePulseInterval = 0.7f;
     public float barrageRange = 20f;
-    public float barrageHalfAngle = 35f;
+    [Tooltip("Half-width of Barrage cone in degrees. Full cone = 2x this value.")]
+    public float barrageHalfAngle = 17.5f;
     public int barrageDamagePerPulse = 9;
     public float barrageKnockbackMin = 2.8f;
     public float barrageKnockbackMax = 4f;
@@ -118,6 +123,8 @@ public class PredatorClassManager : MonoBehaviour
     public float barrageVfxVerticalOffset = 0.1f;
     [Range(0f, 1f)] public float barrageWarningAlpha = 0.28f;
     [Range(0f, 1f)] public float barragePulseAlpha = 0.42f;
+    [Tooltip("Fan mesh segment count for Barrage warning/pulse VFX.")]
+    public int barrageVfxSegments = 14;
 
     [Header("Relentless Hook - Feel")]
     public bool enableAbilityFeel = true;
@@ -1084,7 +1091,8 @@ public class PredatorClassManager : MonoBehaviour
         float halfAngle,
         out float distance,
         out float angleToTarget,
-        out string reason)
+        out string reason,
+        bool allowCloseRangeForgiveness = true)
     {
         distance = 0f;
         angleToTarget = 0f;
@@ -1132,7 +1140,9 @@ public class PredatorClassManager : MonoBehaviour
 
         angleToTarget = Vector3.Angle(forward, toTarget.normalized);
 
-        if (distance <= sprayCloseRangeForgiveness && angleToTarget <= sprayCloseRangeMaxAngle)
+        if (allowCloseRangeForgiveness
+            && distance <= sprayCloseRangeForgiveness
+            && angleToTarget <= sprayCloseRangeMaxAngle)
         {
             reason = "valid-close-forgiveness";
             return true;
@@ -1408,10 +1418,6 @@ public class PredatorClassManager : MonoBehaviour
     private void TickTonicSurvivorGas(float radius, float deltaTime)
     {
         float dps = Mathf.Max(0f, tonicGasDamagePerSecond);
-        if (dps <= 0f)
-        {
-            return;
-        }
 
         UnitHealth[] candidates = GetSurvivorsInRange(transform.position, radius + 0.5f);
         HashSet<UnitHealth> insideRadius = new HashSet<UnitHealth>();
@@ -1433,6 +1439,12 @@ public class PredatorClassManager : MonoBehaviour
             }
 
             insideRadius.Add(survivor);
+            ApplyTonicGasSlowToSurvivor(survivor);
+
+            if (dps <= 0f)
+            {
+                continue;
+            }
 
             float pending = 0f;
             tonicGasPendingDamage.TryGetValue(survivor, out pending);
@@ -1450,6 +1462,26 @@ public class PredatorClassManager : MonoBehaviour
         }
 
         ClearStalePendingDamage(insideRadius);
+    }
+
+    private void ApplyTonicGasSlowToSurvivor(UnitHealth survivor)
+    {
+        if (survivor == null || survivor.IsDead || tonicGasSlowDuration <= 0f)
+        {
+            return;
+        }
+
+        SurvivorMovement movement = survivor.GetComponent<SurvivorMovement>();
+        if (movement != null)
+        {
+            movement.ApplyTemporarySpeedMultiplier(tonicGasSlowMultiplier, tonicGasSlowDuration);
+        }
+
+        OfflineSurvivorBotAI bot = survivor.GetComponent<OfflineSurvivorBotAI>();
+        if (bot != null)
+        {
+            bot.ApplyTemporarySpeedMultiplier(tonicGasSlowMultiplier, tonicGasSlowDuration);
+        }
     }
 
     private void TickTonicPropGas(float radius, float deltaTime)
@@ -1706,7 +1738,16 @@ public class PredatorClassManager : MonoBehaviour
             float distance;
             float angleToTarget;
             string reason;
-            if (!TryEvaluateSprayTarget(target, origin, forward, range, halfAngle, out distance, out angleToTarget, out reason))
+            if (!TryEvaluateSprayTarget(
+                target,
+                origin,
+                forward,
+                range,
+                halfAngle,
+                out distance,
+                out angleToTarget,
+                out reason,
+                allowCloseRangeForgiveness: false))
             {
                 continue;
             }
@@ -1750,7 +1791,7 @@ public class PredatorClassManager : MonoBehaviour
         vfx.transform.rotation = Quaternion.LookRotation(forward, Vector3.up);
 
         MeshFilter meshFilter = vfx.AddComponent<MeshFilter>();
-        meshFilter.sharedMesh = BuildSprayFanMesh(range, halfAngle, Mathf.Max(4, sprayVfxSegments));
+        meshFilter.sharedMesh = BuildSprayFanMesh(range, halfAngle, Mathf.Max(4, barrageVfxSegments));
 
         MeshRenderer renderer = vfx.AddComponent<MeshRenderer>();
         renderer.sharedMaterial = CreateSprayFanMaterial(tint);
@@ -2568,36 +2609,116 @@ public class PredatorClassManager : MonoBehaviour
 
     private void ApplyKnockback(UnitHealth target, Vector3 dir, float distance)
     {
-        if (target == null || target.IsDead || dir.sqrMagnitude <= 0.001f)
+        if (target == null || target.IsDead || dir.sqrMagnitude <= 0.001f || distance <= 0f)
         {
             return;
         }
 
-        CharacterController cc = target.GetComponent<CharacterController>();
-        if (TryMoveCharacterController(cc, target, dir.normalized * distance))
+        Vector3 flatDir = dir;
+        flatDir.y = 0f;
+        if (flatDir.sqrMagnitude <= 0.001f)
         {
-            if (ArenaBounds.Instance != null)
-            {
-                ArenaBounds.Instance.ClampUnitTransform(target.transform, "ApplyKnockback");
-            }
+            flatDir = transform.forward;
+            flatDir.y = 0f;
+        }
+
+        if (flatDir.sqrMagnitude <= 0.001f)
+        {
             return;
         }
 
-        Rigidbody rb = target.GetComponent<Rigidbody>();
-        if (rb != null && !rb.isKinematic)
-        {
-            rb.AddForce(dir.normalized * distance, ForceMode.Impulse);
-            if (ArenaBounds.Instance != null)
-            {
-                ArenaBounds.Instance.ClampUnitTransform(target.transform, "ApplyKnockback");
-            }
-            return;
-        }
+        flatDir.Normalize();
+        Vector3 start = target.transform.position;
+        float travelDistance = ResolveKnockbackTravelDistance(target, start, flatDir, distance);
+        Vector3 destination = start + flatDir * travelDistance;
+        destination.y = start.y;
 
-        target.transform.position += dir.normalized * distance;
         if (ArenaBounds.Instance != null)
         {
-            ArenaBounds.Instance.ClampUnitTransform(target.transform, "ApplyKnockback");
+            destination = ArenaBounds.Instance.ClampPosition(destination);
+        }
+
+        ApplyForcedKnockbackDisplacement(target, destination);
+    }
+
+    private float ResolveKnockbackTravelDistance(UnitHealth target, Vector3 start, Vector3 direction, float maxDistance)
+    {
+        CharacterController cc = target.GetComponent<CharacterController>();
+        float radius = cc != null ? cc.radius : 0.4f;
+        float probeHeight = cc != null ? Mathf.Max(0.5f, cc.height * 0.5f) : 1f;
+        Vector3 origin = start + Vector3.up * probeHeight;
+
+        RaycastHit[] hits = Physics.SphereCastAll(
+            origin,
+            radius,
+            direction,
+            maxDistance,
+            ~0,
+            QueryTriggerInteraction.Ignore);
+
+        if (hits == null || hits.Length == 0)
+        {
+            return maxDistance;
+        }
+
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        float bestDistance = maxDistance;
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider hitCollider = hits[i].collider;
+            if (hitCollider == null)
+            {
+                continue;
+            }
+
+            if (hitCollider.transform == target.transform || hitCollider.transform.IsChildOf(target.transform))
+            {
+                continue;
+            }
+
+            UnitHealth otherUnit = hitCollider.GetComponentInParent<UnitHealth>();
+            if (otherUnit != null && otherUnit != target && !otherUnit.IsDead)
+            {
+                continue;
+            }
+
+            bestDistance = Mathf.Min(bestDistance, Mathf.Max(0f, hits[i].distance - radius * 0.35f));
+            break;
+        }
+
+        return bestDistance;
+    }
+
+    private void ApplyForcedKnockbackDisplacement(UnitHealth target, Vector3 destination)
+    {
+        OfflineSurvivorBotAI botAi = target.GetComponent<OfflineSurvivorBotAI>();
+        SurvivorMovement survivorMovement = target.GetComponent<SurvivorMovement>();
+        bool botWasEnabled = botAi != null && botAi.enabled;
+        bool moveWasEnabled = survivorMovement != null && survivorMovement.enabled;
+
+        if (botAi != null)
+        {
+            botAi.enabled = false;
+        }
+
+        if (survivorMovement != null)
+        {
+            survivorMovement.enabled = false;
+        }
+
+        MoveUnitToPosition(target, destination);
+
+        if (survivorMovement != null)
+        {
+            survivorMovement.enabled = moveWasEnabled;
+            survivorMovement.ApplyExternalMovementLock(0.22f);
+        }
+
+        if (botAi != null)
+        {
+            botAi.enabled = botWasEnabled;
+            botAi.ApplyKnockbackLock(0.3f);
         }
     }
 

@@ -236,6 +236,12 @@ public class SoloMonsterSurvivorSpawner : MonoBehaviour
         {
             UnitMana.EnsureOn(instance, false);
         }
+
+        SurvivorMana legacyMana = instance.GetComponent<SurvivorMana>();
+        if (legacyMana != null)
+        {
+            Destroy(legacyMana);
+        }
     }
 
     private bool TryFindSafeSpawnPosition(out Vector3 result)

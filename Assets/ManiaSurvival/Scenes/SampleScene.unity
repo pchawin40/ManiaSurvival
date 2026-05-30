@@ -6545,7 +6545,7 @@ MonoBehaviour:
   survivorSlot2ManaCost: 5
   survivorSlot3ManaCost: 4
   survivorSlot4ManaCost: 12
-  predatorSlot1Cooldown: 2.5
+  predatorSlot1Cooldown: 3.75
   predatorSlot2Cooldown: 10
   predatorSlot3Cooldown: 14
   predatorSlot4Cooldown: 35
@@ -10991,7 +10991,7 @@ MonoBehaviour:
   survivorSlot2ManaCost: 5
   survivorSlot3ManaCost: 4
   survivorSlot4ManaCost: 12
-  predatorSlot1Cooldown: 2.5
+  predatorSlot1Cooldown: 3.75
   predatorSlot2Cooldown: 10
   predatorSlot3Cooldown: 14
   predatorSlot4Cooldown: 35
@@ -18655,7 +18655,7 @@ MonoBehaviour:
   survivorSlot2ManaCost: 5
   survivorSlot3ManaCost: 4
   survivorSlot4ManaCost: 12
-  predatorSlot1Cooldown: 2.5
+  predatorSlot1Cooldown: 3.75
   predatorSlot2Cooldown: 10
   predatorSlot3Cooldown: 14
   predatorSlot4Cooldown: 35
@@ -21621,6 +21621,11 @@ MonoBehaviour:
   dragonbladeDuration: 6
   dragonbladePrimaryMultiplier: 1.8
   cyberSwiftStrikeCooldown: 8
+  sprayRange: 8
+  sprayHalfAngle: 45
+  barrageRange: 20
+  barrageHalfAngle: 17.5
+  barrageVfxSegments: 14
 --- !u!95 &8924335234456584571
 Animator:
   serializedVersion: 7
@@ -21674,7 +21679,7 @@ MonoBehaviour:
   survivorSlot2ManaCost: 5
   survivorSlot3ManaCost: 4
   survivorSlot4ManaCost: 12
-  predatorSlot1Cooldown: 2.5
+  predatorSlot1Cooldown: 3.75
   predatorSlot2Cooldown: 10
   predatorSlot3Cooldown: 14
   predatorSlot4Cooldown: 35

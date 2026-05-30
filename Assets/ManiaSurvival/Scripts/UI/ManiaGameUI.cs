@@ -1418,9 +1418,9 @@ public class ManiaGameUI : MonoBehaviour
         {
             abilityInfoText.text =
                 "Relentless Hook\n"
-                + "1. Spray — 12 dmg cone, knockback 2.6 (8 mana, 2s cd).\n"
+                + "1. Spray — 16 dmg cone, knockback 6.5 (8 mana, 3.75s cd).\n"
                 + "2. Hook — Pull + 10 dmg (25 mana, 9s cd).\n"
-                + "3. Tonic — Heal 35, self-slow, toxic gas (35 mana).\n"
+                + "3. Tonic — Heal 35, toxic gas damages + slows (35 mana).\n"
                 + "4. Barrage — Ultimate cone knockback (60 mana, 16s cd).";
             return;
         }

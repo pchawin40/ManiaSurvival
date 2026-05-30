@@ -27,6 +27,10 @@ public class WorldHealthBar : MonoBehaviour
     public float damageFlashDuration = 0.12f;
     public Color damageFlashColor = Color.white;
 
+    [Header("Visibility")]
+    [Tooltip("Hide the whole bar canvas when the linked unit is dead.")]
+    public bool hideWhenDead = true;
+
     [Header("Rotation")]
     [Tooltip("Tilt this transform to face the top-down camera. Disable when this script sits on a unit root with a CharacterController.")]
     public bool applyBillboardRotation = true;
@@ -34,9 +38,17 @@ public class WorldHealthBar : MonoBehaviour
 
     private float damageFlashUntil;
     private bool loggedBillboardDisabled;
+    private Canvas barCanvas;
 
     private void Awake()
     {
+        if (unitHealth == null)
+        {
+            unitHealth = GetComponentInParent<UnitHealth>();
+        }
+
+        barCanvas = GetComponent<Canvas>();
+
         if (applyBillboardRotation && GetComponent<CharacterController>() != null)
         {
             applyBillboardRotation = false;
@@ -67,6 +79,14 @@ public class WorldHealthBar : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (hideWhenDead && unitHealth != null && unitHealth.IsDead)
+        {
+            SetBarCanvasVisible(false);
+            return;
+        }
+
+        SetBarCanvasVisible(true);
+
         if (unitHealth != null)
         {
             float percent = unitHealth.GetHealthPercent();
@@ -118,5 +138,28 @@ public class WorldHealthBar : MonoBehaviour
         }
 
         return highHealthColor;
+    }
+
+    private void SetBarCanvasVisible(bool visible)
+    {
+        if (barCanvas != null)
+        {
+            if (barCanvas.enabled != visible)
+            {
+                barCanvas.enabled = visible;
+            }
+
+            return;
+        }
+
+        if (fillImage != null)
+        {
+            fillImage.enabled = visible;
+        }
+
+        if (healthText != null)
+        {
+            healthText.enabled = visible;
+        }
     }
 }

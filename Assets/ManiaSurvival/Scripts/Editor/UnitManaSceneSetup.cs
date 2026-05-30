@@ -96,11 +96,27 @@ public static class UnitManaSceneSetup
             return 0;
         }
 
+        int changed = 0;
         UnitMana mana = host.GetComponent<UnitMana>();
+        SurvivorMana legacy = host.GetComponent<SurvivorMana>();
         if (mana == null)
         {
             mana = UnitMana.EnsureOn(host, isPredator);
-            return mana != null ? 1 : 0;
+            if (mana != null)
+            {
+                changed++;
+            }
+        }
+
+        if (legacy != null)
+        {
+            Object.DestroyImmediate(legacy);
+            changed++;
+        }
+
+        if (mana == null)
+        {
+            return changed;
         }
 
         mana.ApplyMaxManaForRole();
@@ -113,6 +129,6 @@ public static class UnitManaSceneSetup
             mana.ApplyRegenForRole();
         }
 
-        return 0;
+        return changed;
     }
 }

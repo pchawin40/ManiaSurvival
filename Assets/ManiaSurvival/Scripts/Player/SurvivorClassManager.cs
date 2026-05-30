@@ -237,12 +237,7 @@ public class SurvivorClassManager : MonoBehaviour
         switch (activeClass)
         {
             case SurvivorClass.Medic:
-                if (TryStartMedicTether())
-                {
-                    return true;
-                }
-
-                return TrySurvivorBlink();
+                return TryStartMedicTether();
             case SurvivorClass.Warden:
                 TriggerAnimation(Ability3Hash);
                 Debug.Log("Warden activated Battle Cadence!");

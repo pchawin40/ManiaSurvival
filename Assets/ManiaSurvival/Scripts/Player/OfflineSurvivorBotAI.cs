@@ -37,11 +37,16 @@ public class OfflineSurvivorBotAI : MonoBehaviour
     private UnitHealth unitHealth;
     private SurvivorClassManager survivorClassManager;
     private AbilityController abilityController;
+    private SurvivorMovement survivorMovement;
     private Coroutine wanderRoutine;
     private Coroutine combatRoutine;
+    private Coroutine temporarySpeedEffectRoutine;
     private bool loggedInactiveController;
     private bool loggedWanderClamp;
     private float stuckTimer;
+    private float temporarySpeedMultiplier = 1f;
+    private float temporarySpeedEffectEndTime;
+    private float knockbackLockUntil;
     private Quaternion playStartRotation;
 
     private void Awake()
@@ -50,7 +55,70 @@ public class OfflineSurvivorBotAI : MonoBehaviour
         unitHealth = GetComponent<UnitHealth>();
         survivorClassManager = GetComponent<SurvivorClassManager>();
         abilityController = GetComponent<AbilityController>();
+        survivorMovement = GetComponent<SurvivorMovement>();
         playStartRotation = transform.rotation;
+    }
+
+    public void ApplyTemporarySpeedMultiplier(float multiplier, float duration)
+    {
+        float clampedMultiplier = Mathf.Clamp(multiplier, 0.1f, 2f);
+        float clampedDuration = Mathf.Max(0f, duration);
+
+        if (clampedDuration <= 0f)
+        {
+            return;
+        }
+
+        bool alreadySlowed = Time.time < temporarySpeedEffectEndTime;
+        if (!alreadySlowed)
+        {
+            temporarySpeedMultiplier = clampedMultiplier;
+        }
+        else
+        {
+            temporarySpeedMultiplier = Mathf.Min(temporarySpeedMultiplier, clampedMultiplier);
+        }
+
+        temporarySpeedEffectEndTime = Mathf.Max(temporarySpeedEffectEndTime, Time.time + clampedDuration);
+
+        if (temporarySpeedEffectRoutine != null)
+        {
+            StopCoroutine(temporarySpeedEffectRoutine);
+        }
+
+        temporarySpeedEffectRoutine = StartCoroutine(TemporarySpeedEffectRoutine());
+    }
+
+    public float GetTemporarySpeedMultiplier()
+    {
+        if (survivorMovement != null)
+        {
+            return survivorMovement.GetTemporarySpeedMultiplier();
+        }
+
+        return Time.time < temporarySpeedEffectEndTime ? temporarySpeedMultiplier : 1f;
+    }
+
+    public void ApplyKnockbackLock(float duration)
+    {
+        if (duration <= 0f)
+        {
+            return;
+        }
+
+        knockbackLockUntil = Mathf.Max(knockbackLockUntil, Time.time + duration);
+    }
+
+    private System.Collections.IEnumerator TemporarySpeedEffectRoutine()
+    {
+        while (Time.time < temporarySpeedEffectEndTime)
+        {
+            yield return null;
+        }
+
+        temporarySpeedMultiplier = 1f;
+        temporarySpeedEffectRoutine = null;
+        temporarySpeedEffectEndTime = 0f;
     }
 
     private void OnEnable()
@@ -183,25 +251,31 @@ public class OfflineSurvivorBotAI : MonoBehaviour
 
     private float GetMoveSpeed(Transform predator)
     {
+        float baseSpeed;
+
         if (predator == null)
         {
-            return Mathf.Max(0.1f, wanderMoveSpeed);
+            baseSpeed = Mathf.Max(0.1f, wanderMoveSpeed);
         }
-
-        Vector3 toPredator = predator.position - transform.position;
-        toPredator.y = 0f;
-        if (toPredator.magnitude > fleeRadius)
+        else
         {
-            return Mathf.Max(0.1f, wanderMoveSpeed);
+            Vector3 toPredator = predator.position - transform.position;
+            toPredator.y = 0f;
+            if (toPredator.magnitude > fleeRadius)
+            {
+                baseSpeed = Mathf.Max(0.1f, wanderMoveSpeed);
+            }
+            else
+            {
+                baseSpeed = Mathf.Max(0.1f, fleeMoveSpeed);
+                if (IsLowHealth())
+                {
+                    baseSpeed *= woundedFleeSpeedMultiplier;
+                }
+            }
         }
 
-        float speed = Mathf.Max(0.1f, fleeMoveSpeed);
-        if (IsLowHealth())
-        {
-            speed *= woundedFleeSpeedMultiplier;
-        }
-
-        return speed;
+        return baseSpeed * GetTemporarySpeedMultiplier();
     }
 
     private Vector3 ApplyHellfireAvoidance(Vector3 direction)
@@ -557,6 +631,11 @@ public class OfflineSurvivorBotAI : MonoBehaviour
         }
 
         if (ManiaGameManager.Instance != null && !ManiaGameManager.Instance.IsPlaying)
+        {
+            return false;
+        }
+
+        if (Time.time < knockbackLockUntil)
         {
             return false;
         }

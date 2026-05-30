@@ -430,8 +430,8 @@ public class AbilityTooltipPanel : MonoBehaviour
                         className = "Relentless Hook",
                         abilityName = "Spray",
                         description = "Short-range forward shotgun blast.",
-                        cooldown = 2f,
-                        effect = "Shotgun blast + knockback 2.6",
+                        cooldown = 3.75f,
+                        effect = "16 dmg cone + knockback 6.5",
                         cost = "8 mana",
                         rangeTarget = "8 unit cone in front",
                         tip = "Fight up close and scare survivors."
@@ -455,7 +455,7 @@ public class AbilityTooltipPanel : MonoBehaviour
                         abilityName = "Tonic",
                         description = "Channel toxic gas while recovering.",
                         cooldown = 10f,
-                        effect = "Heal 35, slow self to 0.55 speed, toxic gas 10 DPS in 4.5 radius for 2.5s",
+                        effect = "Heal 35, slow self, toxic gas DPS + heavy poison slow",
                         cost = "35 mana",
                         rangeTarget = "Self + 4.5 unit gas radius",
                         tip = "Use before diving."
