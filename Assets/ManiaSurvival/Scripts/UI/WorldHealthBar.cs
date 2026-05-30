@@ -27,7 +27,27 @@ public class WorldHealthBar : MonoBehaviour
     public float damageFlashDuration = 0.12f;
     public Color damageFlashColor = Color.white;
 
+    [Header("Rotation")]
+    [Tooltip("Tilt this transform to face the top-down camera. Disable when this script sits on a unit root with a CharacterController.")]
+    public bool applyBillboardRotation = true;
+    public Vector3 billboardEulerAngles = new Vector3(60f, 0f, 0f);
+
     private float damageFlashUntil;
+    private bool loggedBillboardDisabled;
+
+    private void Awake()
+    {
+        if (applyBillboardRotation && GetComponent<CharacterController>() != null)
+        {
+            applyBillboardRotation = false;
+
+            if (!loggedBillboardDisabled)
+            {
+                loggedBillboardDisabled = true;
+                Debug.LogWarning("[WorldHealthBar] Disabled billboard rotation on unit root '" + gameObject.name + "'. Move WorldHealthBar to the HP bar canvas child instead.");
+            }
+        }
+    }
 
     private void OnEnable()
     {
@@ -69,7 +89,10 @@ public class WorldHealthBar : MonoBehaviour
             }
         }
 
-        transform.rotation = Quaternion.Euler(60f, 0f, 0f);
+        if (applyBillboardRotation)
+        {
+            transform.rotation = Quaternion.Euler(billboardEulerAngles);
+        }
     }
 
     private void OnUnitDamaged()

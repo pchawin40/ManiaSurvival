@@ -5496,6 +5496,7 @@ GameObject:
   - component: {fileID: 607457747}
   - component: {fileID: 607457746}
   - component: {fileID: 607457748}
+  - component: {fileID: 607457749}
   m_Layer: 0
   m_Name: HeavenSafeZonePlatform
   m_TagString: Untagged
@@ -5658,6 +5659,21 @@ MonoBehaviour:
   blockHazards: 1
   blockTreePatches: 1
   blockNPCChaos: 1
+--- !u!114 &607457749
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 607457741}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4e8c1d23f5b4a6489b0e2d7c6f1a3b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HeavenFloorCollider
+  floorWorldCenter: {x: 0, y: 0.25, z: -100}
+  floorSize: {x: 80, y: 0.5, z: 160}
+  autoFixOnAwake: 1
 --- !u!1 &613925144
 GameObject:
   m_ObjectHideFlags: 0
@@ -6173,7 +6189,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 8019606697992370254}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 637681156}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0d1f2d7e4d5c4dddb3a8a2fb8b5dd8f1, type: 3}
   m_Name: 
@@ -6185,7 +6201,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 637681156}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0d1f2d7e4d5c4dddb3a8a2fb8b5dd8f1, type: 3}
   m_Name: 
@@ -6215,7 +6231,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 637681156}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0d9c2173d5d64b87afae3b0ad2ff2f6a, type: 3}
   m_Name: 
@@ -6255,7 +6271,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 637681156}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9b6d114f8d104cc2a2a1dfd2fe3b7aa1, type: 3}
   m_Name: 
@@ -6284,7 +6300,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 637681156}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e4e1f2162eb04b3d8c4c4f6a7eb5b1a0, type: 3}
   m_Name: 
@@ -6354,7 +6370,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 637681156}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0d9c2173d5d64b87afae3b0ad2ff2f6a, type: 3}
   m_Name: 
@@ -6466,6 +6482,39 @@ MonoBehaviour:
   suzuProjectileLifetime: 2.5
   suzuRadius: 4
   suzuInvulnerabilityDuration: 1
+--- !u!114 &637681190
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 637681156}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b66b8a3d0ebd4f29b0b7d2a11e9d4c6f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AbilityController
+  controlsPredator: 0
+  enforceTestLoadouts: 1
+  logAbilityFlow: 1
+  disableLegacyAbilityComponents: 1
+  pipelineTestMode: 1
+  abilityControllerOwnsCooldowns: 1
+  localRoleController: {fileID: 961346313}
+  gameManager: {fileID: 1497139249}
+  unitHealth: {fileID: 637681161}
+  survivorClassManager: {fileID: 637681185}
+  predatorClassManager: {fileID: 0}
+  survivorSlot1Cooldown: 2.5
+  survivorSlot2Cooldown: 8
+  survivorSlot3Cooldown: 10
+  survivorSlot4Cooldown: 16
+  predatorSlot1Cooldown: 1.4
+  predatorSlot2Cooldown: 8
+  predatorSlot3Cooldown: 10
+  predatorSlot4Cooldown: 14
+  spawnPlaceholderVfx: 1
+  placeholderVfxLifetime: 1.25
 --- !u!95 &637681186
 Animator:
   serializedVersion: 7
@@ -6935,19 +6984,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 661074653}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 961346313}
-        m_TargetAssemblyTypeName: LocalRoleController, Assembly-CSharp
-        m_MethodName: PressSurvivorUltimate
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &661074653
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7143,19 +7180,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 665206595}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 961346313}
-        m_TargetAssemblyTypeName: LocalRoleController, Assembly-CSharp
-        m_MethodName: PressPredatorUltimate
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &665206595
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8834,19 +8859,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 894360467}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 961346313}
-        m_TargetAssemblyTypeName: LocalRoleController, Assembly-CSharp
-        m_MethodName: PressSurvivorPrimary
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &894360467
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9458,19 +9471,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 937926840}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 961346313}
-        m_TargetAssemblyTypeName: LocalRoleController, Assembly-CSharp
-        m_MethodName: PressPredatorMeleeAttack
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &937926840
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9764,9 +9765,11 @@ MonoBehaviour:
   joystickDeadZone: 0.15
   survivorMovement: {fileID: 356814411}
   survivorClassManager: {fileID: 637681185}
+  survivorAbilityController: {fileID: 637681190}
   monsterMovement: {fileID: 8924335234456584559}
   monsterAI: {fileID: 8924335234456584561}
   predatorClassManager: {fileID: 8924335234456584570}
+  predatorAbilityController: {fileID: 8924335234456584573}
   soulwoodAvatarController: {fileID: -3976061171102463217, guid: 63bb14b8995374041820fd9437e0735f, type: 3}
   cameraFollow: {fileID: 46845616}
   logCameraTargetChanges: 1
@@ -10764,14 +10767,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 81e240f2f0705e5408824a36b17caf9f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OfflineSurvivorBotAI
-  isAiControlled: 0
-  localRoleController: {fileID: 961346313}
   wanderRadius: 10
   wanderRetargetInterval: 3
   wanderMoveSpeed: 3.5
   waypointReachDistance: 0.8
   minAbilityInterval: 4
   maxAbilityInterval: 7
+  lockRotationDuringPlay: 1
 --- !u!114 &1048404670
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13556,19 +13558,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1342540089}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 961346313}
-        m_TargetAssemblyTypeName: LocalRoleController, Assembly-CSharp
-        m_MethodName: PressPredatorAbility3
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &1342540089
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14671,19 +14661,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1514859846}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 961346313}
-        m_TargetAssemblyTypeName: LocalRoleController, Assembly-CSharp
-        m_MethodName: PressPredatorAbility1
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &1514859846
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15032,19 +15010,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1534769629}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 961346313}
-        m_TargetAssemblyTypeName: LocalRoleController, Assembly-CSharp
-        m_MethodName: PressSurvivorAbility3
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &1534769629
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -18372,14 +18338,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 81e240f2f0705e5408824a36b17caf9f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OfflineSurvivorBotAI
-  isAiControlled: 0
-  localRoleController: {fileID: 961346313}
   wanderRadius: 10
   wanderRetargetInterval: 3
   wanderMoveSpeed: 3.5
   waypointReachDistance: 0.8
   minAbilityInterval: 4
   maxAbilityInterval: 7
+  lockRotationDuringPlay: 1
 --- !u!114 &1970627231
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19730,19 +19695,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 2060611938}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 961346313}
-        m_TargetAssemblyTypeName: LocalRoleController, Assembly-CSharp
-        m_MethodName: PressSurvivorAbility2
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &2060611938
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19938,19 +19891,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 2060645638}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 961346313}
-        m_TargetAssemblyTypeName: LocalRoleController, Assembly-CSharp
-        m_MethodName: PressPredatorAbility2
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &2060645638
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21066,6 +21007,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1935288733120376740, guid: 3d0c97f0a07bcc2438154cc20a88e933, type: 3}
       insertIndex: -1
       addedObject: {fileID: 637681185}
+    - targetCorrespondingSourceObject: {fileID: 1935288733120376740, guid: 3d0c97f0a07bcc2438154cc20a88e933, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 637681190}
   m_SourcePrefab: {fileID: 100100000, guid: 3d0c97f0a07bcc2438154cc20a88e933, type: 3}
 --- !u!1001 &8409562036592895256
 PrefabInstance:
@@ -21156,6 +21100,10 @@ PrefabInstance:
       propertyPath: attackDamage
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 363360154544469868, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
+      propertyPath: autoAttack
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1901775035134909915, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
       propertyPath: m_Name
       value: Monster
@@ -21242,6 +21190,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1901775035134909915, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8924335234456584570}
+    - targetCorrespondingSourceObject: {fileID: 1901775035134909915, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8924335234456584573}
   m_SourcePrefab: {fileID: 100100000, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
 --- !u!1 &8924335234456584550 stripped
 GameObject:
@@ -21320,7 +21271,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8924335234456584550}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9b7bf5b496d7d7a47add8d0b2098f5bb, type: 3}
   m_Name: 
@@ -21347,7 +21298,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8924335234456584550}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7986bfe6e4f6a0c4eb88aa8fba4a1d9c, type: 3}
   m_Name: 
@@ -21375,7 +21326,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8924335234456584550}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8cf391e6d89f97a4c952060ad50c5a64, type: 3}
   m_Name: 
@@ -21437,6 +21388,39 @@ MonoBehaviour:
   dragonbladeDuration: 6
   dragonbladePrimaryMultiplier: 1.8
   cyberSwiftStrikeCooldown: 8
+--- !u!114 &8924335234456584573
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8924335234456584550}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b66b8a3d0ebd4f29b0b7d2a11e9d4c6f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AbilityController
+  controlsPredator: 1
+  enforceTestLoadouts: 1
+  logAbilityFlow: 1
+  disableLegacyAbilityComponents: 1
+  pipelineTestMode: 1
+  abilityControllerOwnsCooldowns: 1
+  localRoleController: {fileID: 961346313}
+  gameManager: {fileID: 1497139249}
+  unitHealth: {fileID: 8924335234456584551}
+  survivorClassManager: {fileID: 0}
+  predatorClassManager: {fileID: 8924335234456584570}
+  survivorSlot1Cooldown: 2.5
+  survivorSlot2Cooldown: 8
+  survivorSlot3Cooldown: 10
+  survivorSlot4Cooldown: 16
+  predatorSlot1Cooldown: 1.4
+  predatorSlot2Cooldown: 8
+  predatorSlot3Cooldown: 10
+  predatorSlot4Cooldown: 14
+  spawnPlaceholderVfx: 1
+  placeholderVfxLifetime: 1.25
 --- !u!95 &8924335234456584571
 Animator:
   serializedVersion: 7

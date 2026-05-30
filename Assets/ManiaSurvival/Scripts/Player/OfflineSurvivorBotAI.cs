@@ -4,12 +4,9 @@ using UnityEngine;
 [DisallowMultipleComponent]
 [RequireComponent(typeof(CharacterController))]
 [RequireComponent(typeof(SurvivorClassManager))]
+[RequireComponent(typeof(AbilityController))]
 public class OfflineSurvivorBotAI : MonoBehaviour
 {
-    [Header("AI Toggle")]
-    [SerializeField] private bool isAiControlled;
-    [SerializeField] private LocalRoleController localRoleController;
-
     [Header("Wander")]
     public float wanderRadius = 10f;
     public float wanderRetargetInterval = 3f;
@@ -20,73 +17,39 @@ public class OfflineSurvivorBotAI : MonoBehaviour
     public float minAbilityInterval = 4f;
     public float maxAbilityInterval = 7f;
 
+    [Header("Rotation")]
+    [Tooltip("Keep the unit's play-start rotation. Useful for test anchors/dummies that should wander without turning.")]
+    public bool lockRotationDuringPlay;
+
     private CharacterController characterController;
+    private UnitHealth unitHealth;
     private SurvivorClassManager survivorClassManager;
+    private AbilityController abilityController;
     private Coroutine wanderRoutine;
     private Coroutine combatRoutine;
+    private bool loggedInactiveController;
+    private Quaternion playStartRotation;
 
     private void Awake()
     {
         characterController = GetComponent<CharacterController>();
+        unitHealth = GetComponent<UnitHealth>();
         survivorClassManager = GetComponent<SurvivorClassManager>();
-
-        if (localRoleController == null)
-        {
-            localRoleController = GetComponent<LocalRoleController>();
-        }
+        abilityController = GetComponent<AbilityController>();
+        playStartRotation = transform.rotation;
     }
 
     private void OnEnable()
     {
-        RefreshAiControlState();
-        UpdateAiRoutines();
+        loggedInactiveController = false;
+        playStartRotation = transform.rotation;
+        wanderRoutine = StartCoroutine(WanderRoutine());
+        combatRoutine = StartCoroutine(CombatRoutine());
     }
 
     private void OnDisable()
     {
         StopAiRoutines();
-    }
-
-    private void Update()
-    {
-        RefreshAiControlState();
-        UpdateAiRoutines();
-    }
-
-    private void RefreshAiControlState()
-    {
-        if (localRoleController == null)
-        {
-            localRoleController = FindFirstObjectByType<LocalRoleController>();
-        }
-
-        isAiControlled = localRoleController != null
-            && localRoleController.controlMode == PlayerControlMode.MonsterControlled;
-    }
-
-    private void UpdateAiRoutines()
-    {
-        bool hasWander = wanderRoutine != null;
-        bool hasCombat = combatRoutine != null;
-
-        if (!isAiControlled)
-        {
-            if (hasWander || hasCombat)
-            {
-                StopAiRoutines();
-            }
-            return;
-        }
-
-        if (!hasWander)
-        {
-            wanderRoutine = StartCoroutine(WanderRoutine());
-        }
-
-        if (!hasCombat)
-        {
-            combatRoutine = StartCoroutine(CombatRoutine());
-        }
     }
 
     private void StopAiRoutines()
@@ -103,10 +66,7 @@ public class OfflineSurvivorBotAI : MonoBehaviour
             combatRoutine = null;
         }
 
-        if (characterController != null && characterController.enabled)
-        {
-            characterController.SimpleMove(Vector3.zero);
-        }
+        TrySimpleMove(Vector3.zero);
     }
 
     private IEnumerator WanderRoutine()
@@ -126,11 +86,7 @@ public class OfflineSurvivorBotAI : MonoBehaviour
 
                 if (!CanMoveAsAi())
                 {
-                    if (characterController != null && characterController.enabled)
-                    {
-                        characterController.SimpleMove(Vector3.zero);
-                    }
-
+                    TrySimpleMove(Vector3.zero);
                     yield return null;
                     continue;
                 }
@@ -140,11 +96,11 @@ public class OfflineSurvivorBotAI : MonoBehaviour
 
                 if (toDestination.sqrMagnitude <= stopDistance * stopDistance)
                 {
-                    characterController.SimpleMove(Vector3.zero);
+                    TrySimpleMove(Vector3.zero);
                     break;
                 }
 
-                characterController.SimpleMove(toDestination.normalized * moveSpeed);
+                TrySimpleMove(toDestination.normalized * moveSpeed);
                 yield return null;
             }
         }
@@ -157,26 +113,29 @@ public class OfflineSurvivorBotAI : MonoBehaviour
             float delay = Random.Range(Mathf.Max(0.1f, minAbilityInterval), Mathf.Max(minAbilityInterval + 0.1f, maxAbilityInterval));
             yield return new WaitForSeconds(delay);
 
-            if (!CanMoveAsAi() || survivorClassManager == null)
+            if (!CanMoveAsAi())
             {
                 continue;
             }
 
             int roll = Random.Range(0, 4);
+            if (abilityController != null)
+            {
+                abilityController.UseAbilitySlot(roll + 1);
+                continue;
+            }
+
+            if (survivorClassManager == null)
+            {
+                continue;
+            }
+
             switch (roll)
             {
-                case 0:
-                    survivorClassManager.ExecutePrimary();
-                    break;
-                case 1:
-                    survivorClassManager.ExecuteAbility2();
-                    break;
-                case 2:
-                    survivorClassManager.ExecuteAbility3();
-                    break;
-                default:
-                    survivorClassManager.ExecuteUltimate();
-                    break;
+                case 0: survivorClassManager.ExecutePrimary(); break;
+                case 1: survivorClassManager.ExecuteAbility2(); break;
+                case 2: survivorClassManager.ExecuteAbility3(); break;
+                default: survivorClassManager.ExecuteUltimate(); break;
             }
         }
     }
@@ -191,8 +150,51 @@ public class OfflineSurvivorBotAI : MonoBehaviour
 
     private bool CanMoveAsAi()
     {
-        return isAiControlled
-            && characterController != null
-            && characterController.enabled;
+        if (!isActiveAndEnabled || !enabled)
+        {
+            return false;
+        }
+
+        if (unitHealth != null && unitHealth.IsDead)
+        {
+            return false;
+        }
+
+        if (ManiaGameManager.Instance != null && !ManiaGameManager.Instance.IsPlaying)
+        {
+            return false;
+        }
+
+        return characterController != null
+            && characterController.enabled
+            && characterController.gameObject.activeInHierarchy;
+    }
+
+    private bool TrySimpleMove(Vector3 velocity)
+    {
+        if (characterController == null || !characterController.enabled || !characterController.gameObject.activeInHierarchy)
+        {
+            if (!loggedInactiveController)
+            {
+                loggedInactiveController = true;
+                Debug.LogWarning("[OfflineSurvivorBotAI] Skipping movement on inactive CharacterController on '" + gameObject.name + "'.");
+            }
+
+            return false;
+        }
+
+        if (unitHealth != null && unitHealth.IsDead)
+        {
+            return false;
+        }
+
+        characterController.SimpleMove(velocity);
+
+        if (lockRotationDuringPlay)
+        {
+            transform.rotation = playStartRotation;
+        }
+
+        return true;
     }
 }

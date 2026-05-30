@@ -29,6 +29,7 @@ public class PredatorClassManager : MonoBehaviour
 
     [Header("Shared")]
     public bool showDebugLogs = true;
+    public bool useExternalCooldownAuthority = false;
     public Transform projectileSpawn;
 
     [Header("Prefabs")]
@@ -88,11 +89,12 @@ public class PredatorClassManager : MonoBehaviour
     }
 
     // Slot 0: melee / primary.
-    public void CastMeleeAttack()
+    public bool CastMeleeAttack()
     {
+        Debug.Log("[PredatorClassManager] Executing ability: " + activeClass + "/Primary");
         if (!TryConsumeSharedGcd(MeleeAttackHash))
         {
-            return;
+            return false;
         }
 
         switch (activeClass)
@@ -105,14 +107,17 @@ public class PredatorClassManager : MonoBehaviour
             case PredatorClass.Vanguard: CastVanguardRocketHammer(); break;
             case PredatorClass.RelentlessHook: CastRelentlessHookScrapGun(); break;
         }
+
+        return true;
     }
 
     // Slot 1
-    public void CastAbility1()
+    public bool CastAbility1()
     {
+        Debug.Log("[PredatorClassManager] Executing ability: " + activeClass + "/Slot2");
         if (!TryConsumeSharedGcd(Ability1Hash))
         {
-            return;
+            return false;
         }
 
         switch (activeClass)
@@ -125,14 +130,17 @@ public class PredatorClassManager : MonoBehaviour
             case PredatorClass.Vanguard: StartCoroutine(CastVanguardChargeCoroutine()); break;
             case PredatorClass.RelentlessHook: StartCoroutine(CastRelentlessChainHookCoroutine()); break;
         }
+
+        return true;
     }
 
     // Slot 2
-    public void CastAbility2()
+    public bool CastAbility2()
     {
+        Debug.Log("[PredatorClassManager] Executing ability: " + activeClass + "/Slot3");
         if (!TryConsumeSharedGcd(Ability2Hash))
         {
-            return;
+            return false;
         }
 
         switch (activeClass)
@@ -145,14 +153,17 @@ public class PredatorClassManager : MonoBehaviour
             case PredatorClass.Vanguard: CastVanguardFireStrike(); break;
             case PredatorClass.RelentlessHook: StartCoroutine(CastRelentlessTakeABreatherCoroutine()); break;
         }
+
+        return true;
     }
 
     // Slot 3
-    public void CastAbility3()
+    public bool CastAbility3()
     {
+        Debug.Log("[PredatorClassManager] Executing ability: " + activeClass + "/Slot4");
         if (!TryConsumeSharedGcd(Ability3Hash))
         {
-            return;
+            return false;
         }
 
         switch (activeClass)
@@ -165,14 +176,17 @@ public class PredatorClassManager : MonoBehaviour
             case PredatorClass.Vanguard: CastVanguardEarthshatter(); break;
             case PredatorClass.RelentlessHook: StartCoroutine(CastRelentlessWholeHogCoroutine()); break;
         }
+
+        return true;
     }
 
     // Optional explicit ultimate route: same as slot 3 map.
-    public void CastUltimate()
+    public bool CastUltimate()
     {
+        Debug.Log("[PredatorClassManager] Executing ability: " + activeClass + "/Ultimate");
         if (!TryConsumeSharedGcd(UltimateHash))
         {
-            return;
+            return false;
         }
 
         // Uses same blueprint mapping's fourth action.
@@ -186,6 +200,8 @@ public class PredatorClassManager : MonoBehaviour
             case PredatorClass.Vanguard: CastVanguardEarthshatter(); break;
             case PredatorClass.RelentlessHook: StartCoroutine(CastRelentlessWholeHogCoroutine()); break;
         }
+
+        return true;
     }
 
     private bool TryConsumeSharedGcd(int triggerHash)
@@ -222,6 +238,16 @@ public class PredatorClassManager : MonoBehaviour
 
         if (Time.time < nextGlobalCastTime)
         {
+            if (useExternalCooldownAuthority)
+            {
+                if (animator != null)
+                {
+                    animator.SetTrigger(triggerHash);
+                }
+
+                return true;
+            }
+
             if (showDebugLogs)
             {
                 float remaining = Mathf.Max(0f, nextGlobalCastTime - Time.time);
@@ -815,7 +841,8 @@ public class PredatorClassManager : MonoBehaviour
         Vector3 dir = transform.forward;
         if (hookProjectilePrefab != null)
         {
-            Instantiate(hookProjectilePrefab, origin, Quaternion.LookRotation(dir));
+            GameObject hook = Instantiate(hookProjectilePrefab, origin, Quaternion.LookRotation(dir));
+            Debug.Log("[AbilityVFX] Spawned VFX: " + hook.name + ", position=" + hook.transform.position + ", duration=0.50s");
         }
 
         if (Physics.Raycast(origin, dir, out RaycastHit hit, 14f, targetLayers, QueryTriggerInteraction.Ignore))

@@ -20,6 +20,8 @@ public class UnitHealth : MonoBehaviour
     [Header("Debug")]
     [Tooltip("Logs a clear damage line for survivors to improve combat readability while testing.")]
     public bool logSurvivorDamage = true;
+    [Tooltip("Logs generic ability damage/heal lines for stability debugging.")]
+    public bool logAbilityEffects = true;
 
     void Awake()
     {
@@ -37,6 +39,12 @@ public class UnitHealth : MonoBehaviour
         currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
 
         onDamaged?.Invoke();
+
+        if (logAbilityEffects)
+        {
+            string sourceName = damageSource != null ? damageSource.name : "Unknown";
+            Debug.Log("[AbilityEffect] Damaged " + name + " for " + amount + " by " + sourceName + ".");
+        }
 
         if (logSurvivorDamage && CompareTag("Survivor"))
         {
@@ -58,6 +66,11 @@ public class UnitHealth : MonoBehaviour
 
         currentHealth += amount;
         currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+
+        if (logAbilityEffects)
+        {
+            Debug.Log("[AbilityEffect] Healed " + name + " for " + amount + ".");
+        }
     }
 
     public void ResetHealth()

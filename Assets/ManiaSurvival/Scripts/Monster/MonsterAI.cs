@@ -17,12 +17,15 @@ public class MonsterAI : MonoBehaviour
     public ManiaGameManager gameManager;
 
     private CharacterController characterController;
+    private UnitHealth unitHealth;
     private float retargetTimer;
     private float verticalVelocity;
+    private bool loggedInactiveController;
 
     private void Awake()
     {
         characterController = GetComponent<CharacterController>();
+        unitHealth = GetComponent<UnitHealth>();
 
         if (gameManager == null)
         {
@@ -42,6 +45,11 @@ public class MonsterAI : MonoBehaviour
 
     private void Update()
     {
+        if (!enabled || !CanUseCharacterController())
+        {
+            return;
+        }
+
         if (gameManager != null && gameManager.State != ManiaGameState.Playing)
         {
             return;
@@ -129,14 +137,46 @@ public class MonsterAI : MonoBehaviour
 
         Vector3 moveDirection = toTarget.normalized;
         ApplyGravity();
-        characterController.Move((moveDirection * moveSpeed + Vector3.up * verticalVelocity) * Time.deltaTime);
+        TryMove((moveDirection * moveSpeed + Vector3.up * verticalVelocity) * Time.deltaTime);
         RotateToward(moveDirection);
     }
 
     private void ApplyGravityOnly()
     {
         ApplyGravity();
-        characterController.Move(Vector3.up * verticalVelocity * Time.deltaTime);
+        TryMove(Vector3.up * verticalVelocity * Time.deltaTime);
+    }
+
+    private bool CanUseCharacterController()
+    {
+        if (characterController == null || !characterController.enabled || !characterController.gameObject.activeInHierarchy)
+        {
+            return false;
+        }
+
+        if (unitHealth != null && unitHealth.IsDead)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool TryMove(Vector3 motion)
+    {
+        if (!CanUseCharacterController())
+        {
+            if (!loggedInactiveController)
+            {
+                loggedInactiveController = true;
+                Debug.LogWarning("[MonsterAI] Skipping movement on inactive CharacterController on '" + gameObject.name + "'.");
+            }
+
+            return false;
+        }
+
+        characterController.Move(motion);
+        return true;
     }
 
     private void ApplyGravity()

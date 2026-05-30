@@ -41,6 +41,7 @@ public class SurvivorMovement : MonoBehaviour
     private float verticalVelocity;
     private float dodgeTimer;
     private bool mobileSprintHeld;
+    private bool loggedInactiveController;
 
     private float speedBoostMultiplier = 1f;
     private Coroutine speedBoostRoutine;
@@ -108,8 +109,40 @@ public class SurvivorMovement : MonoBehaviour
         }
 
         ApplyGravity();
-        characterController.Move((moveDirection * moveSpeed + Vector3.up * verticalVelocity) * Time.deltaTime);
+        TryMove((moveDirection * moveSpeed + Vector3.up * verticalVelocity) * Time.deltaTime);
         RotateToward(moveDirection);
+    }
+
+    private bool CanUseCharacterController()
+    {
+        if (characterController == null || !characterController.enabled || !characterController.gameObject.activeInHierarchy)
+        {
+            return false;
+        }
+
+        if (health != null && health.IsDead)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool TryMove(Vector3 motion)
+    {
+        if (!CanUseCharacterController())
+        {
+            if (!loggedInactiveController)
+            {
+                loggedInactiveController = true;
+                Debug.LogWarning("[SurvivorMovement] Skipping movement on inactive CharacterController on '" + gameObject.name + "'.");
+            }
+
+            return false;
+        }
+
+        characterController.Move(motion);
+        return true;
     }
 
     public void SetMoveInput(Vector2 input)
@@ -151,7 +184,7 @@ public class SurvivorMovement : MonoBehaviour
         dodgeTimer = dodgeCooldown;
 
         Vector3 dodgeDirection = lastMoveDirection.sqrMagnitude > 0.001f ? lastMoveDirection : transform.forward;
-        characterController.Move(dodgeDirection.normalized * dodgeDistance);
+        TryMove(dodgeDirection.normalized * dodgeDistance);
     }
 
     private Vector2 GetMoveInput()

@@ -15,7 +15,13 @@ public class AbilityCooldownButton : MonoBehaviour
 
     [Header("Colors")]
     public Color readyColor = Color.white;
-    public Color cooldownColor = Color.gray;
+    public Color cooldownColor = new Color(0.55f, 0.55f, 0.55f, 1f);
+
+    [Header("Cooldown Authority")]
+    public ManiaGameUI gameUi;
+    public int abilitySlot = 1;
+    public bool isPredatorSide;
+    public bool useAbilityControllerCooldown = true;
 
     [Header("Ability Info")]
     [Tooltip("Display name shown on the button (e.g. 'Roar'). Abilities will overwrite this on Awake.")]
@@ -27,14 +33,36 @@ public class AbilityCooldownButton : MonoBehaviour
     [Tooltip("If true, the Ability Name Text is overwritten with the formatted label. Turn off if you want to author the label manually.")]
     public bool useAbilityLabel = true;
 
-    private float cooldownEndTime;
+    private float legacyCooldownEndTime;
 
-    public bool IsCoolingDown => cooldownEndTime > Time.time;
+    public bool IsCoolingDown
+    {
+        get
+        {
+            if (useAbilityControllerCooldown)
+            {
+                AbilityController controller = ResolveAbilityController();
+                return controller != null && controller.GetCooldownRemaining(abilitySlot) > 0f;
+            }
+
+            return legacyCooldownEndTime > Time.time;
+        }
+    }
 
     private void Awake()
     {
         CacheReferences();
         ApplyAbilityLabel();
+        ApplyReadyVisuals();
+    }
+
+    public void BindCooldownVisual(ManiaGameUI ui, int slotNumber, bool predatorSide)
+    {
+        gameUi = ui;
+        abilitySlot = slotNumber;
+        isPredatorSide = predatorSide;
+        useAbilityControllerCooldown = true;
+        CacheReferences();
         ApplyReadyVisuals();
     }
 
@@ -65,56 +93,105 @@ public class AbilityCooldownButton : MonoBehaviour
 
     private void Update()
     {
-        if (!IsCoolingDown)
+        if (useAbilityControllerCooldown)
         {
-            if (cooldownEndTime > 0f)
+            AbilityController controller = ResolveAbilityController();
+            if (controller == null)
             {
-                cooldownEndTime = 0f;
+                ApplyReadyVisuals();
+                return;
+            }
+
+            float remaining = controller.GetCooldownRemaining(abilitySlot);
+            if (remaining > 0f)
+            {
+                ApplyCooldownVisuals(remaining);
+            }
+            else
+            {
                 ApplyReadyVisuals();
             }
 
             return;
         }
 
-        if (button != null)
+        if (!IsCoolingDown)
         {
-            button.interactable = false;
+            if (legacyCooldownEndTime > 0f)
+            {
+                legacyCooldownEndTime = 0f;
+                ApplyReadyVisuals();
+            }
+
+            return;
         }
 
-        SetTintColor(cooldownColor);
-
-        if (cooldownText != null)
-        {
-            float remaining = Mathf.Max(0f, cooldownEndTime - Time.time);
-            int seconds = Mathf.CeilToInt(remaining);
-            cooldownText.text = seconds > 0 ? seconds + " sec" : "";
-        }
+        ApplyCooldownVisuals(Mathf.Max(0f, legacyCooldownEndTime - Time.time));
     }
 
     public void StartCooldown(float duration)
     {
+        if (useAbilityControllerCooldown)
+        {
+            return;
+        }
+
         CacheReferences();
 
         float cooldownDuration = Mathf.Max(0f, duration);
         if (cooldownDuration <= 0f)
         {
-            cooldownEndTime = 0f;
+            legacyCooldownEndTime = 0f;
             ApplyReadyVisuals();
             return;
         }
 
-        cooldownEndTime = Time.time + cooldownDuration;
+        legacyCooldownEndTime = Time.time + cooldownDuration;
+        ApplyCooldownVisuals(cooldownDuration);
+    }
 
-        if (button != null)
+    private AbilityController ResolveAbilityController()
+    {
+        if (gameUi == null)
         {
-            button.interactable = false;
+            gameUi = FindFirstObjectByType<ManiaGameUI>();
         }
 
+        if (gameUi == null)
+        {
+            return null;
+        }
+
+        return isPredatorSide ? gameUi.predatorAbilityController : gameUi.survivorAbilityController;
+    }
+
+    private void ApplyCooldownVisuals(float remainingSeconds)
+    {
+        KeepButtonInteractableForTooltip();
         SetTintColor(cooldownColor);
 
         if (cooldownText != null)
         {
-            cooldownText.text = Mathf.CeilToInt(cooldownDuration) + " sec";
+            cooldownText.text = remainingSeconds.ToString("0.0");
+        }
+    }
+
+    private void ApplyReadyVisuals()
+    {
+        KeepButtonInteractableForTooltip();
+        SetTintColor(readyColor);
+
+        if (cooldownText != null)
+        {
+            cooldownText.text = string.Empty;
+        }
+    }
+
+    private void KeepButtonInteractableForTooltip()
+    {
+        if (button != null && !button.interactable)
+        {
+            button.interactable = true;
         }
     }
 
@@ -155,21 +232,6 @@ public class AbilityCooldownButton : MonoBehaviour
                     abilityNameText = text;
                 }
             }
-        }
-    }
-
-    private void ApplyReadyVisuals()
-    {
-        if (button != null)
-        {
-            button.interactable = true;
-        }
-
-        SetTintColor(readyColor);
-
-        if (cooldownText != null)
-        {
-            cooldownText.text = "";
         }
     }
 

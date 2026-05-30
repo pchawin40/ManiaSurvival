@@ -7,6 +7,10 @@ public class HeavenPortal : MonoBehaviour
     public Transform safeZone;
     public Transform returnPoint;
 
+    [Header("Teleport")]
+    [Tooltip("How far above the floor the survivor is placed after teleport.")]
+    public float teleportVerticalOffset = 1.1f;
+
     [Header("Timing")]
     public float safeDuration = 15f;
     public float cooldownDuration = 0f;
@@ -53,43 +57,57 @@ public class HeavenPortal : MonoBehaviour
         CharacterController survivorController = survivorRoot.GetComponent<CharacterController>();
         visibilityStatus.SetHiddenFromMonster(true);
 
-        if (survivorController != null)
-        {
-            survivorController.enabled = false;
-        }
-
-        survivorRoot.position = safeZone.position;
-        survivorRoot.rotation = safeZone.rotation;
-
-        if (survivorController != null)
-        {
-            survivorController.enabled = true;
-        }
-
-        Debug.Log("[HeavenPortal] Survivor teleported to safe zone: " + survivorRoot.position);
+        EnsureHeavenFloorExists();
+        TeleportSafely(survivorRoot, safeZone, survivorController, isHeavenDestination: true);
 
         yield return new WaitForSeconds(safeDuration);
 
         Debug.Log("[HeavenPortal] Returning survivor to: " + returnPoint.position);
+        TeleportSafely(survivorRoot, returnPoint, survivorController, isHeavenDestination: false);
 
-        if (survivorController != null)
-        {
-            survivorController.enabled = false;
-        }
-
-        survivorRoot.position = returnPoint.position;
-        survivorRoot.rotation = returnPoint.rotation;
-
-        if (survivorController != null)
-        {
-            survivorController.enabled = true;
-        }
-
-        Debug.Log("[HeavenPortal] Survivor returned from heaven: " + survivorRoot.position);
         visibilityStatus.SetHiddenFromMonster(false);
 
         nextUseTime = cooldownDuration > 0f ? Time.time + cooldownDuration : 0f;
         isBusy = false;
+    }
+
+    private void EnsureHeavenFloorExists()
+    {
+        HeavenFloorCollider floor = FindFirstObjectByType<HeavenFloorCollider>();
+        if (floor != null)
+        {
+            floor.EnsureWalkableFloor();
+            return;
+        }
+
+        GameObject floorHost = new GameObject("HeavenFloor_Auto");
+        floorHost.AddComponent<HeavenFloorCollider>().EnsureWalkableFloor();
+    }
+
+    private void TeleportSafely(Transform survivorRoot, Transform destination, CharacterController controller, bool isHeavenDestination)
+    {
+        Vector3 targetPosition = HeavenFloorCollider.GetSafeStandPosition(destination.position, teleportVerticalOffset);
+
+        if (controller != null)
+        {
+            controller.enabled = false;
+        }
+
+        survivorRoot.SetPositionAndRotation(targetPosition, destination.rotation);
+
+        if (controller != null)
+        {
+            controller.enabled = true;
+        }
+
+        if (isHeavenDestination)
+        {
+            Debug.Log("[Teleport] Moved player to Heaven at position " + targetPosition);
+        }
+        else
+        {
+            Debug.Log("[HeavenPortal] Survivor returned from heaven: " + targetPosition);
+        }
     }
 
     private void OnDisable()

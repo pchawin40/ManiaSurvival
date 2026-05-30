@@ -41,6 +41,21 @@ public class ManiaGameUI : MonoBehaviour
     public Button predatorAbility3Button;
     public Button predatorUltimateButton;
 
+    [Header("Ability Labels")]
+    public TMP_Text survivorAbility1Label;
+    public TMP_Text survivorAbility2Label;
+    public TMP_Text survivorAbility3Label;
+    public TMP_Text survivorUltimateLabel;
+    public TMP_Text predatorAbility1Label;
+    public TMP_Text predatorAbility2Label;
+    public TMP_Text predatorAbility3Label;
+    public TMP_Text predatorUltimateLabel;
+    public TMP_Text abilityInfoText;
+
+    [Header("Ability Tooltip")]
+    public AbilityTooltipPanel abilityTooltipPanel;
+    public bool logTooltipEvents;
+
     [Header("Role-Specific Visibility")]
     [Tooltip("Any GameObject dragged here is only visible while playing as Survivor (hidden in Monster mode and Avatar mode).")]
     public GameObject[] survivorOnlyObjects;
@@ -63,10 +78,15 @@ public class ManiaGameUI : MonoBehaviour
     public ManiaGameManager gameManager;
     public LocalRoleController localRoleController;
     public SurvivorMovement localSurvivorMovement;
+    public AbilityController survivorAbilityController;
+    public AbilityController predatorAbilityController;
     public SoulwoodAvatarUIBridge soulwoodAvatarUIBridge;
 
     private int activeTouchId = -1;
     private bool mouseJoystickActive;
+    private PlayerControlMode lastAbilityLabelMode = (PlayerControlMode)(-1);
+    private bool loggedMissingAbilityInfoText;
+    private bool loggedMissingAbilityLabels;
 
     private void Awake()
     {
@@ -98,6 +118,16 @@ public class ManiaGameUI : MonoBehaviour
             localRoleController = FindFirstObjectByType<LocalRoleController>();
         }
 
+        if (survivorAbilityController == null && localRoleController != null && localRoleController.survivorMovement != null)
+        {
+            survivorAbilityController = localRoleController.survivorMovement.GetComponent<AbilityController>();
+        }
+
+        if (predatorAbilityController == null && localRoleController != null && localRoleController.monsterMovement != null)
+        {
+            predatorAbilityController = localRoleController.monsterMovement.GetComponent<AbilityController>();
+        }
+
         if (soulwoodAvatarUIBridge == null)
         {
             soulwoodAvatarUIBridge = FindFirstObjectByType<SoulwoodAvatarUIBridge>();
@@ -113,50 +143,10 @@ public class ManiaGameUI : MonoBehaviour
             restartButton.onClick.AddListener(HandleStartPressed);
         }
 
-        if (survivorPrimaryButton != null)
-        {
-            survivorPrimaryButton.onClick.AddListener(OnSurvivorPrimaryPressed);
-        }
+        SetupAbilityHoldButtons();
 
-        if (survivorAbility2Button != null)
-        {
-            survivorAbility2Button.onClick.AddListener(OnSurvivorAbility2Pressed);
-        }
-
-        if (survivorAbility3Button != null)
-        {
-            survivorAbility3Button.onClick.AddListener(OnSurvivorAbility3Pressed);
-        }
-
-        if (survivorUltimateButton != null)
-        {
-            survivorUltimateButton.onClick.AddListener(OnSurvivorUltimatePressed);
-        }
-
-        if (predatorMeleeButton != null)
-        {
-            predatorMeleeButton.onClick.AddListener(OnPredatorMeleePressed);
-        }
-
-        if (predatorAbility1Button != null)
-        {
-            predatorAbility1Button.onClick.AddListener(OnPredatorAbility1Pressed);
-        }
-
-        if (predatorAbility2Button != null)
-        {
-            predatorAbility2Button.onClick.AddListener(OnPredatorAbility2Pressed);
-        }
-
-        if (predatorAbility3Button != null)
-        {
-            predatorAbility3Button.onClick.AddListener(OnPredatorAbility3Pressed);
-        }
-
-        if (predatorUltimateButton != null)
-        {
-            predatorUltimateButton.onClick.AddListener(OnPredatorUltimatePressed);
-        }
+        RefreshAbilityLabels(force: true);
+        RefreshAbilityInfo(force: true);
 
         if (gameManager != null)
         {
@@ -172,6 +162,8 @@ public class ManiaGameUI : MonoBehaviour
         }
 
         UpdateRolePanels();
+        RefreshAbilityLabels();
+        RefreshAbilityInfo();
     }
 
     private void OnDestroy()
@@ -185,51 +177,70 @@ public class ManiaGameUI : MonoBehaviour
         {
             restartButton.onClick.RemoveListener(HandleStartPressed);
         }
+    }
 
-        if (survivorPrimaryButton != null)
+    private void SetupAbilityHoldButtons()
+    {
+        EnsureAbilityTooltipPanel();
+
+        SetupAbilityHoldButton(survivorPrimaryButton, 1, false);
+        SetupAbilityHoldButton(survivorAbility2Button, 2, false);
+        SetupAbilityHoldButton(survivorAbility3Button, 3, false);
+        SetupAbilityHoldButton(survivorUltimateButton, 4, false);
+        SetupAbilityHoldButton(predatorMeleeButton, 1, true);
+        SetupAbilityHoldButton(predatorAbility1Button, 1, true);
+        SetupAbilityHoldButton(predatorAbility2Button, 2, true);
+        SetupAbilityHoldButton(predatorAbility3Button, 3, true);
+        SetupAbilityHoldButton(predatorUltimateButton, 4, true);
+    }
+
+    private void EnsureAbilityTooltipPanel()
+    {
+        if (abilityTooltipPanel == null)
         {
-            survivorPrimaryButton.onClick.RemoveListener(OnSurvivorPrimaryPressed);
+            abilityTooltipPanel = GetComponent<AbilityTooltipPanel>();
         }
 
-        if (survivorAbility2Button != null)
+        if (abilityTooltipPanel == null)
         {
-            survivorAbility2Button.onClick.RemoveListener(OnSurvivorAbility2Pressed);
+            abilityTooltipPanel = gameObject.AddComponent<AbilityTooltipPanel>();
         }
 
-        if (survivorAbility3Button != null)
+        abilityTooltipPanel.gameUi = this;
+    }
+
+    private void SetupAbilityHoldButton(Button button, int slotNumber, bool isPredatorButton)
+    {
+        if (button == null)
         {
-            survivorAbility3Button.onClick.RemoveListener(OnSurvivorAbility3Pressed);
+            return;
         }
 
-        if (survivorUltimateButton != null)
+        button.onClick.RemoveAllListeners();
+
+        AbilityButtonHoldTooltip holdTooltip = button.GetComponent<AbilityButtonHoldTooltip>();
+        if (holdTooltip == null)
         {
-            survivorUltimateButton.onClick.RemoveListener(OnSurvivorUltimatePressed);
+            holdTooltip = button.gameObject.AddComponent<AbilityButtonHoldTooltip>();
         }
 
-        if (predatorMeleeButton != null)
-        {
-            predatorMeleeButton.onClick.RemoveListener(OnPredatorMeleePressed);
-        }
+        holdTooltip.Configure(this, abilityTooltipPanel, slotNumber, isPredatorButton, logTooltipEvents);
 
-        if (predatorAbility1Button != null)
+        AbilityCooldownButton cooldownButton = button.GetComponent<AbilityCooldownButton>();
+        if (cooldownButton != null)
         {
-            predatorAbility1Button.onClick.RemoveListener(OnPredatorAbility1Pressed);
+            cooldownButton.BindCooldownVisual(this, slotNumber, isPredatorButton);
         }
+    }
 
-        if (predatorAbility2Button != null)
-        {
-            predatorAbility2Button.onClick.RemoveListener(OnPredatorAbility2Pressed);
-        }
+    public void CastSurvivorSlot(int slotNumber)
+    {
+        UseSurvivorSlot(slotNumber);
+    }
 
-        if (predatorAbility3Button != null)
-        {
-            predatorAbility3Button.onClick.RemoveListener(OnPredatorAbility3Pressed);
-        }
-
-        if (predatorUltimateButton != null)
-        {
-            predatorUltimateButton.onClick.RemoveListener(OnPredatorUltimatePressed);
-        }
+    public void CastPredatorSlot(int slotNumber)
+    {
+        UsePredatorSlot(slotNumber);
     }
 
     public void Refresh(ManiaGameManager manager)
@@ -698,96 +709,84 @@ public class ManiaGameUI : MonoBehaviour
 
     public void OnSurvivorPrimaryPressed()
     {
-        if (localRoleController == null)
-        {
-            return;
-        }
-
-        localRoleController.PressSurvivorPrimary();
+        Debug.Log("[ManiaGameUI] Survivor button pressed: slot 1");
+        UseSurvivorSlot(1);
     }
 
     public void OnSurvivorAbility2Pressed()
     {
-        if (localRoleController == null)
-        {
-            return;
-        }
-
-        localRoleController.PressSurvivorAbility2();
+        Debug.Log("[ManiaGameUI] Survivor button pressed: slot 2");
+        UseSurvivorSlot(2);
     }
 
     public void OnSurvivorAbility3Pressed()
     {
-        if (localRoleController == null)
-        {
-            return;
-        }
-
-        localRoleController.PressSurvivorAbility3();
+        Debug.Log("[ManiaGameUI] Survivor button pressed: slot 3");
+        UseSurvivorSlot(3);
     }
 
     public void OnSurvivorUltimatePressed()
     {
-        if (localRoleController == null)
-        {
-            return;
-        }
-
-        localRoleController.PressSurvivorUltimate();
+        Debug.Log("[ManiaGameUI] Survivor button pressed: slot 4");
+        UseSurvivorSlot(4);
     }
 
     public void OnPredatorMeleePressed()
     {
-        if (localRoleController == null)
-        {
-            return;
-        }
-
-        localRoleController.PressPredatorMeleeAttack();
+        Debug.Log("[ManiaGameUI] OnPredatorMeleePressed -> slot 1");
+        UsePredatorSlot(1);
     }
 
     public void OnPredatorAbility1Pressed()
     {
-        if (localRoleController == null)
-        {
-            return;
-        }
-
-        localRoleController.PressPredatorAbility1();
+        Debug.Log("[ManiaGameUI] OnPredatorAbility1Pressed -> slot 1");
+        UsePredatorSlot(1);
     }
 
     public void OnPredatorAbility2Pressed()
     {
-        if (localRoleController == null)
-        {
-            return;
-        }
-
-        localRoleController.PressPredatorAbility2();
+        Debug.Log("[ManiaGameUI] OnPredatorAbility2Pressed -> slot 2");
+        UsePredatorSlot(2);
     }
 
     public void OnPredatorAbility3Pressed()
     {
-        if (localRoleController == null)
-        {
-            return;
-        }
-
-        localRoleController.PressPredatorAbility3();
+        Debug.Log("[ManiaGameUI] OnPredatorAbility3Pressed -> slot 3");
+        UsePredatorSlot(3);
     }
 
     public void OnPredatorUltimatePressed()
     {
-        if (localRoleController == null)
+        Debug.Log("[ManiaGameUI] OnPredatorUltimatePressed -> slot 4");
+        UsePredatorSlot(4);
+    }
+
+    private void UseSurvivorSlot(int slotNumber)
+    {
+        if (localRoleController != null)
         {
+            localRoleController.UseSurvivorAbilitySlot(slotNumber);
             return;
         }
 
-        localRoleController.PressPredatorUltimate();
+        Debug.LogWarning("[ManiaGameUI] Missing localRoleController/AbilityController reference on '" + gameObject.name + "' for Survivor slot " + slotNumber + ".");
+    }
+
+    private void UsePredatorSlot(int slotNumber)
+    {
+        if (localRoleController != null)
+        {
+            localRoleController.UsePredatorAbilitySlot(slotNumber);
+            return;
+        }
+
+        Debug.LogWarning("[ManiaGameUI] Missing localRoleController/AbilityController reference on '" + gameObject.name + "' for Predator slot " + slotNumber + ".");
     }
 
     private void StartGameWithMode(PlayerControlMode mode)
     {
+        lastAbilityLabelMode = (PlayerControlMode)(-1);
+
         if (localRoleController != null)
         {
             localRoleController.SetControlMode(mode);
@@ -824,6 +823,136 @@ public class ManiaGameUI : MonoBehaviour
             Debug.Log("UI Start Monster Mode");
             ShowMonsterPanel();
         }
+
+        RefreshAbilityLabels(force: true);
+        RefreshAbilityInfo(force: true);
+    }
+
+    public void RefreshAbilityLabels(bool force = false)
+    {
+        PlayerControlMode currentMode = localRoleController != null
+            ? localRoleController.controlMode
+            : PlayerControlMode.SurvivorControlled;
+
+        if (!force && currentMode == lastAbilityLabelMode)
+        {
+            return;
+        }
+
+        lastAbilityLabelMode = currentMode;
+        bool isMonsterControlled = currentMode == PlayerControlMode.MonsterControlled;
+
+        if (isMonsterControlled)
+        {
+            ApplyPredatorAbilityLabels();
+            return;
+        }
+
+        ApplySurvivorAbilityLabels();
+    }
+
+    public void RefreshAbilityInfo(bool force = false)
+    {
+        if (abilityInfoText == null)
+        {
+            if (!loggedMissingAbilityInfoText)
+            {
+                loggedMissingAbilityInfoText = true;
+                Debug.Log("[ManiaGameUI] abilityInfoText is not assigned. Info panel will stay hidden until wired.");
+            }
+
+            return;
+        }
+
+        PlayerControlMode currentMode = localRoleController != null
+            ? localRoleController.controlMode
+            : PlayerControlMode.SurvivorControlled;
+
+        if (currentMode == PlayerControlMode.MonsterControlled)
+        {
+            abilityInfoText.text =
+                "Relentless Hook\n"
+                + "1. Spray — Short-range cone burst.\n"
+                + "2. Hook — Pulls one Survivor toward you.\n"
+                + "3. Tonic — Recover and reduce damage briefly.\n"
+                + "4. Barrage — Rapid knockback blasts for a short time.";
+            return;
+        }
+
+        abilityInfoText.text =
+            "Field Medic\n"
+            + "1. Heal Dart — Restores health to a wounded ally.\n"
+            + "2. Heal Pulse — Emits a healing wave around you.\n"
+            + "3. Tether — Dash quickly toward an ally.\n"
+            + "4. Sanctuary — Drops a zone that protects allies briefly.";
+    }
+
+    private void ApplySurvivorAbilityLabels()
+    {
+        SetButtonLabel(survivorPrimaryButton, survivorAbility1Label, "Heal Dart");
+        SetButtonLabel(survivorAbility2Button, survivorAbility2Label, "Heal Pulse");
+        SetButtonLabel(survivorAbility3Button, survivorAbility3Label, "Tether");
+        SetButtonLabel(survivorUltimateButton, survivorUltimateLabel, "Sanctuary");
+    }
+
+    private void ApplyPredatorAbilityLabels()
+    {
+        SetButtonLabel(predatorMeleeButton, null, "Spray");
+        SetButtonLabel(predatorAbility1Button, predatorAbility1Label, "Spray");
+        SetButtonLabel(predatorAbility2Button, predatorAbility2Label, "Hook");
+        SetButtonLabel(predatorAbility3Button, predatorAbility3Label, "Tonic");
+        SetButtonLabel(predatorUltimateButton, predatorUltimateLabel, "Barrage");
+    }
+
+    private void SetButtonLabel(Button button, TMP_Text explicitLabel, string labelText)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        AbilityCooldownButton cooldownButton = button.GetComponent<AbilityCooldownButton>();
+        if (cooldownButton != null)
+        {
+            cooldownButton.SetAbilityInfo(labelText, 0);
+        }
+
+        TMP_Text resolvedLabel = explicitLabel != null ? explicitLabel : FindAbilityLabelText(button);
+        if (resolvedLabel != null)
+        {
+            resolvedLabel.text = labelText;
+            return;
+        }
+
+        if (!loggedMissingAbilityLabels)
+        {
+            loggedMissingAbilityLabels = true;
+            Debug.Log("[ManiaGameUI] No ability label text found for button '" + button.name + "'. Assign a TMP child or AbilityCooldownButton.");
+        }
+    }
+
+    private TMP_Text FindAbilityLabelText(Button button)
+    {
+        AbilityCooldownButton cooldownButton = button.GetComponent<AbilityCooldownButton>();
+        if (cooldownButton != null && cooldownButton.abilityNameText != null)
+        {
+            return cooldownButton.abilityNameText;
+        }
+
+        TMP_Text[] texts = button.GetComponentsInChildren<TMP_Text>(true);
+        for (int i = 0; i < texts.Length; i++)
+        {
+            TMP_Text text = texts[i];
+            string lowerName = text.gameObject.name.ToLowerInvariant();
+            if (lowerName.Contains("cooldown"))
+            {
+                continue;
+            }
+
+            return text;
+        }
+
+        return null;
     }
 
     private string GetPlayingRoleLabel()

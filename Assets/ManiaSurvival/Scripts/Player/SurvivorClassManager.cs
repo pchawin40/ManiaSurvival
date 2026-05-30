@@ -28,6 +28,7 @@ public class SurvivorClassManager : MonoBehaviour
     public string[] predatorTags = { "Monster", "Predator" };
     public LayerMask targetLayers = ~0;
     public bool showDebugLogs = true;
+    public bool useExternalCooldownAuthority = false;
 
     [Header("Global Cooldowns (30% Nerf Applied)")]
     [Tooltip("All base cooldowns are multiplied by this value.")]
@@ -129,18 +130,18 @@ public class SurvivorClassManager : MonoBehaviour
         animator = GetComponent<Animator>();
     }
 
-    public void ExecutePrimary()
+    public bool ExecutePrimary()
     {
-        Debug.Log($"[SurvivorClassManager] {activeClass} executing Primary Ability!");
+        Debug.Log($"[SurvivorClassManager] Executing ability: {activeClass}/Primary");
 
         if (!CanExecute())
         {
-            return;
+            return false;
         }
 
         if (!TryConsumeCooldown("Primary", primaryCooldown, ref nextPrimaryReadyAt))
         {
-            return;
+            return false;
         }
 
         TriggerAnimation(AttackHash);
@@ -157,20 +158,22 @@ public class SurvivorClassManager : MonoBehaviour
                 ExecuteWeaverPrimary();
                 break;
         }
+
+        return true;
     }
 
-    public void ExecuteAbility2()
+    public bool ExecuteAbility2()
     {
-        Debug.Log($"[SurvivorClassManager] {activeClass} executing Ability2!");
+        Debug.Log($"[SurvivorClassManager] Executing ability: {activeClass}/Ability2");
 
         if (!CanExecute())
         {
-            return;
+            return false;
         }
 
         if (!TryConsumeCooldown("Ability2", ability2Cooldown, ref nextAbility2ReadyAt))
         {
-            return;
+            return false;
         }
 
         TriggerAnimation(Ability2Hash);
@@ -187,20 +190,22 @@ public class SurvivorClassManager : MonoBehaviour
                 StartCoroutine(WeaverLifeGripCoroutine());
                 break;
         }
+
+        return true;
     }
 
-    public void ExecuteAbility3()
+    public bool ExecuteAbility3()
     {
-        Debug.Log($"[SurvivorClassManager] {activeClass} executing Ability3!");
+        Debug.Log($"[SurvivorClassManager] Executing ability: {activeClass}/Ability3");
 
         if (!CanExecute())
         {
-            return;
+            return false;
         }
 
         if (!TryConsumeCooldown("Ability3", ability3Cooldown, ref nextAbility3ReadyAt))
         {
-            return;
+            return false;
         }
 
         TriggerAnimation(Ability3Hash);
@@ -219,20 +224,22 @@ public class SurvivorClassManager : MonoBehaviour
                 ExecuteWeaverSwiftStep();
                 break;
         }
+
+        return true;
     }
 
-    public void ExecuteUltimate()
+    public bool ExecuteUltimate()
     {
-        Debug.Log($"[SurvivorClassManager] {activeClass} executing Ultimate Ability!");
+        Debug.Log($"[SurvivorClassManager] Executing ability: {activeClass}/Ultimate");
 
         if (!CanExecute())
         {
-            return;
+            return false;
         }
 
         if (!TryConsumeCooldown("Ultimate", ultimateCooldown, ref nextUltimateReadyAt))
         {
-            return;
+            return false;
         }
 
         TriggerAnimation(UltimateHash);
@@ -249,6 +256,8 @@ public class SurvivorClassManager : MonoBehaviour
                 ExecuteWeaverProtectionSuzu();
                 break;
         }
+
+        return true;
     }
 
     private bool CanExecute()
@@ -276,6 +285,11 @@ public class SurvivorClassManager : MonoBehaviour
 
     private bool TryConsumeCooldown(string abilityName, float baseCooldown, ref float nextReadyAt)
     {
+        if (useExternalCooldownAuthority)
+        {
+            return true;
+        }
+
         float now = Time.time;
         if (now < nextReadyAt)
         {
@@ -305,6 +319,7 @@ public class SurvivorClassManager : MonoBehaviour
         if (bioticDartProjectilePrefab != null)
         {
             GameObject obj = Instantiate(bioticDartProjectilePrefab, spawn, Quaternion.LookRotation(direction));
+            Debug.Log("[AbilityVFX] Spawned VFX: " + obj.name + ", position=" + obj.transform.position + ", duration=" + bioticDartLifetime.ToString("0.00") + "s");
             BioticDartProjectile projectile = obj.GetComponent<BioticDartProjectile>();
             if (projectile == null)
             {
@@ -378,6 +393,7 @@ public class SurvivorClassManager : MonoBehaviour
         }
 
         GameObject field = Instantiate(immortalityFieldPrefab, transform.position, Quaternion.identity);
+        Debug.Log("[AbilityVFX] Spawned VFX: " + field.name + ", position=" + field.transform.position + ", duration=" + immortalityFieldDuration.ToString("0.00") + "s");
         ImmortalityFieldZone zone = field.GetComponent<ImmortalityFieldZone>();
         if (zone == null)
         {

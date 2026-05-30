@@ -17,17 +17,25 @@ public class MonsterPlayerMovement : MonoBehaviour
     public float gravity = -20f;
 
     private CharacterController characterController;
+    private UnitHealth unitHealth;
     private Vector2 mobileMoveInput;
     private float verticalVelocity;
     private float carriedItemSpeedMultiplier = 1f;
+    private bool loggedInactiveController;
 
     private void Awake()
     {
         characterController = GetComponent<CharacterController>();
+        unitHealth = GetComponent<UnitHealth>();
     }
 
     private void Update()
     {
+        if (!enabled || !CanUseCharacterController())
+        {
+            return;
+        }
+
         if (ManiaGameManager.Instance != null && !ManiaGameManager.Instance.IsPlaying)
         {
             return;
@@ -39,7 +47,7 @@ public class MonsterPlayerMovement : MonoBehaviour
         if (moveDirection.sqrMagnitude > 0.001f)
         {
             ApplyGravity();
-            characterController.Move((moveDirection * moveSpeed * carriedItemSpeedMultiplier + Vector3.up * verticalVelocity) * Time.deltaTime);
+            TryMove((moveDirection * moveSpeed * carriedItemSpeedMultiplier + Vector3.up * verticalVelocity) * Time.deltaTime);
             RotateToward(moveDirection);
             return;
         }
@@ -116,7 +124,39 @@ public class MonsterPlayerMovement : MonoBehaviour
     private void ApplyGravityOnly()
     {
         ApplyGravity();
-        characterController.Move(Vector3.up * verticalVelocity * Time.deltaTime);
+        TryMove(Vector3.up * verticalVelocity * Time.deltaTime);
+    }
+
+    private bool CanUseCharacterController()
+    {
+        if (characterController == null || !characterController.enabled || !characterController.gameObject.activeInHierarchy)
+        {
+            return false;
+        }
+
+        if (unitHealth != null && unitHealth.IsDead)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool TryMove(Vector3 motion)
+    {
+        if (!CanUseCharacterController())
+        {
+            if (!loggedInactiveController)
+            {
+                loggedInactiveController = true;
+                Debug.LogWarning("[MonsterPlayerMovement] Skipping movement on inactive CharacterController on '" + gameObject.name + "'.");
+            }
+
+            return false;
+        }
+
+        characterController.Move(motion);
+        return true;
     }
 
     private void ApplyGravity()
