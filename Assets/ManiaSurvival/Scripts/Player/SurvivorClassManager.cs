@@ -38,19 +38,27 @@ public class SurvivorClassManager : MonoBehaviour
     public float ability3Cooldown = 10f;
     public float ultimateCooldown = 20f;
 
-    [Header("Medic - Heal Dart")]
+    [Header("Medic - Biotic Dart")]
     public GameObject bioticDartProjectilePrefab;
     public float bioticDartSpeed = 18f;
     public float bioticDartLifetime = 2f;
-    [Tooltip("Max range for Heal Dart ally search and hit validation.")]
+    [Tooltip("Max range for Biotic Dart aim line and hit validation.")]
     public float bioticDartRange = 12f;
     public int healDartAmount = 3;
     public int bioticDartPredatorDamage = 6;
+    [Tooltip("Knockback when Biotic Dart hits a monster.")]
+    public float bioticDartPredatorKnockback = 5f;
+    [Tooltip("Sphere cast radius — wider = easier to hit nearby allies.")]
+    public float bioticDartSphereCastRadius = 0.65f;
+    [Tooltip("Aim cone half-angle when no direct line hit (degrees).")]
+    public float bioticDartAimConeHalfAngle = 38f;
+    [Tooltip("Apply heal/damage instantly when the resolved target is this close.")]
+    public float bioticDartCloseRangeInstant = 3.5f;
 
     [Header("Medic - Heal Pulse")]
     [Tooltip("Area heal radius — keep local, not map-wide.")]
-    public float healPulseRadius = 7f;
-    public int healPulseAmount = 2;
+    public float healPulseRadius = 8f;
+    public int healPulseAmount = 4;
 
     [Header("Medic - Guardian Angel")]
     [Tooltip("Max range to dash toward an ally (Tether).")]
@@ -60,12 +68,13 @@ public class SurvivorClassManager : MonoBehaviour
 
     [Header("Medic - Sanctuary")]
     public GameObject immortalityFieldPrefab;
-    public float sanctuaryDuration = 4f;
+    public float sanctuaryDuration = 7f;
     [Tooltip("Healing zone radius — should not cover the whole map.")]
     public float sanctuaryRadius = 8f;
-    public int sanctuaryHealPerSecond = 1;
+    [Tooltip("HP restored to each wounded ally per sanctuary tick.")]
+    public int sanctuaryHealPerSecond = 3;
     [Tooltip("Seconds between sanctuary heal ticks.")]
-    public float sanctuaryTickInterval = 1.75f;
+    public float sanctuaryTickInterval = 1.25f;
 
     [Header("Warden - Rocket Flail")]
     public float rocketFlailRange = 2.6f;
@@ -334,41 +343,43 @@ public class SurvivorClassManager : MonoBehaviour
 
     private bool ExecuteMedicPrimary()
     {
-        UnitHealth target = FindClosestAlly(transform.position, bioticDartRange, requireDamaged: true);
-        if (target == null && unitHealth != null && !unitHealth.IsDead && unitHealth.currentHealth < unitHealth.maxHealth)
+        Vector3 aimDirection = GetAimDirection();
+        if (!TryResolveBioticDartTarget(aimDirection, out UnitHealth target, out bool healTarget))
         {
-            target = unitHealth;
-        }
-
-        if (target == null)
-        {
-            Debug.Log("[AbilityBlock] Heal blocked: no wounded ally in range");
+            Debug.Log("[AbilityBlock] Biotic Dart blocked: no valid target in aim direction");
             return false;
         }
 
-        if (target.currentHealth >= target.maxHealth)
+        if (healTarget)
         {
-            Debug.Log("[AbilityBlock] Heal blocked: target already full HP");
-            return false;
+            if (target.currentHealth >= target.maxHealth)
+            {
+                Debug.Log("[AbilityBlock] Biotic Dart blocked: ally already full HP");
+                return false;
+            }
         }
 
         if (!IsUnitWithinFlatRange(target, transform.position, bioticDartRange))
         {
-            Debug.Log("[AbilityBlock] Heal blocked: target outside heal range");
+            Debug.Log("[AbilityBlock] Biotic Dart blocked: target outside range");
             return false;
         }
 
-        Vector3 spawn = GetProjectileSpawnPosition();
-        Vector3 direction = target.transform.position - spawn;
-        direction.y = 0f;
-        if (direction.sqrMagnitude <= 0.001f)
+        Vector3 direction = NormalizeFlatDirection(aimDirection);
+        Vector3 toTarget = target.transform.position - transform.position;
+        toTarget.y = 0f;
+        if (toTarget.sqrMagnitude > 0.01f)
         {
-            direction = GetForwardDirection();
+            direction = toTarget.normalized;
         }
-        else
+
+        if (IsUnitWithinFlatRange(target, transform.position, bioticDartCloseRangeInstant))
         {
-            direction.Normalize();
+            ApplyBioticDartEffect(target);
+            return true;
         }
+
+        Vector3 spawn = GetProjectileSpawnPosition(direction);
 
         if (bioticDartProjectilePrefab != null)
         {
@@ -392,6 +403,7 @@ public class SurvivorClassManager : MonoBehaviour
     {
         UnitHealth[] allies = FindAlliesInRange(transform.position, healPulseRadius);
         int healedCount = 0;
+        int totalHealed = 0;
 
         for (int i = 0; i < allies.Length; i++)
         {
@@ -401,22 +413,26 @@ public class SurvivorClassManager : MonoBehaviour
                 continue;
             }
 
-            if (ally.Heal(healPulseAmount) > 0)
+            int healed = ally.Heal(healPulseAmount);
+            if (healed > 0)
             {
                 healedCount++;
+                totalHealed += healed;
             }
         }
 
-        if (healedCount > 0 && showDebugLogs)
+        if (healedCount > 0)
         {
-            Debug.Log("[SurvivorAbility] Heal Pulse healed " + healedCount + " wounded allies");
-        }
-        else if (healedCount == 0)
-        {
-            Debug.Log("[AbilityBlock] Heal blocked: no wounded ally in range");
+            if (showDebugLogs)
+            {
+                Debug.Log("[SurvivorAbility] Heal Pulse healed " + healedCount + " allies for " + totalHealed + " HP");
+            }
+
+            return true;
         }
 
-        return healedCount > 0;
+        Debug.Log("[AbilityBlock] Heal Pulse blocked: no wounded allies in range");
+        return false;
     }
 
     private bool TryStartMedicTether()
@@ -511,7 +527,7 @@ public class SurvivorClassManager : MonoBehaviour
             int healed = target.Heal(healDartAmount);
             if (healed > 0 && showDebugLogs)
             {
-                Debug.Log("[SurvivorAbility] Heal Dart healed " + target.name + " for " + healed);
+                Debug.Log("[SurvivorAbility] Biotic Dart healed " + target.name + " for " + healed);
             }
 
             return;
@@ -520,6 +536,18 @@ public class SurvivorClassManager : MonoBehaviour
         if (IsPredator(target))
         {
             target.TakeDamage(bioticDartPredatorDamage, gameObject);
+            Vector3 knockDir = target.transform.position - transform.position;
+            knockDir.y = 0f;
+            if (knockDir.sqrMagnitude <= 0.001f)
+            {
+                knockDir = GetForwardDirection();
+            }
+
+            ApplyKnockback(target, knockDir.normalized, bioticDartPredatorKnockback);
+            if (showDebugLogs)
+            {
+                Debug.Log("[SurvivorAbility] Biotic Dart hit " + target.name + " for " + bioticDartPredatorDamage + " damage");
+            }
         }
     }
 
@@ -900,27 +928,199 @@ public class SurvivorClassManager : MonoBehaviour
         return dir.normalized;
     }
 
-    private Vector3 GetProjectileSpawnPosition()
+    private Vector3 GetAimDirection()
     {
-        return transform.position + Vector3.up * 1.1f + GetForwardDirection() * 0.8f;
+        SurvivorMovement movement = GetComponent<SurvivorMovement>();
+        if (movement != null)
+        {
+            return movement.GetAimDirection();
+        }
+
+        return GetForwardDirection();
     }
 
-    private UnitHealth[] FindAlliesInRange(Vector3 center, float radius)
+    private static Vector3 NormalizeFlatDirection(Vector3 direction)
     {
-        Collider[] hits = Physics.OverlapSphere(center, Mathf.Max(0.1f, radius), targetLayers, QueryTriggerInteraction.Ignore);
-        List<UnitHealth> result = new List<UnitHealth>();
+        direction.y = 0f;
+        if (direction.sqrMagnitude <= 0.001f)
+        {
+            return Vector3.forward;
+        }
+
+        return direction.normalized;
+    }
+
+    private bool TryResolveBioticDartTarget(Vector3 aimDirection, out UnitHealth target, out bool healTarget)
+    {
+        target = null;
+        healTarget = false;
+
+        Vector3 direction = NormalizeFlatDirection(aimDirection);
+        if (TryResolveBioticDartLineTarget(direction, out target, out healTarget))
+        {
+            return true;
+        }
+
+        return TryResolveBioticDartConeTarget(direction, out target, out healTarget);
+    }
+
+    private bool TryResolveBioticDartLineTarget(Vector3 direction, out UnitHealth target, out bool healTarget)
+    {
+        target = null;
+        healTarget = false;
+
+        Vector3 origin = transform.position + Vector3.up * 1.1f;
+        float castRadius = Mathf.Max(0.2f, bioticDartSphereCastRadius);
+        RaycastHit[] hits = Physics.SphereCastAll(
+            origin,
+            castRadius,
+            direction,
+            bioticDartRange,
+            targetLayers,
+            QueryTriggerInteraction.Ignore);
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
         for (int i = 0; i < hits.Length; i++)
         {
+            UnitHealth health = hits[i].collider.GetComponentInParent<UnitHealth>();
+            if (health == null || health.IsDead || health == unitHealth)
+            {
+                if (health == null)
+                {
+                    return false;
+                }
+
+                continue;
+            }
+
+            if (IsAlly(health))
+            {
+                target = health;
+                healTarget = true;
+                return true;
+            }
+
+            if (IsPredator(health))
+            {
+                target = health;
+                healTarget = false;
+                return true;
+            }
+
+            return false;
+        }
+
+        return false;
+    }
+
+    private bool TryResolveBioticDartConeTarget(Vector3 direction, out UnitHealth target, out bool healTarget)
+    {
+        target = null;
+        healTarget = false;
+
+        UnitHealth bestTarget = null;
+        bool bestHeal = false;
+        float bestAngle = bioticDartAimConeHalfAngle + 1f;
+        float bestDistance = float.MaxValue;
+
+        void ConsiderTarget(UnitHealth health, bool isAllyTarget)
+        {
+            if (health == null || health.IsDead || health == unitHealth)
+            {
+                return;
+            }
+
+            if (!IsUnitWithinFlatRange(health, transform.position, bioticDartRange))
+            {
+                return;
+            }
+
+            Vector3 toTarget = health.transform.position - transform.position;
+            toTarget.y = 0f;
+            float distance = toTarget.magnitude;
+            float angle = distance <= 0.15f ? 0f : Vector3.Angle(direction, toTarget / distance);
+            if (angle > bioticDartAimConeHalfAngle)
+            {
+                return;
+            }
+
+            if (angle < bestAngle - 0.01f || (Mathf.Abs(angle - bestAngle) <= 0.01f && distance < bestDistance))
+            {
+                bestTarget = health;
+                bestHeal = isAllyTarget;
+                bestAngle = angle;
+                bestDistance = distance;
+            }
+        }
+
+        Collider[] hits = Physics.OverlapSphere(transform.position, bioticDartRange, targetLayers, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < hits.Length; i++)
+        {
             UnitHealth health = hits[i].GetComponentInParent<UnitHealth>();
-            if (health == null || health.IsDead || !IsAlly(health))
+            if (health == null)
             {
                 continue;
             }
 
+            if (IsAlly(health))
+            {
+                ConsiderTarget(health, true);
+            }
+            else if (IsPredator(health))
+            {
+                ConsiderTarget(health, false);
+            }
+        }
+
+        if (!string.IsNullOrEmpty(survivorTag))
+        {
+            GameObject[] taggedAllies = GameObject.FindGameObjectsWithTag(survivorTag);
+            for (int i = 0; i < taggedAllies.Length; i++)
+            {
+                ConsiderTarget(taggedAllies[i].GetComponent<UnitHealth>(), true);
+            }
+        }
+
+        if (bestTarget == null)
+        {
+            return false;
+        }
+
+        target = bestTarget;
+        healTarget = bestHeal;
+        return true;
+    }
+
+    private Vector3 GetProjectileSpawnPosition()
+    {
+        return GetProjectileSpawnPosition(GetForwardDirection());
+    }
+
+    private Vector3 GetProjectileSpawnPosition(Vector3 aimDirection)
+    {
+        Vector3 forward = NormalizeFlatDirection(aimDirection);
+        if (forward.sqrMagnitude <= 0.001f)
+        {
+            forward = GetForwardDirection();
+        }
+
+        return transform.position + Vector3.up * 1.1f + forward * 0.45f;
+    }
+
+    private UnitHealth[] FindAlliesInRange(Vector3 center, float radius)
+    {
+        List<UnitHealth> result = new List<UnitHealth>();
+
+        void TryAddAlly(UnitHealth health)
+        {
+            if (health == null || health.IsDead || !IsAlly(health))
+            {
+                return;
+            }
+
             if (!IsUnitWithinFlatRange(health, center, radius))
             {
-                continue;
+                return;
             }
 
             if (!result.Contains(health))
@@ -929,14 +1129,22 @@ public class SurvivorClassManager : MonoBehaviour
             }
         }
 
-        if (!result.Contains(unitHealth) && unitHealth != null && !unitHealth.IsDead)
+        Collider[] hits = Physics.OverlapSphere(center, Mathf.Max(0.1f, radius), targetLayers, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < hits.Length; i++)
         {
-            if (IsUnitWithinFlatRange(unitHealth, center, radius))
+            TryAddAlly(hits[i].GetComponentInParent<UnitHealth>());
+        }
+
+        if (!string.IsNullOrEmpty(survivorTag))
+        {
+            GameObject[] taggedAllies = GameObject.FindGameObjectsWithTag(survivorTag);
+            for (int i = 0; i < taggedAllies.Length; i++)
             {
-                result.Add(unitHealth);
+                TryAddAlly(taggedAllies[i].GetComponent<UnitHealth>());
             }
         }
 
+        TryAddAlly(unitHealth);
         return result.ToArray();
     }
 
@@ -1124,18 +1332,18 @@ public class SurvivorClassManager : MonoBehaviour
 
             if (homingTarget != null && !homingTarget.IsDead)
             {
-                Vector3 toTarget = homingTarget.transform.position - transform.position;
+                Vector3 toTarget = homingTarget.transform.position + Vector3.up * 1f - transform.position;
                 toTarget.y = 0f;
-                if (toTarget.sqrMagnitude > 0.01f)
-                {
-                    direction = toTarget.normalized;
-                }
-
                 if (toTarget.sqrMagnitude <= 0.64f)
                 {
                     owner.ApplyBioticDartEffect(homingTarget);
                     Destroy(gameObject);
                     return;
+                }
+
+                if (toTarget.sqrMagnitude > 0.01f)
+                {
+                    direction = Vector3.Slerp(direction, toTarget.normalized, 14f * Time.deltaTime).normalized;
                 }
             }
 
@@ -1145,8 +1353,8 @@ public class SurvivorClassManager : MonoBehaviour
 
             if (Physics.Linecast(start, end, out RaycastHit hit, owner.targetLayers, QueryTriggerInteraction.Ignore))
             {
-                UnitHealth target = hit.collider.GetComponentInParent<UnitHealth>();
-                owner.ApplyBioticDartEffect(target);
+                UnitHealth hitUnit = hit.collider.GetComponentInParent<UnitHealth>();
+                owner.ApplyBioticDartEffect(hitUnit != null ? hitUnit : homingTarget);
                 Destroy(gameObject);
                 return;
             }
@@ -1157,6 +1365,11 @@ public class SurvivorClassManager : MonoBehaviour
 
             if (lifetime <= 0f || distanceTravelled >= range)
             {
+                if (homingTarget != null && !homingTarget.IsDead)
+                {
+                    owner.ApplyBioticDartEffect(homingTarget);
+                }
+
                 Destroy(gameObject);
             }
         }
@@ -1284,7 +1497,7 @@ public class SurvivorClassManager : MonoBehaviour
             healPerSecond = Mathf.Max(1, healPerTick);
             allyTag = allySurvivorTag;
             logEvents = debugLogs;
-            tick = Mathf.Clamp(tickInterval, 1f, 1.5f);
+            tick = Mathf.Max(0.75f, tickInterval);
             StartCoroutine(RunZoneCoroutine());
         }
 

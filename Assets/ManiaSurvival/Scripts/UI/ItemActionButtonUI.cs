@@ -28,6 +28,9 @@ public class ItemActionButtonUI : MonoBehaviour
     [Tooltip("If true, the Drop button is hidden when nothing is held. If false, it stays visible but is greyed out.")]
     public bool hideDropWhenUnavailable = false;
 
+    [Header("References")]
+    public ManiaGameUI gameUi;
+
     private void Start()
     {
         if (holder == null)
@@ -35,7 +38,13 @@ public class ItemActionButtonUI : MonoBehaviour
             holder = FindFirstObjectByType<CarriedItemHolder>();
         }
 
+        if (gameUi == null)
+        {
+            gameUi = FindFirstObjectByType<ManiaGameUI>();
+        }
+
         Refresh();
+        RefreshActionButtonLayout();
     }
 
     private void Update()
@@ -45,8 +54,31 @@ public class ItemActionButtonUI : MonoBehaviour
 
     private void Refresh()
     {
+        bool pickupWasActive = pickupButton != null && pickupButton.gameObject.activeSelf;
+        bool dropWasActive = dropButton != null && dropButton.gameObject.activeSelf;
+
         RefreshPickupButton();
         RefreshDropButton();
+
+        bool pickupIsActive = pickupButton != null && pickupButton.gameObject.activeSelf;
+        bool dropIsActive = dropButton != null && dropButton.gameObject.activeSelf;
+        if (pickupWasActive != pickupIsActive || dropWasActive != dropIsActive)
+        {
+            RefreshActionButtonLayout();
+        }
+    }
+
+    private void RefreshActionButtonLayout()
+    {
+        if (gameUi == null)
+        {
+            gameUi = FindFirstObjectByType<ManiaGameUI>();
+        }
+
+        if (gameUi != null)
+        {
+            gameUi.RefreshActionButtonLayout();
+        }
     }
 
     private void RefreshPickupButton()
@@ -73,8 +105,8 @@ public class ItemActionButtonUI : MonoBehaviour
         {
             string nearbyName = holder != null ? holder.NearbyItemName : "";
             pickupButtonText.text = !string.IsNullOrEmpty(nearbyName)
-                ? "Pick Up: " + nearbyName
-                : "Pick Up";
+                ? "Pick Up: " + nearbyName + " [E]"
+                : "Pick Up [E]";
         }
     }
 

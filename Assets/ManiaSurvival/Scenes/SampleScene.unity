@@ -6446,16 +6446,16 @@ MonoBehaviour:
   bioticDartRange: 12
   healDartAmount: 3
   bioticDartPredatorDamage: 6
-  healPulseRadius: 7
-  healPulseAmount: 2
+  healPulseRadius: 8
+  healPulseAmount: 4
   guardianAngelRange: 14
   guardianAngelDashDuration: 0.2
   guardianAngelStopDistance: 1.25
   immortalityFieldPrefab: {fileID: 5917795142820719444, guid: bbe047b13dbe85f45aea724e9252f9f6, type: 3}
-  sanctuaryDuration: 4
+  sanctuaryDuration: 7
   sanctuaryRadius: 8
-  sanctuaryHealPerSecond: 1
-  sanctuaryTickInterval: 1.75
+  sanctuaryHealPerSecond: 3
+  sanctuaryTickInterval: 1.25
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8
@@ -6778,16 +6778,16 @@ MonoBehaviour:
   bioticDartRange: 12
   healDartAmount: 3
   bioticDartPredatorDamage: 6
-  healPulseRadius: 7
-  healPulseAmount: 2
+  healPulseRadius: 8
+  healPulseAmount: 4
   guardianAngelRange: 14
   guardianAngelDashDuration: 0.2
   guardianAngelStopDistance: 1.25
   immortalityFieldPrefab: {fileID: 5917795142820719444, guid: bbe047b13dbe85f45aea724e9252f9f6, type: 3}
-  sanctuaryDuration: 4
+  sanctuaryDuration: 7
   sanctuaryRadius: 8
-  sanctuaryHealPerSecond: 1
-  sanctuaryTickInterval: 1.75
+  sanctuaryHealPerSecond: 3
+  sanctuaryTickInterval: 1.25
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8
@@ -8666,16 +8666,16 @@ MonoBehaviour:
   bioticDartRange: 12
   healDartAmount: 3
   bioticDartPredatorDamage: 6
-  healPulseRadius: 7
-  healPulseAmount: 2
+  healPulseRadius: 8
+  healPulseAmount: 4
   guardianAngelRange: 14
   guardianAngelDashDuration: 0.2
   guardianAngelStopDistance: 1.25
   immortalityFieldPrefab: {fileID: 5917795142820719444, guid: bbe047b13dbe85f45aea724e9252f9f6, type: 3}
-  sanctuaryDuration: 4
+  sanctuaryDuration: 7
   sanctuaryRadius: 8
-  sanctuaryHealPerSecond: 1
-  sanctuaryTickInterval: 1.75
+  sanctuaryHealPerSecond: 3
+  sanctuaryTickInterval: 1.25
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8
@@ -10867,16 +10867,16 @@ MonoBehaviour:
   bioticDartRange: 12
   healDartAmount: 3
   bioticDartPredatorDamage: 6
-  healPulseRadius: 7
-  healPulseAmount: 2
+  healPulseRadius: 8
+  healPulseAmount: 4
   guardianAngelRange: 14
   guardianAngelDashDuration: 0.2
   guardianAngelStopDistance: 1.25
   immortalityFieldPrefab: {fileID: 5917795142820719444, guid: bbe047b13dbe85f45aea724e9252f9f6, type: 3}
-  sanctuaryDuration: 4
+  sanctuaryDuration: 7
   sanctuaryRadius: 8
-  sanctuaryHealPerSecond: 1
-  sanctuaryTickInterval: 1.75
+  sanctuaryHealPerSecond: 3
+  sanctuaryTickInterval: 1.25
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8
@@ -14916,16 +14916,16 @@ MonoBehaviour:
   bioticDartRange: 12
   healDartAmount: 3
   bioticDartPredatorDamage: 6
-  healPulseRadius: 7
-  healPulseAmount: 2
+  healPulseRadius: 8
+  healPulseAmount: 4
   guardianAngelRange: 14
   guardianAngelDashDuration: 0.2
   guardianAngelStopDistance: 1.25
   immortalityFieldPrefab: {fileID: 5917795142820719444, guid: bbe047b13dbe85f45aea724e9252f9f6, type: 3}
-  sanctuaryDuration: 4
+  sanctuaryDuration: 7
   sanctuaryRadius: 8
-  sanctuaryHealPerSecond: 1
-  sanctuaryTickInterval: 1.75
+  sanctuaryHealPerSecond: 3
+  sanctuaryTickInterval: 1.25
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8
@@ -18531,16 +18531,16 @@ MonoBehaviour:
   bioticDartRange: 12
   healDartAmount: 3
   bioticDartPredatorDamage: 6
-  healPulseRadius: 7
-  healPulseAmount: 2
+  healPulseRadius: 8
+  healPulseAmount: 4
   guardianAngelRange: 14
   guardianAngelDashDuration: 0.2
   guardianAngelStopDistance: 1.25
   immortalityFieldPrefab: {fileID: 5917795142820719444, guid: bbe047b13dbe85f45aea724e9252f9f6, type: 3}
-  sanctuaryDuration: 4
+  sanctuaryDuration: 7
   sanctuaryRadius: 8
-  sanctuaryHealPerSecond: 1
-  sanctuaryTickInterval: 1.75
+  sanctuaryHealPerSecond: 3
+  sanctuaryTickInterval: 1.25
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8
@@ -19670,16 +19670,16 @@ MonoBehaviour:
   bioticDartRange: 12
   healDartAmount: 3
   bioticDartPredatorDamage: 6
-  healPulseRadius: 7
-  healPulseAmount: 2
+  healPulseRadius: 8
+  healPulseAmount: 4
   guardianAngelRange: 14
   guardianAngelDashDuration: 0.2
   guardianAngelStopDistance: 1.25
   immortalityFieldPrefab: {fileID: 5917795142820719444, guid: bbe047b13dbe85f45aea724e9252f9f6, type: 3}
-  sanctuaryDuration: 4
+  sanctuaryDuration: 7
   sanctuaryRadius: 8
-  sanctuaryHealPerSecond: 1
-  sanctuaryTickInterval: 1.75
+  sanctuaryHealPerSecond: 3
+  sanctuaryTickInterval: 1.25
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8

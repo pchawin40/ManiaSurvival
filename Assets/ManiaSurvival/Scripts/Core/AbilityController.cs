@@ -526,7 +526,7 @@ public class AbilityController : MonoBehaviour
 
         switch (slotNumber)
         {
-            case 1: return "Field Medic - Heal Dart";
+            case 1: return "Field Medic - Biotic Dart";
             case 2: return "Field Medic - Healing Pulse";
             case 3: return "Field Medic - Tether";
             default: return "Field Medic - Protection Zone";

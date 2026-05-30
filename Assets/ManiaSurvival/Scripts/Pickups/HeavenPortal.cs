@@ -108,6 +108,12 @@ public class HeavenPortal : MonoBehaviour
         {
             Debug.Log("[HeavenPortal] Survivor returned from heaven: " + targetPosition);
         }
+
+        ManiaGameUI gameUi = FindFirstObjectByType<ManiaGameUI>();
+        if (gameUi != null)
+        {
+            gameUi.RefreshActionButtonLayout();
+        }
     }
 
     private void OnDisable()

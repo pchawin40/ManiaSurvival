@@ -74,6 +74,11 @@ public class ManiaGameUI : MonoBehaviour
     public float joystickMarginBottom = 24f;
     public Vector2 joystickAreaSize = new Vector2(200f, 200f);
 
+    [Header("Survivor Utility Buttons")]
+    public Button survivorSprintButton;
+    public Button survivorPickupButton;
+    public Button survivorDropButton;
+
     [Header("Mobile Ability Layout")]
     [Tooltip("Distance from the right screen edge to the ability grid.")]
     public float abilityMarginRight = 24f;
@@ -88,7 +93,7 @@ public class ManiaGameUI : MonoBehaviour
     [Tooltip("Gap between the ability grid and the tooltip panel.")]
     public float tooltipGapAboveAbilities = 96f;
     [Tooltip("Tooltip panel size for hold-to-read ability info.")]
-    public Vector2 tooltipPanelSize = new Vector2(260f, 112f);
+    public Vector2 tooltipPanelSize = new Vector2(250f, 100f);
     [Tooltip("Utility button size for Sprint / Pick Up / Drop (Survivor only).")]
     public Vector2 survivorUtilityButtonSize = new Vector2(120f, 64f);
     [Tooltip("Vertical gap between survivor utility buttons.")]
@@ -173,6 +178,7 @@ public class ManiaGameUI : MonoBehaviour
         }
 
         SetupAbilityHoldButtons();
+        ResolveSurvivorUtilityButtons();
         ConfigureMobileAbilityLayout();
         RefreshPredatorAbilityButtonBindings();
 
@@ -268,8 +274,102 @@ public class ManiaGameUI : MonoBehaviour
 
         RectTransform gridRect = GetAbilityGridRoot(survivorPrimaryButton, survivorUltimateButton);
         ApplyAbilityGridLayout(gridRect, insetRight, insetBottom);
-        RelocateSurvivorUtilityButtons(insetLeft: GetLayoutInsetsLeft(), insetBottom);
-        ConfigureSurvivorUtilityPanel(insetLeft: GetLayoutInsetsLeft(), insetBottom);
+        RefreshActionButtonLayout(insetLeft: GetLayoutInsetsLeft(), insetBottom);
+    }
+
+    public void RefreshActionButtonLayout()
+    {
+        GetLayoutInsets(out float insetLeft, out _, out float insetBottom, out _);
+        RefreshActionButtonLayout(insetLeft, insetBottom);
+    }
+
+    private void RefreshActionButtonLayout(float insetLeft, float insetBottom)
+    {
+        ResolveSurvivorUtilityButtons();
+
+        RectTransform gridRect = GetAbilityGridRoot(survivorPrimaryButton, survivorUltimateButton);
+        Transform utilityParent = gridRect != null ? gridRect.parent : survivorPanel != null ? survivorPanel.transform : transform;
+
+        RelocateUtilityButton(survivorSprintButton, utilityParent, insetLeft, insetBottom, 0);
+        RelocateUtilityButton(survivorPickupButton, utilityParent, insetLeft, insetBottom, 1);
+        RelocateUtilityButton(survivorDropButton, utilityParent, insetLeft, insetBottom, 1);
+        ConfigureSurvivorUtilityPanel(insetLeft, insetBottom);
+    }
+
+    private void ResolveSurvivorUtilityButtons()
+    {
+        ItemActionButtonUI itemUi = GetComponent<ItemActionButtonUI>();
+        if (itemUi != null)
+        {
+            if (survivorPickupButton == null)
+            {
+                survivorPickupButton = itemUi.pickupButton;
+            }
+
+            if (survivorDropButton == null)
+            {
+                survivorDropButton = itemUi.dropButton;
+            }
+        }
+
+        if (survivorSprintButton == null)
+        {
+            survivorSprintButton = FindSurvivorUtilityButton("Sprint");
+        }
+    }
+
+    private Button FindSurvivorUtilityButton(string objectName)
+    {
+        RectTransform gridRect = GetAbilityGridRoot(survivorPrimaryButton, survivorUltimateButton);
+        if (gridRect == null)
+        {
+            return null;
+        }
+
+        Button[] buttons = gridRect.GetComponentsInChildren<Button>(true);
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            Button button = buttons[i];
+            if (button != null && button.gameObject.name == objectName)
+            {
+                return button;
+            }
+        }
+
+        return null;
+    }
+
+    private void RelocateUtilityButton(Button button, Transform parent, float insetLeft, float insetBottom, int slotIndex)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        RectTransform utilityRect = button.transform as RectTransform;
+        if (utilityRect == null)
+        {
+            return;
+        }
+
+        if (parent != null && utilityRect.parent != parent)
+        {
+            utilityRect.SetParent(parent, false);
+        }
+
+        SetIgnoreLayout(button.gameObject, true);
+
+        float yOffset = insetBottom
+            + joystickMarginBottom
+            + joystickAreaSize.y
+            + survivorUtilityGapAboveJoystick
+            + (survivorUtilityButtonSize.y + survivorUtilitySpacing) * slotIndex;
+
+        ApplyBottomLeftAnchor(
+            utilityRect,
+            survivorUtilityButtonSize,
+            insetLeft + joystickMarginLeft,
+            yOffset);
     }
 
     private void ConfigureSurvivorUtilityPanel(float insetLeft, float insetBottom)
@@ -289,7 +389,7 @@ public class ManiaGameUI : MonoBehaviour
             + joystickMarginBottom
             + joystickAreaSize.y
             + survivorUtilityGapAboveJoystick
-            + (survivorUtilityButtonSize.y + survivorUtilitySpacing) * 3f
+            + (survivorUtilityButtonSize.y + survivorUtilitySpacing) * 2f
             + 8f;
 
         ApplyBottomLeftAnchor(
@@ -442,49 +542,7 @@ public class ManiaGameUI : MonoBehaviour
 
     private void RelocateSurvivorUtilityButtons(float insetLeft, float insetBottom)
     {
-        RectTransform gridRect = GetAbilityGridRoot(survivorPrimaryButton, survivorUltimateButton);
-        if (gridRect == null)
-        {
-            return;
-        }
-
-        Button[] buttons = gridRect.GetComponentsInChildren<Button>(true);
-        int utilityIndex = 0;
-
-        for (int i = 0; i < buttons.Length; i++)
-        {
-            Button button = buttons[i];
-            if (button == null || IsSurvivorAbilityButton(button))
-            {
-                continue;
-            }
-
-            if (!button.gameObject.activeInHierarchy)
-            {
-                continue;
-            }
-
-            RectTransform utilityRect = button.transform as RectTransform;
-            if (utilityRect == null)
-            {
-                continue;
-            }
-
-            utilityRect.SetParent(gridRect.parent, false);
-            float yOffset = insetBottom
-                + joystickMarginBottom
-                + joystickAreaSize.y
-                + survivorUtilityGapAboveJoystick
-                + (survivorUtilityButtonSize.y + survivorUtilitySpacing) * utilityIndex;
-
-            ApplyBottomLeftAnchor(
-                utilityRect,
-                survivorUtilityButtonSize,
-                insetLeft + joystickMarginLeft,
-                yOffset);
-
-            utilityIndex++;
-        }
+        RefreshActionButtonLayout(insetLeft, insetBottom);
     }
 
     private void ApplyBottomRightContainer(RectTransform container, float insetRight, float insetBottom)
@@ -1369,10 +1427,10 @@ public class ManiaGameUI : MonoBehaviour
 
         abilityInfoText.text =
             "Field Medic\n"
-            + "1. Heal Dart — Heal ally (2 mana, 2.5s cd).\n"
-            + "2. Heal Pulse — Area heal (5 mana, 8s cd).\n"
+            + "1. Biotic Dart — Aim heal ally or hurt monster (2 mana, 2.5s cd).\n"
+            + "2. Heal Pulse — Heal self + nearby allies (5 mana, 8s cd).\n"
             + "3. Tether — Dash to ally or blink forward (4 mana, 10s cd).\n"
-            + "4. Sanctuary — Healing zone (12 mana, 28s cd).";
+            + "4. Sanctuary — Strong heal zone 7s (12 mana, 28s cd).\n";
     }
 
     private void RefreshPlayerManaDisplay()
@@ -1420,7 +1478,7 @@ public class ManiaGameUI : MonoBehaviour
 
     private void ApplySurvivorAbilityLabels()
     {
-        SetButtonLabel(survivorPrimaryButton, survivorAbility1Label, "Heal Dart", survivorAbilityController, 1, false);
+        SetButtonLabel(survivorPrimaryButton, survivorAbility1Label, "Biotic", survivorAbilityController, 1, false);
         SetButtonLabel(survivorAbility2Button, survivorAbility2Label, "Heal Pulse", survivorAbilityController, 2, false);
         SetButtonLabel(survivorAbility3Button, survivorAbility3Label, "Tether", survivorAbilityController, 3, false);
         SetButtonLabel(survivorUltimateButton, survivorUltimateLabel, "Sanctuary", survivorAbilityController, 4, false);

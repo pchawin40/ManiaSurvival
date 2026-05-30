@@ -339,7 +339,7 @@ public static class SampleSceneQaValidator
         ValidateButtonLabel(gameUi.predatorAbility3Button, "Tonic", pass, fail);
         ValidateButtonLabel(gameUi.predatorUltimateButton, "Barrage", pass, fail);
 
-        ValidateButtonLabel(gameUi.survivorPrimaryButton, "Heal Dart", pass, fail);
+        ValidateButtonLabel(gameUi.survivorPrimaryButton, "Biotic", pass, fail);
         ValidateButtonLabel(gameUi.survivorAbility2Button, "Heal Pulse", pass, fail);
         ValidateButtonLabel(gameUi.survivorAbility3Button, "Tether", pass, fail);
         ValidateButtonLabel(gameUi.survivorUltimateButton, "Sanctuary", pass, fail);

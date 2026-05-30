@@ -7,16 +7,18 @@ public class AbilityTooltipPanel : MonoBehaviour
     [Header("Panel")]
     public GameObject tooltipRoot;
     public float autoHideAfterSeconds = 6f;
-    public Vector2 panelSize = new Vector2(260f, 112f);
+    public Vector2 panelSize = new Vector2(250f, 100f);
     public Vector2 panelAnchoredPosition = new Vector2(-24f, 320f);
 
     [Header("Compact Layout")]
     public bool compactMode = true;
     public bool showDetailedTooltip = false;
-    public float tooltipMaxWidth = 260f;
-    public float tooltipPadding = 12f;
-    public float tooltipButtonOffset = 96f;
+    public float tooltipMaxWidth = 250f;
+    public float tooltipPadding = 7f;
+    public float tooltipButtonOffset = 88f;
     public float tooltipLeftFallbackOffset = 16f;
+    public float titleFontSize = 22f;
+    public float bodyFontSize = 18f;
 
     [Header("Mobile Layout")]
     public RectTransform abilityPanelAnchor;
@@ -96,10 +98,12 @@ public class AbilityTooltipPanel : MonoBehaviour
         data.cost = GetLiveManaCostText(isPredator, slotNumber, data.cost);
         string status = GetAbilityStatus(isPredator, slotNumber);
 
+        ApplyTooltipFontSizes();
         SetText(tooltipAbilityNameText, data.abilityName);
         SetText(tooltipBodyText, BuildCompactBody(data, status));
 
         tooltipRoot.SetActive(true);
+        FitPanelToContent();
         ApplyMobilePosition();
         ClampTooltipInsideCanvas();
         hideAtUnscaledTime = Time.unscaledTime + Mathf.Max(1f, autoHideAfterSeconds);
@@ -136,7 +140,7 @@ public class AbilityTooltipPanel : MonoBehaviour
             return;
         }
 
-        tooltipRootRect.sizeDelta = new Vector2(Mathf.Max(160f, tooltipMaxWidth), panelSize.y);
+        tooltipRootRect.sizeDelta = new Vector2(Mathf.Max(160f, tooltipMaxWidth), tooltipRootRect.sizeDelta.y);
 
         float gap = compactMode ? Mathf.Max(mobileGapAboveAbilities, tooltipButtonOffset) : mobileGapAboveAbilities;
 
@@ -226,9 +230,42 @@ public class AbilityTooltipPanel : MonoBehaviour
         }
 
         return data.description + "\n"
-            + "Cost: " + data.cost + "\n"
-            + "CD: " + data.cooldown.ToString("0.0") + "s\n"
-            + status;
+            + data.cost + " • " + data.cooldown.ToString("0") + "s CD"
+            + (string.IsNullOrEmpty(status) || status == "Ready" ? string.Empty : "\n" + status);
+    }
+
+    private void FitPanelToContent()
+    {
+        if (tooltipRootRect == null)
+        {
+            CacheRootRect();
+        }
+
+        if (tooltipRootRect == null)
+        {
+            return;
+        }
+
+        float width = Mathf.Clamp(tooltipMaxWidth, 180f, 280f);
+        float pad = tooltipPadding;
+        float titleHeight = titleFontSize + 4f;
+        float bodyHeight = bodyFontSize * 2f;
+
+        if (tooltipAbilityNameText != null)
+        {
+            tooltipAbilityNameText.ForceMeshUpdate();
+            titleHeight = Mathf.Max(titleFontSize + 2f, tooltipAbilityNameText.preferredHeight);
+        }
+
+        if (tooltipBodyText != null)
+        {
+            tooltipBodyText.ForceMeshUpdate();
+            bodyHeight = Mathf.Max(bodyFontSize + 8f, tooltipBodyText.preferredHeight);
+        }
+
+        float height = pad + titleHeight + 4f + bodyHeight + pad;
+        height = Mathf.Clamp(height, 72f, 120f);
+        tooltipRootRect.sizeDelta = new Vector2(width, height);
     }
 
     private string GetLiveManaCostText(bool isPredator, int slotNumber, string fallbackCost)
@@ -444,22 +481,22 @@ public class AbilityTooltipPanel : MonoBehaviour
                 return new AbilityTooltipData
                 {
                     className = "Field Medic",
-                    abilityName = "Heal Dart",
-                    description = "Heal wounded ally.",
+                    abilityName = "Biotic Dart",
+                    description = "Heal ally or knock predator back.",
                     cooldown = 2.5f,
-                    effect = "Heal 3 HP",
+                    effect = "Heal 3 HP or 6 dmg + knockback",
                     cost = "2 mana",
-                    rangeTarget = "Ally in range",
-                    tip = "Save hurt allies."
+                    rangeTarget = "First target in aim line",
+                    tip = "Allies block shots to monsters behind them."
                 };
             case 2:
                 return new AbilityTooltipData
                 {
                     className = "Field Medic",
                     abilityName = "Heal Pulse",
-                    description = "Area heal nearby allies.",
+                    description = "Heal you and nearby wounded allies.",
                     cooldown = 8f,
-                    effect = "Heal 2 HP",
+                    effect = "Heal 4 HP each",
                     cost = "5 mana",
                     rangeTarget = "Radius around you",
                     tip = "Stand near allies."
@@ -481,13 +518,27 @@ public class AbilityTooltipPanel : MonoBehaviour
                 {
                     className = "Field Medic",
                     abilityName = "Sanctuary",
-                    description = "Drop a small healing zone.",
+                    description = "Drop a strong healing zone.",
                     cooldown = 28f,
-                    effect = "Slow zone heal",
+                    effect = "3 HP/tick for 7s in radius",
                     cost = "12 mana",
                     rangeTarget = "At your position",
                     tip = "Use under pressure."
                 };
+        }
+    }
+
+    private void ApplyTooltipFontSizes()
+    {
+        if (tooltipAbilityNameText != null)
+        {
+            tooltipAbilityNameText.fontSize = titleFontSize;
+        }
+
+        if (tooltipBodyText != null)
+        {
+            tooltipBodyText.fontSize = bodyFontSize;
+            tooltipBodyText.lineSpacing = -2f;
         }
     }
 
@@ -541,22 +592,22 @@ public class AbilityTooltipPanel : MonoBehaviour
             root.transform,
             "AbilityNameText",
             new Vector2(pad, -pad),
-            new Vector2(-pad * 2f, 28f),
-            22f,
+            new Vector2(-pad * 2f, titleFontSize + 6f),
+            titleFontSize,
             font,
             FontStyles.Bold);
         tooltipBodyText = CreateTooltipText(
             root.transform,
             "BodyText",
-            new Vector2(pad, -pad - 30f),
-            new Vector2(-pad * 2f, 72f),
-            17f,
+            new Vector2(pad, -pad - titleFontSize - 6f),
+            new Vector2(-pad * 2f, bodyFontSize * 3f),
+            bodyFontSize,
             font,
             FontStyles.Normal);
 
         tooltipBodyText.enableWordWrapping = true;
-        tooltipBodyText.overflowMode = TextOverflowModes.Truncate;
-        tooltipBodyText.lineSpacing = 2f;
+        tooltipBodyText.overflowMode = TextOverflowModes.Overflow;
+        tooltipBodyText.lineSpacing = -2f;
 
         tooltipRoot.SetActive(false);
     }

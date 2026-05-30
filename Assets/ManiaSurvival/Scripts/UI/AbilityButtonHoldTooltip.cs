@@ -109,7 +109,7 @@ public class AbilityButtonHoldTooltip : MonoBehaviour, IPointerDownHandler, IPoi
 
         switch (abilitySlot)
         {
-            case 1: return "Heal Dart";
+            case 1: return "Biotic Dart";
             case 2: return "Heal Pulse";
             case 3: return "Tether";
             default: return "Sanctuary";

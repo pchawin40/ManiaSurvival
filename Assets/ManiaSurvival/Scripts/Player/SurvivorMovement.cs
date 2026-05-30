@@ -123,6 +123,13 @@ public class SurvivorMovement : MonoBehaviour
             return direction.normalized;
         }
 
+        direction = transform.forward;
+        direction.y = 0f;
+        if (direction.sqrMagnitude > 0.001f)
+        {
+            return direction.normalized;
+        }
+
         direction = lastMoveDirection;
         direction.y = 0f;
         if (direction.sqrMagnitude > 0.001f)
@@ -130,9 +137,7 @@ public class SurvivorMovement : MonoBehaviour
             return direction.normalized;
         }
 
-        direction = transform.forward;
-        direction.y = 0f;
-        return direction.sqrMagnitude > 0.001f ? direction.normalized : Vector3.forward;
+        return Vector3.forward;
     }
 
     private bool CanUseCharacterController()
