@@ -68,34 +68,42 @@ public class PredatorClassManager : MonoBehaviour
     [Header("Relentless Hook - Spray")]
     public float sprayRange = 8f;
     public float sprayHalfAngle = 45f;
-    public int sprayDamage = 10;
-    public float sprayKnockback = 0.9f;
+    public int sprayDamage = 12;
+    public float sprayKnockback = 1.8f;
     public float sprayCloseRangeForgiveness = 2f;
     public float sprayCloseRangeMaxAngle = 140f;
 
     [Header("Relentless Hook - Hook")]
-    public float hookRange = 18f;
+    public float hookRange = 24f;
+    public int hookDamage = 10;
     public float hookPullForwardDistance = 1.75f;
     public float hookPullDuration = 0.25f;
 
     [Header("Relentless Hook - Tonic")]
-    public int tonicHealAmount = 20;
-    public float tonicSpeedMultiplier = 1.25f;
-    public float tonicSpeedDuration = 3f;
+    public int tonicHealAmount = 35;
+    public float tonicDuration = 2.5f;
+    [Tooltip("Movement multiplier while Tonic is active. Values below 1 slow the Predator.")]
+    public float tonicSelfSpeedMultiplier = 0.55f;
+    public float tonicGasRadius = 4.5f;
+    public float tonicGasDamagePerSecond = 10f;
+    public float tonicGasPropDamagePerSecond = 10f;
 
     [Header("Relentless Hook - Barrage")]
-    public float barrageDuration = 2.7f;
+    public float barrageDuration = 3f;
     public float barragePulseInterval = 0.3f;
-    public float barrageRange = 15f;
-    public float barrageHalfAngle = 60f;
-    public int barrageDamagePerPulse = 5;
-    public float barrageKnockbackMin = 1.5f;
-    public float barrageKnockbackMax = 2.2f;
+    public float barrageRange = 18f;
+    public float barrageHalfAngle = 65f;
+    public int barrageDamagePerPulse = 8;
+    public float barrageKnockbackMin = 2.4f;
+    public float barrageKnockbackMax = 3.2f;
 
     private Coroutine relentlessBarrageRoutine;
     private bool isBarrageActive;
     private readonly List<GameObject> barragePulseVfx = new List<GameObject>();
-    private Coroutine tonicSpeedRoutine;
+    private Coroutine tonicEffectRoutine;
+    private GameObject tonicGasVfx;
+    private readonly Dictionary<UnitHealth, float> tonicGasPendingDamage = new Dictionary<UnitHealth, float>();
+    private readonly Dictionary<DestructiblePropHealth, float> tonicGasPendingPropDamage = new Dictionary<DestructiblePropHealth, float>();
 
     private void Awake()
     {
@@ -123,7 +131,7 @@ public class PredatorClassManager : MonoBehaviour
     private void OnDisable()
     {
         StopRelentlessBarrage("disabled");
-        StopTonicSpeedBoost("disabled");
+        StopTonicEffects("disabled");
     }
 
     // Slot 0: melee / primary.
@@ -973,6 +981,7 @@ public class PredatorClassManager : MonoBehaviour
 
             LogPredatorAbility("Spray damaged " + target.name + " for " + damage
                 + " " + oldHp + " -> " + newHp);
+            LogPredatorAbility("Spray knockback " + target.name);
         }
 
         if (showDebugLogs)
@@ -1104,6 +1113,15 @@ public class PredatorClassManager : MonoBehaviour
             yield break;
         }
 
+        int damage = Mathf.Max(0, hookDamage);
+        if (damage > 0)
+        {
+            int oldHp = target.currentHealth;
+            target.TakeDamage(damage, gameObject);
+            LogPredatorAbility("Hook damaged " + target.name + " for " + damage
+                + " " + oldHp + " -> " + target.currentHealth);
+        }
+
         Vector3 start = target.transform.position;
         Vector3 end = GetHookPullDestination(start, pullForwardDistance);
         Debug.Log("[PredatorAbility] Hook pull start: " + start);
@@ -1131,51 +1149,226 @@ public class PredatorClassManager : MonoBehaviour
         }
 
         int after = unitHealth.currentHealth;
-        LogPredatorAbility("Tonic healed " + (after - before) + " (" + before + " -> " + after + ")");
+        LogPredatorAbility("Tonic healed " + (after - before));
 
-        ApplyTonicSpeedBoost();
+        ApplyTonicEffects();
         SpawnSelfBurstVfx(new Color(0.35f, 0.95f, 0.45f, 0.75f), 0.55f);
-        SpawnTonicSpeedVfx();
         yield break;
     }
 
-    private void ApplyTonicSpeedBoost()
+    private void ApplyTonicEffects()
     {
-        StopTonicSpeedBoost("refresh");
+        StopTonicEffects("refresh");
 
         if (monsterMovement != null)
         {
-            monsterMovement.SetAbilitySpeedMultiplier(tonicSpeedMultiplier);
+            monsterMovement.SetAbilitySpeedMultiplier(tonicSelfSpeedMultiplier);
         }
 
-        tonicSpeedRoutine = StartCoroutine(TonicSpeedRoutine());
-        LogPredatorAbility("Tonic speed boost started x" + tonicSpeedMultiplier.ToString("0.00")
-            + " for " + tonicSpeedDuration.ToString("0.0") + "s");
+        SpawnTonicGasVfx();
+        tonicEffectRoutine = StartCoroutine(TonicEffectRoutine());
+        LogPredatorAbility("Tonic slow started x" + tonicSelfSpeedMultiplier.ToString("0.00")
+            + " for " + tonicDuration.ToString("0.0") + "s");
     }
 
-    private IEnumerator TonicSpeedRoutine()
+    private IEnumerator TonicEffectRoutine()
     {
-        float endTime = Time.time + Mathf.Max(0.1f, tonicSpeedDuration);
+        float endTime = Time.time + Mathf.Max(0.1f, tonicDuration);
+        tonicGasPendingDamage.Clear();
+        tonicGasPendingPropDamage.Clear();
+
         while (Time.time < endTime)
         {
             if (!isActiveAndEnabled || unitHealth == null || unitHealth.IsDead || !IsRoundActive())
             {
-                StopTonicSpeedBoost("interrupted");
+                StopTonicEffects("interrupted");
                 yield break;
             }
 
+            TickTonicGas(Time.deltaTime);
             yield return null;
         }
 
-        StopTonicSpeedBoost("duration-ended");
+        StopTonicEffects("duration-ended");
     }
 
-    private void StopTonicSpeedBoost(string reason)
+    private void TickTonicGas(float deltaTime)
     {
-        if (tonicSpeedRoutine != null)
+        if (deltaTime <= 0f)
         {
-            StopCoroutine(tonicSpeedRoutine);
-            tonicSpeedRoutine = null;
+            return;
+        }
+
+        float radius = Mathf.Max(0.1f, tonicGasRadius);
+        TickTonicSurvivorGas(radius, deltaTime);
+        TickTonicPropGas(radius, deltaTime);
+    }
+
+    private void TickTonicSurvivorGas(float radius, float deltaTime)
+    {
+        float dps = Mathf.Max(0f, tonicGasDamagePerSecond);
+        if (dps <= 0f)
+        {
+            return;
+        }
+
+        UnitHealth[] candidates = GetSurvivorsInRange(transform.position, radius + 0.5f);
+        HashSet<UnitHealth> insideRadius = new HashSet<UnitHealth>();
+
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            UnitHealth survivor = candidates[i];
+            if (survivor == null || survivor.IsDead || survivor.gameObject == gameObject
+                || IsPredatorOwned(survivor.gameObject) || !survivor.CompareTag(survivorTag))
+            {
+                continue;
+            }
+
+            Vector3 offset = survivor.transform.position - transform.position;
+            offset.y = 0f;
+            if (offset.sqrMagnitude > radius * radius)
+            {
+                continue;
+            }
+
+            insideRadius.Add(survivor);
+
+            float pending = 0f;
+            tonicGasPendingDamage.TryGetValue(survivor, out pending);
+            pending += dps * deltaTime;
+
+            while (pending >= 1f)
+            {
+                int damage = Mathf.FloorToInt(pending);
+                pending -= damage;
+                survivor.TakeDamage(damage, gameObject);
+                LogPredatorAbility("Tonic gas damaged " + survivor.name + " for " + damage);
+            }
+
+            tonicGasPendingDamage[survivor] = pending;
+        }
+
+        ClearStalePendingDamage(insideRadius);
+    }
+
+    private void TickTonicPropGas(float radius, float deltaTime)
+    {
+        float propDps = Mathf.Max(0f, tonicGasPropDamagePerSecond);
+        if (propDps <= 0f)
+        {
+            return;
+        }
+
+        Collider[] hits = Physics.OverlapSphere(transform.position, radius, ~0, QueryTriggerInteraction.Ignore);
+        HashSet<DestructiblePropHealth> insideRadius = new HashSet<DestructiblePropHealth>();
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider hit = hits[i];
+            if (hit == null)
+            {
+                continue;
+            }
+
+            DestructiblePropHealth prop = hit.GetComponentInParent<DestructiblePropHealth>();
+            if (prop == null || !prop.IsAlive)
+            {
+                continue;
+            }
+
+            Vector3 propPoint = prop.transform.position;
+            Vector3 offset = propPoint - transform.position;
+            offset.y = 0f;
+            if (offset.sqrMagnitude > radius * radius)
+            {
+                continue;
+            }
+
+            insideRadius.Add(prop);
+
+            float pending = 0f;
+            tonicGasPendingPropDamage.TryGetValue(prop, out pending);
+            pending += propDps * deltaTime;
+
+            while (pending >= 1f)
+            {
+                int damage = Mathf.FloorToInt(pending);
+                pending -= damage;
+                prop.TakeDamage(damage, gameObject);
+                LogPredatorAbility("Tonic gas damaged prop " + prop.name + " for " + damage);
+            }
+
+            tonicGasPendingPropDamage[prop] = pending;
+        }
+
+        if (tonicGasPendingPropDamage.Count == 0)
+        {
+            return;
+        }
+
+        List<DestructiblePropHealth> staleProps = null;
+        foreach (KeyValuePair<DestructiblePropHealth, float> entry in tonicGasPendingPropDamage)
+        {
+            if (entry.Key == null || !entry.Key.IsAlive || !insideRadius.Contains(entry.Key))
+            {
+                if (staleProps == null)
+                {
+                    staleProps = new List<DestructiblePropHealth>();
+                }
+
+                staleProps.Add(entry.Key);
+            }
+        }
+
+        if (staleProps == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < staleProps.Count; i++)
+        {
+            tonicGasPendingPropDamage.Remove(staleProps[i]);
+        }
+    }
+
+    private void ClearStalePendingDamage(HashSet<UnitHealth> insideRadius)
+    {
+        if (tonicGasPendingDamage.Count == 0)
+        {
+            return;
+        }
+
+        List<UnitHealth> staleKeys = null;
+        foreach (KeyValuePair<UnitHealth, float> entry in tonicGasPendingDamage)
+        {
+            if (entry.Key == null || entry.Key.IsDead || !insideRadius.Contains(entry.Key))
+            {
+                if (staleKeys == null)
+                {
+                    staleKeys = new List<UnitHealth>();
+                }
+
+                staleKeys.Add(entry.Key);
+            }
+        }
+
+        if (staleKeys == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < staleKeys.Count; i++)
+        {
+            tonicGasPendingDamage.Remove(staleKeys[i]);
+        }
+    }
+
+    private void StopTonicEffects(string reason)
+    {
+        if (tonicEffectRoutine != null)
+        {
+            StopCoroutine(tonicEffectRoutine);
+            tonicEffectRoutine = null;
         }
 
         if (monsterMovement != null)
@@ -1183,16 +1376,31 @@ public class PredatorClassManager : MonoBehaviour
             monsterMovement.ClearAbilitySpeedMultiplier();
         }
 
+        if (tonicGasVfx != null)
+        {
+            Destroy(tonicGasVfx);
+            tonicGasVfx = null;
+        }
+
+        tonicGasPendingDamage.Clear();
+        tonicGasPendingPropDamage.Clear();
+
         if (showDebugLogs && reason != "refresh")
         {
-            LogPredatorAbility("Tonic speed boost ended (" + reason + ")");
+            LogPredatorAbility("Tonic ended, movement restored (" + reason + ")");
         }
     }
 
-    private void SpawnTonicSpeedVfx()
+    private void SpawnTonicGasVfx()
     {
-        GameObject vfx = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        vfx.name = "TonicSpeedVFX";
+        if (tonicGasVfx != null)
+        {
+            Destroy(tonicGasVfx);
+        }
+
+        float radius = Mathf.Max(0.5f, tonicGasRadius);
+        GameObject vfx = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        vfx.name = "TonicGasVFX";
         Collider col = vfx.GetComponent<Collider>();
         if (col != null)
         {
@@ -1200,10 +1408,10 @@ public class PredatorClassManager : MonoBehaviour
         }
 
         vfx.transform.SetParent(transform, false);
-        vfx.transform.localPosition = Vector3.up * 0.2f;
-        vfx.transform.localScale = new Vector3(1.4f, 0.08f, 1.4f);
-        ApplySimpleVfxColor(vfx, new Color(0.2f, 0.85f, 1f, 0.65f));
-        Destroy(vfx, 0.55f);
+        vfx.transform.localPosition = new Vector3(0f, 0.15f, 0f);
+        vfx.transform.localScale = new Vector3(radius * 2f, 0.12f, radius * 2f);
+        ApplySimpleVfxColor(vfx, new Color(0.12f, 0.55f, 0.18f, 0.38f));
+        tonicGasVfx = vfx;
     }
 
     private IEnumerator CastRelentlessBarrageCoroutine()
@@ -1253,11 +1461,17 @@ public class PredatorClassManager : MonoBehaviour
         for (int i = 0; i < hits.Length; i++)
         {
             UnitHealth target = hits[i];
-            if (target == null || target.IsDead || target.gameObject == gameObject)
+            if (target == null || target.IsDead || target.gameObject == gameObject || IsPredatorOwned(target.gameObject))
             {
                 continue;
             }
 
+            if (!target.CompareTag(survivorTag))
+            {
+                continue;
+            }
+
+            int oldHp = target.currentHealth;
             target.TakeDamage(barrageDamagePerPulse, gameObject);
             Vector3 knockDir = target.transform.position - transform.position;
             knockDir.y = 0f;
@@ -1268,6 +1482,7 @@ public class PredatorClassManager : MonoBehaviour
 
             float knockDistance = Random.Range(barrageKnockbackMin, barrageKnockbackMax);
             ApplyKnockback(target, knockDir.normalized, knockDistance);
+            LogPredatorAbility("Barrage pulse " + pulseNumber + " damaged " + target.name + " for " + barrageDamagePerPulse);
             hitCount++;
         }
 
@@ -1586,6 +1801,9 @@ public class PredatorClassManager : MonoBehaviour
         if (objectName.Contains("VFX")
             || objectName.Contains("TemporaryGroundEffect")
             || objectName.Contains("SprayBurst")
+            || objectName.Contains("SprayCone")
+            || objectName.Contains("BarragePulse")
+            || objectName.Contains("TonicGas")
             || objectName.Contains("HookHit")
             || objectName.Contains("HookMiss")
             || objectName.Contains("TonicSelf")

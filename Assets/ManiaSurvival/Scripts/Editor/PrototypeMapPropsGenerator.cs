@@ -595,6 +595,26 @@ public class PrototypeMapPropsGenerator : EditorWindow
         marker.propType = placement.propType;
         marker.blocksMovement = placement.blocksMovement;
         marker.blocksLineOfSight = placement.blocksLineOfSight;
+
+        if (placement.blocksMovement)
+        {
+            EnsureDestructibleHealth(root);
+        }
+    }
+
+    private static void EnsureDestructibleHealth(GameObject root)
+    {
+        DestructiblePropHealth health = root.GetComponent<DestructiblePropHealth>();
+        if (health != null)
+        {
+            return;
+        }
+
+        health = root.AddComponent<DestructiblePropHealth>();
+        health.maxHealth = 60;
+        health.currentHealth = 60;
+        health.destroyOnDeath = true;
+        health.hitFlashRenderer = root.GetComponentInChildren<Renderer>();
     }
 
     private struct PropPlacement

@@ -1357,10 +1357,10 @@ public class ManiaGameUI : MonoBehaviour
         {
             abilityInfoText.text =
                 "Relentless Hook\n"
-                + "1. Spray — Short-range cone burst.\n"
-                + "2. Hook — Pulls one Survivor from long range (18 units).\n"
-                + "3. Tonic — Heal and brief speed boost.\n"
-                + "4. Barrage — Long-range ultimate cone barrage for 2.7 seconds.";
+                + "1. Spray — 12 damage close-range cone blast (knockback 1.8).\n"
+                + "2. Hook — Long-range pull, 10 damage on hit (24 units, 9s cd).\n"
+                + "3. Tonic — Heal 35, slow self, toxic gas damages nearby for 2.5s.\n"
+                + "4. Barrage — Ultimate cone barrage for 3s (8 damage per pulse).";
             return;
         }
 

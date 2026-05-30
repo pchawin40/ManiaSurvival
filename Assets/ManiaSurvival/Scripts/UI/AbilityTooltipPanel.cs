@@ -285,8 +285,8 @@ public class AbilityTooltipPanel : MonoBehaviour
                         className = "Relentless Hook",
                         abilityName = "Spray",
                         description = "Short-range forward shotgun blast.",
-                        cooldown = 1.8f,
-                        effect = "10 damage close-range blast",
+                        cooldown = 2f,
+                        effect = "12 damage close-range blast",
                         cost = "None",
                         rangeTarget = "8 unit cone in front",
                         tip = "Fight up close and scare survivors."
@@ -297,10 +297,10 @@ public class AbilityTooltipPanel : MonoBehaviour
                         className = "Relentless Hook",
                         abilityName = "Hook",
                         description = "Pulls one Survivor from long range.",
-                        cooldown = 7f,
-                        effect = "Long pull",
+                        cooldown = 9f,
+                        effect = "Long-range pull. Deals 10 damage on hit",
                         cost = "None",
-                        rangeTarget = "18 unit line skillshot",
+                        rangeTarget = "24 unit line skillshot",
                         tip = "Catch fleeing prey."
                     };
                 case 3:
@@ -308,11 +308,11 @@ public class AbilityTooltipPanel : MonoBehaviour
                     {
                         className = "Relentless Hook",
                         abilityName = "Tonic",
-                        description = "Recover and surge forward briefly.",
+                        description = "Channel toxic gas while recovering.",
                         cooldown = 10f,
-                        effect = "Heal and brief speed boost",
+                        effect = "Heals Predator but slows movement while toxic gas damages nearby targets",
                         cost = "None",
-                        rangeTarget = "Self",
+                        rangeTarget = "Self + 4.5 unit gas radius",
                         tip = "Use before diving."
                     };
                 default:
@@ -322,9 +322,9 @@ public class AbilityTooltipPanel : MonoBehaviour
                         abilityName = "Barrage",
                         description = "Rapid long-range knockback blasts.",
                         cooldown = 14f,
-                        effect = "Long-range ultimate cone barrage",
+                        effect = "Ultimate cone barrage. Repeated heavy damage and knockback",
                         cost = "None",
-                        rangeTarget = "15 unit cone in front",
+                        rangeTarget = "18 unit cone in front",
                         tip = "Scatter and finish survivors."
                     };
             }
