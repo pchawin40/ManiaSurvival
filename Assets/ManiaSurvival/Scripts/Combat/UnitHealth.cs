@@ -18,6 +18,12 @@ public class UnitHealth : MonoBehaviour
 
     public bool IsDead { get; private set; }
 
+    [Header("Temporary Protection")]
+    [Tooltip("Multiplies incoming damage while protection is active. 0.7 = 30% less damage taken.")]
+    public float temporaryDamageMultiplier = 1f;
+
+    private float temporaryProtectionEndTime;
+
     [Header("Debug")]
     [Tooltip("Logs a clear damage line for survivors to improve combat readability while testing.")]
     public bool logSurvivorDamage = true;
@@ -47,10 +53,39 @@ public class UnitHealth : MonoBehaviour
         }
     }
 
+    public void ApplyTemporaryDamageReduction(float reductionPercent, float duration)
+    {
+        reductionPercent = Mathf.Clamp01(reductionPercent);
+        temporaryDamageMultiplier = Mathf.Clamp(1f - reductionPercent, 0.05f, 1f);
+        temporaryProtectionEndTime = Mathf.Max(
+            temporaryProtectionEndTime,
+            Time.time + Mathf.Max(0.05f, duration));
+
+        if (logAbilityEffects)
+        {
+            Debug.Log("[Protection] Applied " + (reductionPercent * 100f).ToString("0")
+                + "% damage reduction for " + duration.ToString("0.0") + "s on " + name);
+        }
+    }
+
     public void TakeDamage(int amount, GameObject damageSource = null)
     {
         if (IsDead) return;
         if (amount <= 0) return;
+
+        if (Time.time > temporaryProtectionEndTime)
+        {
+            temporaryDamageMultiplier = 1f;
+        }
+
+        if (temporaryDamageMultiplier < 0.999f)
+        {
+            amount = Mathf.RoundToInt(amount * temporaryDamageMultiplier);
+            if (amount <= 0)
+            {
+                return;
+            }
+        }
 
         int previousHealth = currentHealth;
         currentHealth -= amount;
@@ -87,17 +122,32 @@ public class UnitHealth : MonoBehaviour
         }
     }
 
-    public void Heal(int amount)
+    public int Heal(int amount)
     {
-        if (IsDead) return;
-        if (amount <= 0) return;
+        if (IsDead)
+        {
+            if (logAbilityEffects)
+            {
+                Debug.Log("[AbilityBlock] Heal blocked: target is dead");
+            }
 
+            return 0;
+        }
+
+        if (amount <= 0) return 0;
+
+        int before = currentHealth;
         currentHealth += amount;
         currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+        int actualHeal = currentHealth - before;
+        if (actualHeal <= 0)
+        {
+            return 0;
+        }
 
         if (showFloatingCombatText)
         {
-            FloatingCombatText.Spawn(transform.position, "+" + amount, healTextColor);
+            FloatingCombatText.Spawn(transform.position, "+" + actualHeal, healTextColor);
         }
 
         if (showHitFlash && visualFeedback != null)
@@ -107,8 +157,10 @@ public class UnitHealth : MonoBehaviour
 
         if (logAbilityEffects)
         {
-            Debug.Log("[AbilityEffect] Healed " + name + " for " + amount + ".");
+            Debug.Log("[AbilityEffect] Healed " + name + " for " + actualHeal + ".");
         }
+
+        return actualHeal;
     }
 
     public void ResetHealth()
@@ -120,6 +172,8 @@ public class UnitHealth : MonoBehaviour
 
         IsDead = false;
         currentHealth = maxHealth;
+        temporaryDamageMultiplier = 1f;
+        temporaryProtectionEndTime = 0f;
     }
 
     public float GetHealthPercent()
@@ -134,8 +188,33 @@ public class UnitHealth : MonoBehaviour
 
         IsDead = true;
         currentHealth = 0;
+        temporaryDamageMultiplier = 1f;
+        temporaryProtectionEndTime = 0f;
+
+        string sourceLabel = damageSource != null ? damageSource.name : "unknown";
+        Debug.Log("[UnitHealth] " + name + " died from " + sourceLabel);
 
         onDeath?.Invoke();
+
+        if (CompareTag("Survivor"))
+        {
+            ManiaGameManager manager = ManiaGameManager.Instance;
+            if (manager != null)
+            {
+                manager.ReportSurvivorDeath(this, damageSource);
+            }
+        }
+
+        DeathMessageManager feed = DeathMessageManager.Instance;
+        if (feed == null)
+        {
+            feed = FindFirstObjectByType<DeathMessageManager>();
+        }
+
+        if (feed != null)
+        {
+            feed.ShowDeathMessage(this, damageSource);
+        }
 
         if (disableOnDeath)
         {

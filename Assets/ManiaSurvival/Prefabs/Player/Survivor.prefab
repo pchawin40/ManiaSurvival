@@ -218,9 +218,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0d1f2d7e4d5c4dddb3a8a2fb8b5dd8f1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SurvivorBlinkAbility
-  blinkDistance: 5
+  blinkDistance: 6
   blinkCooldown: 10
   collisionCheckRadius: 0.4
+  useAbilityControllerAuthority: 1
   cooldownButton: {fileID: 0}
   obstacleLayers:
     serializedVersion: 2

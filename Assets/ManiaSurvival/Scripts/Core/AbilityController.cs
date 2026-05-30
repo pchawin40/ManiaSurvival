@@ -15,7 +15,7 @@ public class AbilityController : MonoBehaviour
     public bool controlsPredator;
     public bool enforceTestLoadouts = true;
     public bool logAbilityFlow = true;
-    public bool logAbilityMana = false;
+    public bool logAbilityMana = true;
     public bool disableLegacyAbilityComponents = true;
     public bool pipelineTestMode = true;
     public bool abilityControllerOwnsCooldowns = true;
@@ -29,28 +29,28 @@ public class AbilityController : MonoBehaviour
     public PredatorClassManager predatorClassManager;
 
     [Header("Survivor Mana Costs")]
-    public float survivorSlot1ManaCost = 10f;
-    public float survivorSlot2ManaCost = 20f;
-    public float survivorSlot3ManaCost = 15f;
-    public float survivorSlot4ManaCost = 45f;
+    public float survivorSlot1ManaCost = 2f;
+    public float survivorSlot2ManaCost = 5f;
+    public float survivorSlot3ManaCost = 4f;
+    public float survivorSlot4ManaCost = 12f;
 
     [Header("Predator Mana Costs")]
     public float predatorSlot1ManaCost = 8f;
     public float predatorSlot2ManaCost = 25f;
     public float predatorSlot3ManaCost = 35f;
-    public float predatorSlot4ManaCost = 60f;
+    public float predatorSlot4ManaCost = 80f;
 
     [Header("Survivor Slot Cooldowns")]
-    public float survivorSlot1Cooldown = 3f;
+    public float survivorSlot1Cooldown = 2.5f;
     public float survivorSlot2Cooldown = 8f;
-    public float survivorSlot3Cooldown = 6f;
-    public float survivorSlot4Cooldown = 18f;
+    public float survivorSlot3Cooldown = 10f;
+    public float survivorSlot4Cooldown = 28f;
 
     [Header("Predator Slot Cooldowns")]
-    public float predatorSlot1Cooldown = 2f;
-    public float predatorSlot2Cooldown = 9f;
-    public float predatorSlot3Cooldown = 10f;
-    public float predatorSlot4Cooldown = 16f;
+    public float predatorSlot1Cooldown = 2.5f;
+    public float predatorSlot2Cooldown = 10f;
+    public float predatorSlot3Cooldown = 14f;
+    public float predatorSlot4Cooldown = 35f;
 
     [Header("Debug VFX")]
     public bool spawnPlaceholderVfx = true;
@@ -186,6 +186,7 @@ public class AbilityController : MonoBehaviour
 
         if (!CanUseBase(out string denyReason))
         {
+            LogAbilityBlocked(clampedSlot, denyReason);
             LogFlow($"[AbilityController] Current class/loadout: {GetCurrentLoadoutLabel()}");
             LogFlow("[AbilityController] Ability resolved: none");
             LogFlow($"[AbilityController] Cooldown check: blocked ({denyReason})");
@@ -200,6 +201,7 @@ public class AbilityController : MonoBehaviour
         float cooldownRemaining = GetCooldownRemaining(clampedSlot);
         if (cooldownRemaining > 0f)
         {
+            LogAbilityBlocked(clampedSlot, "cooldown " + cooldownRemaining.ToString("0.0") + " seconds remaining");
             LogAbilityManaBlocked(clampedSlot, cooldownRemaining, "cooldown");
             LogFlow($"[AbilityController] Current class/loadout: {GetCurrentLoadoutLabel()}");
             LogFlow($"[AbilityController] Ability resolved: {GetResolvedAbilityName(clampedSlot)}");
@@ -221,6 +223,8 @@ public class AbilityController : MonoBehaviour
 
         if (unitMana != null && !unitMana.HasMana(manaCost))
         {
+            LogAbilityBlocked(clampedSlot, "insufficient mana (have " + unitMana.currentMana.ToString("0")
+                + ", need " + manaCost.ToString("0") + ")");
             LogAbilityManaBlocked(clampedSlot, unitMana.currentMana, manaCost, "insufficient mana");
             LogFlow($"[AbilityController] Insufficient mana for slot {clampedSlot}: need {manaCost:0.0}, have {unitMana.currentMana:0.0}");
             LogFlow("[AbilityController] Ability succeeded/failed: failed (insufficient mana)");
@@ -264,6 +268,10 @@ public class AbilityController : MonoBehaviour
             SpawnDebugVfx(clampedSlot, assignedVfx);
             PlaySlotSound(clampedSlot);
             SpawnGroundEffect(clampedSlot);
+        }
+        else
+        {
+            LogAbilityBlocked(clampedSlot, "ability execution failed");
         }
 
         LogFlow($"[AbilityController] Ability succeeded/failed: {(succeeded ? "succeeded" : "failed")}");
@@ -520,7 +528,7 @@ public class AbilityController : MonoBehaviour
         {
             case 1: return "Field Medic - Heal Dart";
             case 2: return "Field Medic - Healing Pulse";
-            case 3: return "Field Medic - Ally Dash";
+            case 3: return "Field Medic - Tether / Blink";
             default: return "Field Medic - Protection Zone";
         }
     }
@@ -748,6 +756,16 @@ public class AbilityController : MonoBehaviour
         Debug.Log(message);
     }
 
+    private void LogAbilityBlocked(int slotNumber, string reason)
+    {
+        if (!logAbilityFlow)
+        {
+            return;
+        }
+
+        Debug.Log("[AbilityBlock] " + GetCurrentRoleLabel() + " Slot " + slotNumber + " blocked: " + reason);
+    }
+
     private void LogAbilityManaBlocked(int slotNumber, float value, string reason)
     {
         if (!logAbilityMana || controlsPredator)
@@ -772,13 +790,16 @@ public class AbilityController : MonoBehaviour
 
     private void LogAbilityManaSpend(int slotNumber, float cost, float before, float after)
     {
-        if (!logAbilityMana || controlsPredator)
+        if (controlsPredator)
         {
             return;
         }
 
-        Debug.Log("[AbilityMana] Survivor slot " + slotNumber + " " + GetResolvedAbilityName(slotNumber)
-            + " cost=" + cost.ToString("0") + " before=" + before.ToString("0") + " after=" + after.ToString("0"));
+        if (logAbilityMana || logAbilityFlow)
+        {
+            Debug.Log("[AbilityMana] Survivor spent " + cost.ToString("0") + " mana on Slot " + slotNumber
+                + " (before=" + before.ToString("0") + ", after=" + after.ToString("0") + ")");
+        }
     }
 
     private void DisableLegacyComponentsOnHost()

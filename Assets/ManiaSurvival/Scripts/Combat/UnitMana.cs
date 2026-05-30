@@ -8,8 +8,27 @@ public class UnitMana : MonoBehaviour
     public float maxMana = 100f;
     public float currentMana = 100f;
 
-    [Header("Regen")]
-    public float manaRegenPerSecond = 3f;
+    [Header("Max Mana By Role")]
+    [Tooltip("Survivor mana pool cap.")]
+    public float survivorMaxMana = 20f;
+    [Tooltip("Predator mana pool cap.")]
+    public float predatorMaxMana = 100f;
+    [Tooltip("NPC mana pool cap.")]
+    public float npcMaxMana = 100f;
+    [Tooltip("If true, picks max mana from tag/role on Awake.")]
+    public bool autoApplyMaxManaByRole = true;
+
+    [Header("Regen By Role")]
+    [Tooltip("Passive mana regen for Survivors. Default ~0.33/sec keeps Medic from spam-healing.")]
+    public float survivorManaRegenPerSecond = 0.33f;
+    [Tooltip("Passive mana regen for Predators.")]
+    public float predatorManaRegenPerSecond = 6f;
+    [Tooltip("Passive mana regen for NPC casters.")]
+    public float npcManaRegenPerSecond = 1f;
+    [Tooltip("If true, picks regen from tag/role on Awake.")]
+    public bool autoApplyRegenByRole = true;
+    [Tooltip("Active regen rate used each frame. Set automatically when autoApplyRegenByRole is enabled.")]
+    public float manaRegenPerSecond = 0.33f;
 
     [Header("Zone Bonus")]
     [Tooltip("Extra regen from ManaRegenZone while inside. Applied on top of base regen.")]
@@ -27,6 +46,31 @@ public class UnitMana : MonoBehaviour
     {
         currentMana = Mathf.Clamp(currentMana, 0f, maxMana);
         MigrateLegacySurvivorMana();
+        ApplyMaxManaForRole();
+        ApplyRegenForRole(logResult: showManaLogs);
+    }
+
+    public void ApplyMaxManaForRole()
+    {
+        if (!autoApplyMaxManaByRole)
+        {
+            return;
+        }
+
+        if (CompareTag("Survivor"))
+        {
+            maxMana = survivorMaxMana;
+        }
+        else if (CompareTag("Monster") || CompareTag("Predator"))
+        {
+            maxMana = predatorMaxMana;
+        }
+        else if (GetComponentInParent<NPCChaosCaster>() != null)
+        {
+            maxMana = npcMaxMana;
+        }
+
+        currentMana = Mathf.Clamp(currentMana, 0f, maxMana);
     }
 
     private void Update()
@@ -44,6 +88,32 @@ public class UnitMana : MonoBehaviour
             float gain = regenCarry;
             regenCarry = 0f;
             RestoreMana(gain);
+        }
+    }
+
+    public void ApplyRegenForRole(bool logResult = false)
+    {
+        if (!autoApplyRegenByRole)
+        {
+            return;
+        }
+
+        if (CompareTag("Survivor"))
+        {
+            manaRegenPerSecond = survivorManaRegenPerSecond;
+        }
+        else if (CompareTag("Monster") || CompareTag("Predator"))
+        {
+            manaRegenPerSecond = predatorManaRegenPerSecond;
+        }
+        else if (GetComponentInParent<NPCChaosCaster>() != null)
+        {
+            manaRegenPerSecond = npcManaRegenPerSecond;
+        }
+
+        if (logResult)
+        {
+            Debug.Log("[UnitMana] " + name + " mana regen = " + manaRegenPerSecond.ToString("0.##") + "/sec");
         }
     }
 
@@ -129,13 +199,22 @@ public class UnitMana : MonoBehaviour
         UnitMana existing = host.GetComponent<UnitMana>();
         if (existing != null)
         {
+            existing.ApplyMaxManaForRole();
+            existing.ApplyRegenForRole();
             return existing;
         }
 
         UnitMana added = host.AddComponent<UnitMana>();
-        added.maxMana = 100f;
-        added.currentMana = 100f;
-        added.manaRegenPerSecond = isPredator ? 6f : 3f;
+        added.survivorMaxMana = 20f;
+        added.predatorMaxMana = 100f;
+        added.npcMaxMana = 100f;
+        added.maxMana = isPredator ? 100f : 20f;
+        added.currentMana = added.maxMana;
+        added.survivorManaRegenPerSecond = 0.33f;
+        added.predatorManaRegenPerSecond = 6f;
+        added.npcManaRegenPerSecond = 1f;
+        added.autoApplyRegenByRole = true;
+        added.ApplyRegenForRole();
         return added;
     }
 
@@ -149,7 +228,10 @@ public class UnitMana : MonoBehaviour
 
         maxMana = legacy.maxMana;
         currentMana = legacy.currentMana;
-        manaRegenPerSecond = legacy.passiveRegenPerSecond;
         Destroy(legacy);
+        autoApplyMaxManaByRole = true;
+        autoApplyRegenByRole = true;
+        ApplyMaxManaForRole();
+        ApplyRegenForRole();
     }
 }

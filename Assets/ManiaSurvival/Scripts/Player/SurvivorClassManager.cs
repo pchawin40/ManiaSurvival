@@ -42,24 +42,30 @@ public class SurvivorClassManager : MonoBehaviour
     public GameObject bioticDartProjectilePrefab;
     public float bioticDartSpeed = 18f;
     public float bioticDartLifetime = 2f;
-    public float bioticDartRange = 20f;
-    public int healDartAmount = 6;
+    [Tooltip("Max range for Heal Dart ally search and hit validation.")]
+    public float bioticDartRange = 12f;
+    public int healDartAmount = 3;
     public int bioticDartPredatorDamage = 6;
 
     [Header("Medic - Heal Pulse")]
-    public float healPulseRadius = 5f;
-    public int healPulseAmount = 4;
+    [Tooltip("Area heal radius — keep local, not map-wide.")]
+    public float healPulseRadius = 7f;
+    public int healPulseAmount = 2;
 
     [Header("Medic - Guardian Angel")]
-    public float guardianAngelRange = 18f;
+    [Tooltip("Max range to dash toward an ally (Tether).")]
+    public float guardianAngelRange = 14f;
     public float guardianAngelDashDuration = 0.2f;
     public float guardianAngelStopDistance = 1.25f;
 
     [Header("Medic - Sanctuary")]
     public GameObject immortalityFieldPrefab;
     public float sanctuaryDuration = 4f;
-    public float sanctuaryRadius = 5f;
-    public int sanctuaryHealPerSecond = 2;
+    [Tooltip("Healing zone radius — should not cover the whole map.")]
+    public float sanctuaryRadius = 8f;
+    public int sanctuaryHealPerSecond = 1;
+    [Tooltip("Seconds between sanctuary heal ticks.")]
+    public float sanctuaryTickInterval = 1.75f;
 
     [Header("Warden - Rocket Flail")]
     public float rocketFlailRange = 2.6f;
@@ -89,7 +95,7 @@ public class SurvivorClassManager : MonoBehaviour
     public float healingBlossomSpeed = 12f;
     public float healingBlossomTurnSpeed = 10f;
     public float healingBlossomLifetime = 3f;
-    public int healingBlossomHealAmount = 20;
+    public int healingBlossomHealAmount = 10;
     public float healingBlossomTargetRange = 16f;
 
     [Header("Weaver - Life Grip")]
@@ -110,6 +116,10 @@ public class SurvivorClassManager : MonoBehaviour
     public float suzuProjectileLifetime = 2.5f;
     public float suzuRadius = 4f;
     public float suzuInvulnerabilityDuration = 1f;
+    [Tooltip("Damage reduction while Suzu protection is active (not full invulnerability).")]
+    [Range(0f, 0.75f)] public float suzuDamageReduction = 0.30f;
+    [Tooltip("Damage reduction during Life Grip bubble.")]
+    [Range(0f, 0.75f)] public float lifeGripDamageReduction = 0.35f;
 
     private UnitHealth unitHealth;
     private CharacterController characterController;
@@ -218,7 +228,12 @@ public class SurvivorClassManager : MonoBehaviour
         switch (activeClass)
         {
             case SurvivorClass.Medic:
-                return TryStartMedicTether();
+                if (TryStartMedicTether())
+                {
+                    return true;
+                }
+
+                return TrySurvivorBlink();
             case SurvivorClass.Warden:
                 TriggerAnimation(Ability3Hash);
                 Debug.Log("Warden activated Battle Cadence!");
@@ -327,11 +342,19 @@ public class SurvivorClassManager : MonoBehaviour
 
         if (target == null)
         {
-            if (showDebugLogs)
-            {
-                Debug.Log("[SurvivorAbility] Heal Dart found no wounded target.");
-            }
+            Debug.Log("[AbilityBlock] Heal blocked: no wounded ally in range");
+            return false;
+        }
 
+        if (target.currentHealth >= target.maxHealth)
+        {
+            Debug.Log("[AbilityBlock] Heal blocked: target already full HP");
+            return false;
+        }
+
+        if (!IsUnitWithinFlatRange(target, transform.position, bioticDartRange))
+        {
+            Debug.Log("[AbilityBlock] Heal blocked: target outside heal range");
             return false;
         }
 
@@ -378,20 +401,19 @@ public class SurvivorClassManager : MonoBehaviour
                 continue;
             }
 
-            ally.Heal(healPulseAmount);
-            healedCount++;
+            if (ally.Heal(healPulseAmount) > 0)
+            {
+                healedCount++;
+            }
         }
 
-        if (showDebugLogs)
+        if (healedCount > 0 && showDebugLogs)
         {
-            if (healedCount > 0)
-            {
-                Debug.Log("[SurvivorAbility] Heal Pulse healed " + healedCount + " wounded allies");
-            }
-            else
-            {
-                Debug.Log("[SurvivorAbility] Heal Pulse found no wounded allies.");
-            }
+            Debug.Log("[SurvivorAbility] Heal Pulse healed " + healedCount + " wounded allies");
+        }
+        else if (healedCount == 0)
+        {
+            Debug.Log("[AbilityBlock] Heal blocked: no wounded ally in range");
         }
 
         return healedCount > 0;
@@ -402,11 +424,13 @@ public class SurvivorClassManager : MonoBehaviour
         UnitHealth ally = FindClosestAlly(transform.position, guardianAngelRange, requireDamaged: false);
         if (ally == null)
         {
-            if (showDebugLogs)
-            {
-                Debug.Log("[SurvivorAbility] Tether found no ally target.");
-            }
+            Debug.Log("[AbilityBlock] Tether blocked: no ally in range");
+            return false;
+        }
 
+        if (!IsUnitWithinFlatRange(ally, transform.position, guardianAngelRange))
+        {
+            Debug.Log("[AbilityBlock] Tether blocked: target outside range");
             return false;
         }
 
@@ -459,7 +483,7 @@ public class SurvivorClassManager : MonoBehaviour
             zone = field.AddComponent<SanctuaryHealZone>();
         }
 
-        zone.Initialize(this, sanctuaryRadius, sanctuaryDuration, sanctuaryHealPerSecond, survivorTag, showDebugLogs);
+        zone.Initialize(this, sanctuaryRadius, sanctuaryDuration, sanctuaryHealPerSecond, sanctuaryTickInterval, survivorTag, showDebugLogs);
         return true;
     }
 
@@ -472,10 +496,22 @@ public class SurvivorClassManager : MonoBehaviour
 
         if (IsAlly(target))
         {
-            target.Heal(healDartAmount);
-            if (showDebugLogs)
+            if (target.currentHealth >= target.maxHealth)
             {
-                Debug.Log("[SurvivorAbility] Heal Dart healed " + target.name + " for " + healDartAmount);
+                Debug.Log("[AbilityBlock] Heal blocked: target already full HP");
+                return;
+            }
+
+            if (!IsUnitWithinFlatRange(target, transform.position, bioticDartRange))
+            {
+                Debug.Log("[AbilityBlock] Heal blocked: target outside heal range");
+                return;
+            }
+
+            int healed = target.Heal(healDartAmount);
+            if (healed > 0 && showDebugLogs)
+            {
+                Debug.Log("[SurvivorAbility] Heal Dart healed " + target.name + " for " + healed);
             }
 
             return;
@@ -703,12 +739,7 @@ public class SurvivorClassManager : MonoBehaviour
             Destroy(bubble, lifeGripBubbleDuration);
         }
 
-        TempInvulnerability inv = ally.gameObject.GetComponent<TempInvulnerability>();
-        if (inv == null)
-        {
-            inv = ally.gameObject.AddComponent<TempInvulnerability>();
-        }
-        inv.Activate(lifeGripBubbleDuration);
+        ally.ApplyTemporaryDamageReduction(lifeGripDamageReduction, lifeGripBubbleDuration);
 
         Vector3 start = ally.transform.position;
         Vector3 end = transform.position - GetForwardDirection() * lifeGripEndOffset;
@@ -728,6 +759,17 @@ public class SurvivorClassManager : MonoBehaviour
         {
             Destroy(bubble);
         }
+    }
+
+    private bool TrySurvivorBlink()
+    {
+        SurvivorBlinkAbility blink = GetComponent<SurvivorBlinkAbility>();
+        if (blink == null)
+        {
+            blink = gameObject.AddComponent<SurvivorBlinkAbility>();
+        }
+
+        return blink.TryBlinkStep();
     }
 
     private void ExecuteWeaverSwiftStep()
@@ -838,12 +880,7 @@ public class SurvivorClassManager : MonoBehaviour
                 move.enabled = true;
             }
 
-            TempInvulnerability inv = ally.gameObject.GetComponent<TempInvulnerability>();
-            if (inv == null)
-            {
-                inv = ally.gameObject.AddComponent<TempInvulnerability>();
-            }
-            inv.Activate(suzuInvulnerabilityDuration);
+            ally.ApplyTemporaryDamageReduction(suzuDamageReduction, suzuInvulnerabilityDuration);
         }
     }
 
@@ -881,18 +918,38 @@ public class SurvivorClassManager : MonoBehaviour
                 continue;
             }
 
+            if (!IsUnitWithinFlatRange(health, center, radius))
+            {
+                continue;
+            }
+
             if (!result.Contains(health))
             {
                 result.Add(health);
             }
         }
 
-        if (!result.Contains(unitHealth))
+        if (!result.Contains(unitHealth) && unitHealth != null && !unitHealth.IsDead)
         {
-            result.Add(unitHealth);
+            if (IsUnitWithinFlatRange(unitHealth, center, radius))
+            {
+                result.Add(unitHealth);
+            }
         }
 
         return result.ToArray();
+    }
+
+    private bool IsUnitWithinFlatRange(UnitHealth unit, Vector3 center, float range)
+    {
+        if (unit == null)
+        {
+            return false;
+        }
+
+        Vector3 delta = unit.transform.position - center;
+        delta.y = 0f;
+        return delta.sqrMagnitude <= range * range;
     }
 
     private UnitHealth FindClosestAlly(Vector3 center, float radius, bool requireDamaged)
@@ -1209,6 +1266,7 @@ public class SurvivorClassManager : MonoBehaviour
         private int healPerSecond;
         private string allyTag;
         private bool logEvents;
+        private float tick = 1.25f;
         private readonly HashSet<UnitHealth> healedAllies = new HashSet<UnitHealth>();
 
         public void Initialize(
@@ -1216,6 +1274,7 @@ public class SurvivorClassManager : MonoBehaviour
             float zoneRadius,
             float zoneDuration,
             int healPerTick,
+            float tickInterval,
             string allySurvivorTag,
             bool debugLogs)
         {
@@ -1225,13 +1284,13 @@ public class SurvivorClassManager : MonoBehaviour
             healPerSecond = Mathf.Max(1, healPerTick);
             allyTag = allySurvivorTag;
             logEvents = debugLogs;
+            tick = Mathf.Clamp(tickInterval, 1f, 1.5f);
             StartCoroutine(RunZoneCoroutine());
         }
 
         private IEnumerator RunZoneCoroutine()
         {
             float elapsed = 0f;
-            float tick = 1f;
 
             while (elapsed < duration)
             {
@@ -1244,8 +1303,23 @@ public class SurvivorClassManager : MonoBehaviour
                         continue;
                     }
 
-                    health.Heal(healPerSecond);
-                    healedAllies.Add(health);
+                    if (health.currentHealth >= health.maxHealth)
+                    {
+                        continue;
+                    }
+
+                    Vector3 delta = health.transform.position - transform.position;
+                    delta.y = 0f;
+                    if (delta.sqrMagnitude > radius * radius)
+                    {
+                        continue;
+                    }
+
+                    int healed = health.Heal(healPerSecond);
+                    if (healed > 0)
+                    {
+                        healedAllies.Add(health);
+                    }
                 }
 
                 elapsed += tick;
@@ -1258,52 +1332,6 @@ public class SurvivorClassManager : MonoBehaviour
             }
 
             Destroy(gameObject);
-        }
-    }
-
-    private class TempInvulnerability : MonoBehaviour
-    {
-        private UnitHealth health;
-        private float endTime;
-        private int lastHealth;
-
-        private void Awake()
-        {
-            health = GetComponent<UnitHealth>();
-            lastHealth = health != null ? health.currentHealth : 0;
-        }
-
-        public void Activate(float duration)
-        {
-            endTime = Mathf.Max(endTime, Time.time + Mathf.Max(0.05f, duration));
-            if (health != null)
-            {
-                lastHealth = health.currentHealth;
-            }
-        }
-
-        private void LateUpdate()
-        {
-            if (health == null || health.IsDead)
-            {
-                return;
-            }
-
-            if (Time.time <= endTime)
-            {
-                if (health.currentHealth < lastHealth)
-                {
-                    health.currentHealth = lastHealth;
-                }
-                else
-                {
-                    lastHealth = health.currentHealth;
-                }
-
-                return;
-            }
-
-            lastHealth = health.currentHealth;
         }
     }
 }

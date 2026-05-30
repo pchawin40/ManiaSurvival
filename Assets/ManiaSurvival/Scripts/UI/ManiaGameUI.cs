@@ -9,6 +9,7 @@ public class ManiaGameUI : MonoBehaviour
     [Header("Text")]
     public TMP_Text timerText;
     public TMP_Text roleText;
+    public TMP_Text deathFeedText;
     public TMP_Text survivorCountText;
     public TMP_Text monsterKillsText;
     public TMP_Text gameOverTitleText;
@@ -85,9 +86,9 @@ public class ManiaGameUI : MonoBehaviour
     [Tooltip("Extra safe-area padding applied on top of layout margins.")]
     public float safeAreaPadding = 8f;
     [Tooltip("Gap between the ability grid and the tooltip panel.")]
-    public float tooltipGapAboveAbilities = 12f;
+    public float tooltipGapAboveAbilities = 96f;
     [Tooltip("Tooltip panel size for hold-to-read ability info.")]
-    public Vector2 tooltipPanelSize = new Vector2(380f, 200f);
+    public Vector2 tooltipPanelSize = new Vector2(260f, 112f);
     [Tooltip("Utility button size for Sprint / Pick Up / Drop (Survivor only).")]
     public Vector2 survivorUtilityButtonSize = new Vector2(120f, 64f);
     [Tooltip("Vertical gap between survivor utility buttons.")]
@@ -1368,10 +1369,10 @@ public class ManiaGameUI : MonoBehaviour
 
         abilityInfoText.text =
             "Field Medic\n"
-            + "1. Heal Dart — Heal 6 HP (10 mana, 2.5s cd).\n"
-            + "2. Heal Pulse — Area heal 4 HP (20 mana, 6s cd).\n"
-            + "3. Tether — Dash to ally (15 mana, 10s cd).\n"
-            + "4. Sanctuary — Healing zone 2 HP/s (45 mana, 16s cd).";
+            + "1. Heal Dart — Heal ally (2 mana, 2.5s cd).\n"
+            + "2. Heal Pulse — Area heal (5 mana, 8s cd).\n"
+            + "3. Tether / Blink — Dash to ally or blink forward (4 mana, 10s cd).\n"
+            + "4. Sanctuary — Healing zone (12 mana, 28s cd).";
     }
 
     private void RefreshPlayerManaDisplay()
@@ -1421,7 +1422,7 @@ public class ManiaGameUI : MonoBehaviour
     {
         SetButtonLabel(survivorPrimaryButton, survivorAbility1Label, "Heal Dart", survivorAbilityController, 1, false);
         SetButtonLabel(survivorAbility2Button, survivorAbility2Label, "Heal Pulse", survivorAbilityController, 2, false);
-        SetButtonLabel(survivorAbility3Button, survivorAbility3Label, "Tether", survivorAbilityController, 3, false);
+        SetButtonLabel(survivorAbility3Button, survivorAbility3Label, "Tether / Blink", survivorAbilityController, 3, false);
         SetButtonLabel(survivorUltimateButton, survivorUltimateLabel, "Sanctuary", survivorAbilityController, 4, false);
     }
 

@@ -103,7 +103,16 @@ public static class UnitManaSceneSetup
             return mana != null ? 1 : 0;
         }
 
-        mana.manaRegenPerSecond = isPredator ? 6f : 3f;
+        mana.ApplyMaxManaForRole();
+        mana.ApplyRegenForRole();
+        if (!isPredator)
+        {
+            mana.survivorMaxMana = 20f;
+            mana.survivorManaRegenPerSecond = 0.33f;
+            mana.ApplyMaxManaForRole();
+            mana.ApplyRegenForRole();
+        }
+
         return 0;
     }
 }

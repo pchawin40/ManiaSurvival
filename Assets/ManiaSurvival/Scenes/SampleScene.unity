@@ -6349,7 +6349,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SurvivorMana
   maxMana: 20
   currentMana: 20
-  passiveRegenPerSecond: 0.5
+  passiveRegenPerSecond: 0.33
   onManaChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -6434,7 +6434,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   showDebugLogs: 1
-  useExternalCooldownAuthority: 0
+  useExternalCooldownAuthority: 1
   globalCooldownMultiplier: 1.3
   primaryCooldown: 2.5
   ability2Cooldown: 8
@@ -6443,20 +6443,19 @@ MonoBehaviour:
   bioticDartProjectilePrefab: {fileID: 6574161600693057298, guid: 60914396fcbb7b24981b2b14f83a3f88, type: 3}
   bioticDartSpeed: 18
   bioticDartLifetime: 2
-  bioticDartRange: 20
-  bioticDartAllyHeal: 18
+  bioticDartRange: 12
+  healDartAmount: 3
   bioticDartPredatorDamage: 6
-  regenBurstDuration: 5
-  regenBurstRadius: 6
-  regenBurstHealPerTick: 4
-  regenBurstTickInterval: 0.5
-  guardianAngelRange: 18
+  healPulseRadius: 7
+  healPulseAmount: 2
+  guardianAngelRange: 14
   guardianAngelDashDuration: 0.2
   guardianAngelStopDistance: 1.25
   immortalityFieldPrefab: {fileID: 5917795142820719444, guid: bbe047b13dbe85f45aea724e9252f9f6, type: 3}
-  immortalityFieldDuration: 6
-  immortalityFieldRadius: 5
-  immortalityMinHealthPercent: 0.1
+  sanctuaryDuration: 4
+  sanctuaryRadius: 8
+  sanctuaryHealPerSecond: 1
+  sanctuaryTickInterval: 1.75
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8
@@ -6538,14 +6537,18 @@ MonoBehaviour:
   unitHealth: {fileID: 637681161}
   survivorClassManager: {fileID: 637681185}
   predatorClassManager: {fileID: 0}
-  survivorSlot1Cooldown: 3
+  survivorSlot1Cooldown: 2.5
   survivorSlot2Cooldown: 8
-  survivorSlot3Cooldown: 6
-  survivorSlot4Cooldown: 18
-  predatorSlot1Cooldown: 1.4
-  predatorSlot2Cooldown: 8
-  predatorSlot3Cooldown: 10
-  predatorSlot4Cooldown: 14
+  survivorSlot3Cooldown: 10
+  survivorSlot4Cooldown: 28
+  survivorSlot1ManaCost: 2
+  survivorSlot2ManaCost: 5
+  survivorSlot3ManaCost: 4
+  survivorSlot4ManaCost: 12
+  predatorSlot1Cooldown: 2.5
+  predatorSlot2Cooldown: 10
+  predatorSlot3Cooldown: 14
+  predatorSlot4Cooldown: 35
   spawnPlaceholderVfx: 1
   placeholderVfxLifetime: 1.25
   abilityAudioSource: {fileID: 0}
@@ -6763,7 +6766,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   showDebugLogs: 1
-  useExternalCooldownAuthority: 0
+  useExternalCooldownAuthority: 1
   globalCooldownMultiplier: 1.3
   primaryCooldown: 2.5
   ability2Cooldown: 8
@@ -6772,20 +6775,19 @@ MonoBehaviour:
   bioticDartProjectilePrefab: {fileID: 6574161600693057298, guid: 60914396fcbb7b24981b2b14f83a3f88, type: 3}
   bioticDartSpeed: 18
   bioticDartLifetime: 2
-  bioticDartRange: 20
-  bioticDartAllyHeal: 18
+  bioticDartRange: 12
+  healDartAmount: 3
   bioticDartPredatorDamage: 6
-  regenBurstDuration: 5
-  regenBurstRadius: 6
-  regenBurstHealPerTick: 4
-  regenBurstTickInterval: 0.5
-  guardianAngelRange: 18
+  healPulseRadius: 7
+  healPulseAmount: 2
+  guardianAngelRange: 14
   guardianAngelDashDuration: 0.2
   guardianAngelStopDistance: 1.25
   immortalityFieldPrefab: {fileID: 5917795142820719444, guid: bbe047b13dbe85f45aea724e9252f9f6, type: 3}
-  immortalityFieldDuration: 6
-  immortalityFieldRadius: 5
-  immortalityMinHealthPercent: 0.1
+  sanctuaryDuration: 4
+  sanctuaryRadius: 8
+  sanctuaryHealPerSecond: 1
+  sanctuaryTickInterval: 1.75
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8
@@ -8652,7 +8654,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   showDebugLogs: 1
-  useExternalCooldownAuthority: 0
+  useExternalCooldownAuthority: 1
   globalCooldownMultiplier: 1.3
   primaryCooldown: 2.5
   ability2Cooldown: 8
@@ -8661,20 +8663,19 @@ MonoBehaviour:
   bioticDartProjectilePrefab: {fileID: 6574161600693057298, guid: 60914396fcbb7b24981b2b14f83a3f88, type: 3}
   bioticDartSpeed: 18
   bioticDartLifetime: 2
-  bioticDartRange: 20
-  bioticDartAllyHeal: 18
+  bioticDartRange: 12
+  healDartAmount: 3
   bioticDartPredatorDamage: 6
-  regenBurstDuration: 5
-  regenBurstRadius: 6
-  regenBurstHealPerTick: 4
-  regenBurstTickInterval: 0.5
-  guardianAngelRange: 18
+  healPulseRadius: 7
+  healPulseAmount: 2
+  guardianAngelRange: 14
   guardianAngelDashDuration: 0.2
   guardianAngelStopDistance: 1.25
   immortalityFieldPrefab: {fileID: 5917795142820719444, guid: bbe047b13dbe85f45aea724e9252f9f6, type: 3}
-  immortalityFieldDuration: 6
-  immortalityFieldRadius: 5
-  immortalityMinHealthPercent: 0.1
+  sanctuaryDuration: 4
+  sanctuaryRadius: 8
+  sanctuaryHealPerSecond: 1
+  sanctuaryTickInterval: 1.75
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8
@@ -10810,7 +10811,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SurvivorMana
   maxMana: 20
   currentMana: 20
-  passiveRegenPerSecond: 1
+  passiveRegenPerSecond: 0.33
   onManaChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -10854,7 +10855,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   showDebugLogs: 1
-  useExternalCooldownAuthority: 0
+  useExternalCooldownAuthority: 1
   globalCooldownMultiplier: 1.3
   primaryCooldown: 2.5
   ability2Cooldown: 8
@@ -10863,20 +10864,19 @@ MonoBehaviour:
   bioticDartProjectilePrefab: {fileID: 6574161600693057298, guid: 60914396fcbb7b24981b2b14f83a3f88, type: 3}
   bioticDartSpeed: 18
   bioticDartLifetime: 2
-  bioticDartRange: 20
-  bioticDartAllyHeal: 18
+  bioticDartRange: 12
+  healDartAmount: 3
   bioticDartPredatorDamage: 6
-  regenBurstDuration: 3
-  regenBurstRadius: 6
-  regenBurstHealPerTick: 4
-  regenBurstTickInterval: 0.85
-  guardianAngelRange: 18
+  healPulseRadius: 7
+  healPulseAmount: 2
+  guardianAngelRange: 14
   guardianAngelDashDuration: 0.2
   guardianAngelStopDistance: 1.25
   immortalityFieldPrefab: {fileID: 5917795142820719444, guid: bbe047b13dbe85f45aea724e9252f9f6, type: 3}
-  immortalityFieldDuration: 6
-  immortalityFieldRadius: 5
-  immortalityMinHealthPercent: 0.1
+  sanctuaryDuration: 4
+  sanctuaryRadius: 8
+  sanctuaryHealPerSecond: 1
+  sanctuaryTickInterval: 1.75
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8
@@ -10983,14 +10983,18 @@ MonoBehaviour:
   unitHealth: {fileID: 0}
   survivorClassManager: {fileID: 0}
   predatorClassManager: {fileID: 0}
-  survivorSlot1Cooldown: 3
+  survivorSlot1Cooldown: 2.5
   survivorSlot2Cooldown: 8
-  survivorSlot3Cooldown: 6
-  survivorSlot4Cooldown: 18
-  predatorSlot1Cooldown: 1.4
-  predatorSlot2Cooldown: 8
-  predatorSlot3Cooldown: 10
-  predatorSlot4Cooldown: 14
+  survivorSlot3Cooldown: 10
+  survivorSlot4Cooldown: 28
+  survivorSlot1ManaCost: 2
+  survivorSlot2ManaCost: 5
+  survivorSlot3ManaCost: 4
+  survivorSlot4ManaCost: 12
+  predatorSlot1Cooldown: 2.5
+  predatorSlot2Cooldown: 10
+  predatorSlot3Cooldown: 14
+  predatorSlot4Cooldown: 35
   spawnPlaceholderVfx: 1
   placeholderVfxLifetime: 1.25
   abilityAudioSource: {fileID: 0}
@@ -13051,6 +13055,7 @@ GameObject:
   - component: {fileID: 1311636433}
   - component: {fileID: 1311636432}
   - component: {fileID: 1311636436}
+  - component: {fileID: 1311636437}
   m_Layer: 0
   m_Name: ManiaCanvas
   m_TagString: Untagged
@@ -13094,6 +13099,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ManiaGameUI
   timerText: {fileID: 1101193395}
   roleText: {fileID: 507419153}
+  deathFeedText: {fileID: 0}
   survivorCountText: {fileID: 1332423948}
   monsterKillsText: {fileID: 1221458530}
   gameOverTitleText: {fileID: 1691793988}
@@ -13226,6 +13232,27 @@ MonoBehaviour:
   dropButton: {fileID: 621431536}
   dropButtonText: {fileID: 1973488499}
   hideDropWhenUnavailable: 1
+--- !u!114 &1311636437
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1311636430}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56de56d2197945acacd08cb144a2f0ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DeathMessageManager
+  deathMessageText: {fileID: 0}
+  deathMessageDuration: 3
+  fadeDuration: 0.6
+  punchDuration: 0.25
+  deathMessageFontSize: 34
+  predatorKillColor: {r: 1, g: 0.42, b: 0.12, a: 1}
+  survivorKillColor: {r: 0.35, g: 0.85, b: 1, a: 1}
+  hazardKillColor: {r: 0.85, g: 0.45, b: 1, a: 1}
+  genericKillColor: {r: 1, g: 0.95, b: 0.55, a: 1}
 --- !u!1 &1332423946
 GameObject:
   m_ObjectHideFlags: 0
@@ -14877,7 +14904,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   showDebugLogs: 1
-  useExternalCooldownAuthority: 0
+  useExternalCooldownAuthority: 1
   globalCooldownMultiplier: 1.3
   primaryCooldown: 2.5
   ability2Cooldown: 8
@@ -14886,20 +14913,19 @@ MonoBehaviour:
   bioticDartProjectilePrefab: {fileID: 6574161600693057298, guid: 60914396fcbb7b24981b2b14f83a3f88, type: 3}
   bioticDartSpeed: 18
   bioticDartLifetime: 2
-  bioticDartRange: 20
-  bioticDartAllyHeal: 18
+  bioticDartRange: 12
+  healDartAmount: 3
   bioticDartPredatorDamage: 6
-  regenBurstDuration: 5
-  regenBurstRadius: 6
-  regenBurstHealPerTick: 4
-  regenBurstTickInterval: 0.5
-  guardianAngelRange: 18
+  healPulseRadius: 7
+  healPulseAmount: 2
+  guardianAngelRange: 14
   guardianAngelDashDuration: 0.2
   guardianAngelStopDistance: 1.25
   immortalityFieldPrefab: {fileID: 5917795142820719444, guid: bbe047b13dbe85f45aea724e9252f9f6, type: 3}
-  immortalityFieldDuration: 6
-  immortalityFieldRadius: 5
-  immortalityMinHealthPercent: 0.1
+  sanctuaryDuration: 4
+  sanctuaryRadius: 8
+  sanctuaryHealPerSecond: 1
+  sanctuaryTickInterval: 1.75
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8
@@ -18449,7 +18475,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SurvivorMana
   maxMana: 20
   currentMana: 20
-  passiveRegenPerSecond: 1
+  passiveRegenPerSecond: 0.33
   onManaChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -18493,7 +18519,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   showDebugLogs: 1
-  useExternalCooldownAuthority: 0
+  useExternalCooldownAuthority: 1
   globalCooldownMultiplier: 1.3
   primaryCooldown: 2.5
   ability2Cooldown: 8
@@ -18502,20 +18528,19 @@ MonoBehaviour:
   bioticDartProjectilePrefab: {fileID: 6574161600693057298, guid: 60914396fcbb7b24981b2b14f83a3f88, type: 3}
   bioticDartSpeed: 18
   bioticDartLifetime: 2
-  bioticDartRange: 20
-  bioticDartAllyHeal: 18
+  bioticDartRange: 12
+  healDartAmount: 3
   bioticDartPredatorDamage: 6
-  regenBurstDuration: 3
-  regenBurstRadius: 6
-  regenBurstHealPerTick: 4
-  regenBurstTickInterval: 0.85
-  guardianAngelRange: 18
+  healPulseRadius: 7
+  healPulseAmount: 2
+  guardianAngelRange: 14
   guardianAngelDashDuration: 0.2
   guardianAngelStopDistance: 1.25
   immortalityFieldPrefab: {fileID: 5917795142820719444, guid: bbe047b13dbe85f45aea724e9252f9f6, type: 3}
-  immortalityFieldDuration: 6
-  immortalityFieldRadius: 5
-  immortalityMinHealthPercent: 0.1
+  sanctuaryDuration: 4
+  sanctuaryRadius: 8
+  sanctuaryHealPerSecond: 1
+  sanctuaryTickInterval: 1.75
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8
@@ -18622,14 +18647,18 @@ MonoBehaviour:
   unitHealth: {fileID: 0}
   survivorClassManager: {fileID: 0}
   predatorClassManager: {fileID: 0}
-  survivorSlot1Cooldown: 3
+  survivorSlot1Cooldown: 2.5
   survivorSlot2Cooldown: 8
-  survivorSlot3Cooldown: 6
-  survivorSlot4Cooldown: 18
-  predatorSlot1Cooldown: 1.4
-  predatorSlot2Cooldown: 8
-  predatorSlot3Cooldown: 10
-  predatorSlot4Cooldown: 14
+  survivorSlot3Cooldown: 10
+  survivorSlot4Cooldown: 28
+  survivorSlot1ManaCost: 2
+  survivorSlot2ManaCost: 5
+  survivorSlot3ManaCost: 4
+  survivorSlot4ManaCost: 12
+  predatorSlot1Cooldown: 2.5
+  predatorSlot2Cooldown: 10
+  predatorSlot3Cooldown: 14
+  predatorSlot4Cooldown: 35
   spawnPlaceholderVfx: 1
   placeholderVfxLifetime: 1.25
   abilityAudioSource: {fileID: 0}
@@ -19629,7 +19658,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   showDebugLogs: 1
-  useExternalCooldownAuthority: 0
+  useExternalCooldownAuthority: 1
   globalCooldownMultiplier: 1.3
   primaryCooldown: 2.5
   ability2Cooldown: 8
@@ -19638,20 +19667,19 @@ MonoBehaviour:
   bioticDartProjectilePrefab: {fileID: 6574161600693057298, guid: 60914396fcbb7b24981b2b14f83a3f88, type: 3}
   bioticDartSpeed: 18
   bioticDartLifetime: 2
-  bioticDartRange: 20
-  bioticDartAllyHeal: 18
+  bioticDartRange: 12
+  healDartAmount: 3
   bioticDartPredatorDamage: 6
-  regenBurstDuration: 5
-  regenBurstRadius: 6
-  regenBurstHealPerTick: 4
-  regenBurstTickInterval: 0.5
-  guardianAngelRange: 18
+  healPulseRadius: 7
+  healPulseAmount: 2
+  guardianAngelRange: 14
   guardianAngelDashDuration: 0.2
   guardianAngelStopDistance: 1.25
   immortalityFieldPrefab: {fileID: 5917795142820719444, guid: bbe047b13dbe85f45aea724e9252f9f6, type: 3}
-  immortalityFieldDuration: 6
-  immortalityFieldRadius: 5
-  immortalityMinHealthPercent: 0.1
+  sanctuaryDuration: 4
+  sanctuaryRadius: 8
+  sanctuaryHealPerSecond: 1
+  sanctuaryTickInterval: 1.75
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8
@@ -20745,10 +20773,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a213d13b42d4c1a4483920bad2d227db, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NPCChaosCaster
-  enableChaosCasting: 1
-  minCastInterval: 20
-  maxCastInterval: 45
+  enableChaosAbilities: 1
+  npcAbilityCheckInterval: 2
   castOnlyDuringPlaying: 1
+  minCastInterval: 8
+  maxCastInterval: 14
+  useNpcMana: 1
+  npcMaxMana: 100
+  npcManaRegenPerSecond: 5
+  enableDragonLeap: 1
+  dragonLeapManaCost: 20
+  dragonLeapCooldown: 16
+  chaosTreeManaCost: 10
+  chaosTreeCooldown: 12
+  chaosTreeSpawnCountMin: 2
+  chaosTreeSpawnCountMax: 4
+  chaosTreeLifetime: 16
+  chaosCastRadius: 18
+  minDistanceFromPlayers: 3
+  tornadoManaCost: 15
+  tornadoCooldown: 14
+  enableWildZone: 1
+  wildZoneManaCost: 12
+  wildZoneCooldown: 15
   spawnSettings:
     mapCenter: {x: 0, y: 0, z: 0}
     mapSize: {x: 40, y: 40}
@@ -21558,7 +21605,7 @@ MonoBehaviour:
   baseMeleeRange: 2
   baseMeleeDamage: 10
   showDebugLogs: 1
-  useExternalCooldownAuthority: 0
+  useExternalCooldownAuthority: 1
   projectileSpawn: {fileID: 0}
   sentryTurretPrefab: {fileID: 1206151861668355471, guid: ee6053fbbc7d3ae47818b9220b118362, type: 3}
   minionPrefab: {fileID: 6691088928182749788, guid: 83c94c377211b2c4083dfcc00489877a, type: 3}
@@ -21619,14 +21666,18 @@ MonoBehaviour:
   unitHealth: {fileID: 8924335234456584551}
   survivorClassManager: {fileID: 0}
   predatorClassManager: {fileID: 8924335234456584570}
-  survivorSlot1Cooldown: 3
+  survivorSlot1Cooldown: 2.5
   survivorSlot2Cooldown: 8
-  survivorSlot3Cooldown: 6
-  survivorSlot4Cooldown: 18
-  predatorSlot1Cooldown: 1.4
-  predatorSlot2Cooldown: 8
-  predatorSlot3Cooldown: 10
-  predatorSlot4Cooldown: 14
+  survivorSlot3Cooldown: 10
+  survivorSlot4Cooldown: 28
+  survivorSlot1ManaCost: 2
+  survivorSlot2ManaCost: 5
+  survivorSlot3ManaCost: 4
+  survivorSlot4ManaCost: 12
+  predatorSlot1Cooldown: 2.5
+  predatorSlot2Cooldown: 10
+  predatorSlot3Cooldown: 14
+  predatorSlot4Cooldown: 35
   spawnPlaceholderVfx: 1
   placeholderVfxLifetime: 1.25
   abilityAudioSource: {fileID: 0}

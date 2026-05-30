@@ -65,45 +65,68 @@ public class PredatorClassManager : MonoBehaviour
     // CyberNinja: cooldown reset on kill.
     public float cyberSwiftStrikeCooldown = 8f;
     private float nextCyberSwiftStrikeTime;
-    [Header("Relentless Hook - Spray")]
+    [Header("Relentless Hook - Spray (basic cone poke)")]
+    [Tooltip("Short-range cone poke. Softens survivors between Hook setups; keep damage modest.")]
     public float sprayRange = 8f;
     public float sprayHalfAngle = 45f;
-    public int sprayDamage = 12;
+    public int sprayDamage = 8;
     public float sprayKnockback = 2.6f;
     public float sprayCloseRangeForgiveness = 2f;
     public float sprayCloseRangeMaxAngle = 140f;
 
-    [Header("Relentless Hook - Hook")]
+    [Header("Relentless Hook - Spray VFX")]
+    [Tooltip("Fan mesh segment count for Spray cone visual.")]
+    public int sprayVfxSegments = 14;
+    [Tooltip("Forward offset so the fan starts in front of the predator body.")]
+    public float sprayVfxForwardOffset = 1f;
+    [Tooltip("Height above the ground for the Spray fan mesh.")]
+    public float sprayVfxVerticalOffset = 0.1f;
+    [Tooltip("How long the Spray fan visual stays visible.")]
+    public float sprayVfxLifetime = 0.45f;
+    [Range(0f, 1f)]
+    public float sprayVfxAlpha = 0.35f;
+
+    [Header("Relentless Hook - Hook (pick / catch tool)")]
+    [Tooltip("Skill shot pull. Lower burst damage — the threat is repositioning, not instant melt.")]
     public float hookRange = 24f;
-    public int hookDamage = 10;
+    public int hookDamage = 6;
     public float hookPullForwardDistance = 1.75f;
     public float hookPullDuration = 0.25f;
 
-    [Header("Relentless Hook - Tonic")]
+    [Header("Relentless Hook - Tonic (self-heal + danger gas)")]
+    [Tooltip("Self-heal plus toxic gas. Predator slows while active — survivors get time to reposition.")]
     public int tonicHealAmount = 35;
     public float tonicDuration = 2.5f;
     [Tooltip("Movement multiplier while Tonic is active. Values below 1 slow the Predator.")]
     public float tonicSelfSpeedMultiplier = 0.55f;
     public float tonicGasRadius = 4.5f;
-    public float tonicGasDamagePerSecond = 10f;
-    public float tonicGasPropDamagePerSecond = 10f;
+    public float tonicGasDamagePerSecond = 5f;
+    public float tonicGasPropDamagePerSecond = 5f;
 
-    [Header("Relentless Hook - Barrage")]
-    public float barrageDuration = 3f;
-    public float barragePulseInterval = 0.3f;
+    [Header("Relentless Hook - Barrage (ultimate / big burst)")]
+    [Tooltip("Telegraphed ultimate. Warning strip + long cooldown — scary, but survivors can react.")]
+    public float barrageDuration = 3.5f;
+    public float barragePulseInterval = 0.7f;
     public float barrageRange = 20f;
     public float barrageHalfAngle = 70f;
-    public int barrageDamagePerPulse = 35;
+    public int barrageDamagePerPulse = 9;
     public float barrageKnockbackMin = 2.8f;
     public float barrageKnockbackMax = 4f;
+    [Tooltip("Forward offset for Barrage cone VFX.")]
+    public float barrageVfxForwardOffset = 1f;
+    [Tooltip("Ground height offset for Barrage cone VFX.")]
+    public float barrageVfxVerticalOffset = 0.1f;
+    [Range(0f, 1f)] public float barrageWarningAlpha = 0.28f;
+    [Range(0f, 1f)] public float barragePulseAlpha = 0.42f;
 
     [Header("Relentless Hook - Feel")]
     public bool enableAbilityFeel = true;
     public bool logBarrageVfx = false;
-    public float barrageWarningDuration = 0.25f;
+    [Tooltip("Seconds survivors see the warning strip before Barrage pulses begin.")]
+    public float barrageWarningDuration = 0.75f;
     public float barrageCraterDuration = 10f;
     public float barrageBombPropRadius = 2.5f;
-    public int barragePropDamage = 15;
+    public int barragePropDamage = 8;
 
     [Header("Relentless Hook - Audio")]
     public AudioSource abilityAudioSource;
@@ -233,6 +256,12 @@ public class PredatorClassManager : MonoBehaviour
     public bool CastAbility3()
     {
         Debug.Log("[PredatorClassManager] Executing ability: " + activeClass + "/Slot4");
+        if (activeClass == PredatorClass.RelentlessHook && IsRelentlessBarrageActive())
+        {
+            LogPredatorAbility("Barrage rejected: already active.");
+            return false;
+        }
+
         if (!TryConsumeSharedGcd(Ability3Hash))
         {
             return false;
@@ -256,6 +285,12 @@ public class PredatorClassManager : MonoBehaviour
     public bool CastUltimate()
     {
         Debug.Log("[PredatorClassManager] Executing ability: " + activeClass + "/Ultimate");
+        if (activeClass == PredatorClass.RelentlessHook && IsRelentlessBarrageActive())
+        {
+            LogPredatorAbility("Barrage rejected: already active.");
+            return false;
+        }
+
         if (!TryConsumeSharedGcd(UltimateHash))
         {
             return false;
@@ -277,7 +312,7 @@ public class PredatorClassManager : MonoBehaviour
 
     private bool StartRelentlessBarrage()
     {
-        if (isBarrageActive || relentlessBarrageRoutine != null)
+        if (IsRelentlessBarrageActive())
         {
             LogPredatorAbility("Barrage rejected: already active.");
             return false;
@@ -303,6 +338,11 @@ public class PredatorClassManager : MonoBehaviour
 
         relentlessBarrageRoutine = StartCoroutine(CastRelentlessBarrageCoroutine());
         return relentlessBarrageRoutine != null;
+    }
+
+    private bool IsRelentlessBarrageActive()
+    {
+        return isBarrageActive || relentlessBarrageRoutine != null;
     }
 
     private void StopRelentlessBarrage(string reason)
@@ -984,6 +1024,14 @@ public class PredatorClassManager : MonoBehaviour
                     + " reason=" + reason);
             }
 
+            if (!valid && showDebugLogs && distance <= range + 1f
+                && (reason == "outside-cone" || reason == "out-of-range"))
+            {
+                Debug.Log("[PredatorAbility] Spray candidate miss: distance "
+                    + distance.ToString("0.00") + " angle " + angleToTarget.ToString("0.0")
+                    + " reason " + reason);
+            }
+
             if (valid)
             {
                 hits.Add(candidate);
@@ -1019,20 +1067,12 @@ public class PredatorClassManager : MonoBehaviour
             Debug.DrawRay(origin, Quaternion.Euler(0f, -halfAngle, 0f) * forward * range, Color.red, 1.2f);
         }
 
-        SpawnSprayConeVfx(origin, forward, range, halfAngle, 0.45f);
-        SpawnForwardBurstVfx(origin, forward, range * 0.65f, 0.28f, new Color(1f, 0.5f, 0.1f, 0.65f));
+        SpawnSprayConeVfx(origin, forward, range, halfAngle);
         if (enableAbilityFeel)
         {
             PredatorAbilityFeelVfx.SpawnSprayPellets(origin, forward, range, halfAngle, 7, 0.22f);
         }
 
-        TemporaryGroundEffect.Spawn(
-            origin + forward * 1.4f,
-            new Color(0.65f, 0.55f, 0.4f, 0.55f),
-            0.85f,
-            2.2f,
-            null,
-            showDebugLogs);
         LogPredatorAbility("Spray hit " + hits.Count + " survivors");
     }
 
@@ -1108,24 +1148,122 @@ public class PredatorClassManager : MonoBehaviour
         return false;
     }
 
-    private void SpawnSprayConeVfx(Vector3 origin, Vector3 forward, float range, float halfAngle, float lifetime)
+    private void SpawnSprayConeVfx(Vector3 origin, Vector3 forward, float range, float halfAngle)
     {
-        GameObject vfx = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        vfx.name = "SprayConeVFX";
-        Collider col = vfx.GetComponent<Collider>();
-        if (col != null)
+        forward.y = 0f;
+        if (forward.sqrMagnitude <= 0.001f)
         {
-            Destroy(col);
+            forward = transform.forward;
+            forward.y = 0f;
         }
 
-        forward.y = 0f;
         forward.Normalize();
-        float coneWidth = Mathf.Tan(halfAngle * Mathf.Deg2Rad) * range * 2f;
-        vfx.transform.position = origin + forward * (range * 0.45f) + Vector3.up * 0.35f;
-        vfx.transform.rotation = Quaternion.LookRotation(forward);
-        vfx.transform.localScale = new Vector3(Mathf.Max(1.2f, coneWidth), 0.55f, range * 0.9f);
-        ApplySimpleVfxColor(vfx, new Color(0.95f, 0.28f, 0.08f, 0.72f));
-        Destroy(vfx, Mathf.Max(0.1f, lifetime));
+        int segments = Mathf.Max(4, sprayVfxSegments);
+        float lifetime = Mathf.Max(0.1f, sprayVfxLifetime);
+        float forwardOffset = Mathf.Max(0.2f, sprayVfxForwardOffset);
+        float verticalOffset = Mathf.Clamp(sprayVfxVerticalOffset, 0.05f, 0.2f);
+
+        Vector3 groundAnchor = new Vector3(transform.position.x, transform.position.y + verticalOffset, transform.position.z);
+        Vector3 vfxPosition = groundAnchor + forward * forwardOffset;
+
+        GameObject vfx = new GameObject("SprayConeVFX");
+        vfx.transform.position = vfxPosition;
+        vfx.transform.rotation = Quaternion.LookRotation(forward, Vector3.up);
+
+        MeshFilter meshFilter = vfx.AddComponent<MeshFilter>();
+        meshFilter.sharedMesh = BuildSprayFanMesh(range, halfAngle, segments);
+
+        MeshRenderer renderer = vfx.AddComponent<MeshRenderer>();
+        Color tint = new Color(0.95f, 0.35f, 0.1f, sprayVfxAlpha);
+        renderer.sharedMaterial = CreateSprayFanMaterial(tint);
+        renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        renderer.receiveShadows = false;
+
+        Destroy(vfx, lifetime);
+    }
+
+    private static Material CreateSprayFanMaterial(Color tint)
+    {
+        Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+        if (shader == null)
+        {
+            shader = Shader.Find("Sprites/Default");
+        }
+
+        if (shader == null)
+        {
+            shader = Shader.Find("Standard");
+        }
+
+        Material material = new Material(shader != null ? shader : Shader.Find("Hidden/InternalErrorShader"));
+        string shaderName = material.shader != null ? material.shader.name : string.Empty;
+
+        if (shaderName.Contains("Universal Render Pipeline/Unlit"))
+        {
+            material.SetFloat("_Surface", 1f);
+            material.SetFloat("_Blend", 0f);
+            material.SetFloat("_ZWrite", 0f);
+            material.SetFloat("_Cull", 2f);
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.EnableKeyword("_ALPHAPREMULTIPLY_ON");
+            material.renderQueue = 3000;
+            if (material.HasProperty("_BaseColor"))
+            {
+                material.SetColor("_BaseColor", tint);
+            }
+        }
+        else if (shaderName.Contains("Sprites/Default"))
+        {
+            material.color = tint;
+            material.renderQueue = 3000;
+        }
+        else
+        {
+            material.color = tint;
+            material.SetFloat("_Mode", 3f);
+            material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            material.SetInt("_ZWrite", 0);
+            material.DisableKeyword("_ALPHATEST_ON");
+            material.EnableKeyword("_ALPHABLEND_ON");
+            material.renderQueue = 3000;
+        }
+
+        return material;
+    }
+
+    private static Mesh BuildSprayFanMesh(float range, float halfAngleDegrees, int segments)
+    {
+        range = Mathf.Max(0.5f, range);
+        halfAngleDegrees = Mathf.Max(1f, halfAngleDegrees);
+        segments = Mathf.Max(3, segments);
+
+        Vector3[] vertices = new Vector3[segments + 2];
+        int[] triangles = new int[segments * 3];
+        vertices[0] = Vector3.zero;
+
+        float startAngle = -halfAngleDegrees;
+        float step = (halfAngleDegrees * 2f) / segments;
+        for (int i = 0; i <= segments; i++)
+        {
+            float radians = (startAngle + step * i) * Mathf.Deg2Rad;
+            vertices[i + 1] = new Vector3(Mathf.Sin(radians) * range, 0f, Mathf.Cos(radians) * range);
+        }
+
+        for (int i = 0; i < segments; i++)
+        {
+            int tri = i * 3;
+            triangles[tri] = 0;
+            triangles[tri + 1] = i + 1;
+            triangles[tri + 2] = i + 2;
+        }
+
+        Mesh mesh = new Mesh { name = "SprayFanMesh" };
+        mesh.vertices = vertices;
+        mesh.triangles = triangles;
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        return mesh;
     }
 
     private IEnumerator CastRelentlessChainHookCoroutine()
@@ -1486,11 +1624,24 @@ public class PredatorClassManager : MonoBehaviour
         Vector3 forward = GetFlatForward(logAim: true);
         PlayRelentlessSfx(barrageStartSound, AbilityPlaceholderSound.BarrageStart);
 
-        if (enableAbilityFeel)
+        LogPredatorAbility("Barrage warning started");
+        SpawnBarrageConeVfx(
+            forward,
+            barrageRange,
+            barrageHalfAngle,
+            barrageWarningDuration,
+            new Color(1f, 0.92f, 0.2f, barrageWarningAlpha));
+
+        if (showDebugLogs)
         {
-            PredatorAbilityFeelVfx.SpawnBarrageWarningStrip(origin, forward, barrageRange, barrageHalfAngle, barrageWarningDuration);
-            yield return new WaitForSeconds(barrageWarningDuration);
+            Debug.DrawRay(origin, forward * barrageRange, Color.yellow, barrageWarningDuration + 0.5f);
+            Debug.DrawRay(origin, Quaternion.Euler(0f, barrageHalfAngle, 0f) * forward * barrageRange, Color.yellow, barrageWarningDuration + 0.5f);
+            Debug.DrawRay(origin, Quaternion.Euler(0f, -barrageHalfAngle, 0f) * forward * barrageRange, Color.yellow, barrageWarningDuration + 0.5f);
         }
+
+        yield return new WaitForSeconds(Mathf.Max(0.05f, barrageWarningDuration));
+
+        LogPredatorAbility("Barrage damage started");
 
         float duration = Mathf.Max(0.1f, barrageDuration);
         float pulseInterval = Mathf.Max(0.05f, barragePulseInterval);
@@ -1505,14 +1656,15 @@ public class PredatorClassManager : MonoBehaviour
             }
 
             pulseNumber++;
-            int hitCount = FireRelentlessBarragePulse(pulseNumber);
-            LogPredatorAbility("Barrage pulse " + pulseNumber + " hit " + hitCount + " survivors");
+            int hitCount = FireRelentlessBarragePulse(pulseNumber, forward);
+            LogPredatorAbility("Barrage pulse " + pulseNumber + " hit " + hitCount + " targets");
 
             if (Time.time + pulseInterval >= end)
             {
                 break;
             }
 
+            forward = GetFlatForward(logAim: false);
             yield return new WaitForSeconds(pulseInterval);
         }
 
@@ -1523,47 +1675,38 @@ public class PredatorClassManager : MonoBehaviour
         LogPredatorAbility("Barrage ended");
     }
 
-    private int FireRelentlessBarragePulse(int pulseNumber)
+    private int FireRelentlessBarragePulse(int pulseNumber, Vector3 forward)
     {
         Vector3 origin = GetChestCastOrigin();
-        Vector3 forward = GetFlatForward(logAim: true);
-        UnitHealth[] hits = GetSurvivorsInCone(origin, forward, barrageRange, barrageHalfAngle);
-        int hitCount = 0;
-
-        int expectedPulses = Mathf.Max(1, Mathf.CeilToInt(barrageDuration / Mathf.Max(0.05f, barragePulseInterval)));
-        float spacing = barrageRange / expectedPulses;
-        Vector3 bombPos = origin + forward * Mathf.Clamp(spacing * pulseNumber, 2f, barrageRange);
-        bombPos.y = origin.y;
-
-        if (enableAbilityFeel)
+        forward.y = 0f;
+        if (forward.sqrMagnitude <= 0.001f)
         {
-            PredatorAbilityFeelVfx.SpawnBombExplosion(bombPos, 1.9f, 0.35f);
-            TemporaryGroundEffect.SpawnScorch(
-                bombPos,
-                new Color(0.12f, 0.08f, 0.06f, 0.82f),
-                barrageCraterDuration,
-                2.4f,
-                logBarrageVfx,
-                "BarrageVFX");
-            PredatorAbilityFeelVfx.DamageDestructiblePropsInRadius(bombPos, barrageBombPropRadius, barragePropDamage, gameObject);
-
-            if (logBarrageVfx)
-            {
-                Debug.Log("[BarrageVFX] Bomb impact " + pulseNumber + " at " + bombPos);
-            }
+            forward = GetFlatForward(logAim: false);
         }
+
+        forward.Normalize();
+        float range = Mathf.Max(0.5f, barrageRange);
+        float halfAngle = Mathf.Max(1f, barrageHalfAngle);
+
+        SpawnBarrageConeVfx(
+            forward,
+            range,
+            halfAngle,
+            Mathf.Max(0.15f, barragePulseInterval * 0.85f),
+            new Color(0.95f, 0.35f, 0.1f, barragePulseAlpha));
 
         PlayRelentlessSfx(barrageBombSound, AbilityPlaceholderSound.BarrageBomb, Random.Range(0.92f, 1.08f));
 
-        for (int i = 0; i < hits.Length; i++)
-        {
-            UnitHealth target = hits[i];
-            if (target == null || target.IsDead || target.gameObject == gameObject || IsPredatorOwned(target.gameObject))
-            {
-                continue;
-            }
+        UnitHealth[] candidates = GetSurvivorsInRange(transform.position, range + 1f);
+        int hitCount = 0;
 
-            if (!target.CompareTag(survivorTag))
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            UnitHealth target = candidates[i];
+            float distance;
+            float angleToTarget;
+            string reason;
+            if (!TryEvaluateSprayTarget(target, origin, forward, range, halfAngle, out distance, out angleToTarget, out reason))
             {
                 continue;
             }
@@ -1579,11 +1722,43 @@ public class PredatorClassManager : MonoBehaviour
 
             float knockDistance = Random.Range(barrageKnockbackMin, barrageKnockbackMax);
             ApplyKnockback(target, knockDir.normalized, knockDistance);
-            LogPredatorAbility("Barrage pulse " + pulseNumber + " damaged " + target.name + " for " + barrageDamagePerPulse);
+            LogPredatorAbility("Barrage pulse " + pulseNumber + " damaged " + target.name + " for " + barrageDamagePerPulse
+                + " " + oldHp + " -> " + target.currentHealth);
             hitCount++;
         }
 
         return hitCount;
+    }
+
+    private void SpawnBarrageConeVfx(Vector3 forward, float range, float halfAngle, float lifetime, Color tint)
+    {
+        forward.y = 0f;
+        if (forward.sqrMagnitude <= 0.001f)
+        {
+            forward = transform.forward;
+            forward.y = 0f;
+        }
+
+        forward.Normalize();
+        float forwardOffset = Mathf.Max(0.2f, barrageVfxForwardOffset);
+        float verticalOffset = Mathf.Clamp(barrageVfxVerticalOffset, 0.05f, 0.2f);
+        Vector3 groundAnchor = new Vector3(transform.position.x, transform.position.y + verticalOffset, transform.position.z);
+        Vector3 vfxPosition = groundAnchor + forward * forwardOffset;
+
+        GameObject vfx = new GameObject("BarrageConeVFX");
+        vfx.transform.position = vfxPosition;
+        vfx.transform.rotation = Quaternion.LookRotation(forward, Vector3.up);
+
+        MeshFilter meshFilter = vfx.AddComponent<MeshFilter>();
+        meshFilter.sharedMesh = BuildSprayFanMesh(range, halfAngle, Mathf.Max(4, sprayVfxSegments));
+
+        MeshRenderer renderer = vfx.AddComponent<MeshRenderer>();
+        renderer.sharedMaterial = CreateSprayFanMaterial(tint);
+        renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        renderer.receiveShadows = false;
+
+        barragePulseVfx.Add(vfx);
+        Destroy(vfx, Mathf.Max(0.1f, lifetime));
     }
 
     private void SpawnBarragePulseVfx(Vector3 origin, Vector3 forward, float range, float lifetime)

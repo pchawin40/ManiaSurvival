@@ -111,7 +111,7 @@ public class AbilityButtonHoldTooltip : MonoBehaviour, IPointerDownHandler, IPoi
         {
             case 1: return "Heal Dart";
             case 2: return "Heal Pulse";
-            case 3: return "Tether";
+            case 3: return "Tether / Blink";
             default: return "Sanctuary";
         }
     }

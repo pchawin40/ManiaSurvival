@@ -15,7 +15,7 @@ public class TornadoHazard : MonoBehaviour
     [Tooltip("Radius of the damage area.")]
     public float damageRadius = 2.5f;
 
-    [Tooltip("HP dealt per damage tick to units inside the radius. Never one-shots.")]
+    [Tooltip("HP dealt per damage tick to units inside the radius.")]
     public int damagePerTick = 10;
 
     [Tooltip("Seconds between damage ticks.")]
@@ -101,14 +101,7 @@ public class TornadoHazard : MonoBehaviour
                 continue;
             }
 
-            // Never one-shot: cap so at least 1 HP remains.
-            int dmg = Mathf.Min(Mathf.Max(1, damagePerTick), health.currentHealth - 1);
-
-            if (dmg <= 0)
-            {
-                continue;
-            }
-
+            int dmg = Mathf.Max(1, damagePerTick);
             health.TakeDamage(dmg, gameObject);
 
             if (enableDebugLogs)

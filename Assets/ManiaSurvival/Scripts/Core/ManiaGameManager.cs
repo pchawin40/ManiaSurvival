@@ -36,6 +36,8 @@ public class ManiaGameManager : MonoBehaviour
     public int PlayersRequiredToStart => Mathf.Max(1, playersRequiredToStart);
     public bool IsPlaying => State == ManiaGameState.Playing;
 
+    private readonly HashSet<UnitHealth> reportedDeaths = new HashSet<UnitHealth>();
+
     public int AliveSurvivorCount
     {
         get
@@ -120,6 +122,7 @@ public class ManiaGameManager : MonoBehaviour
         TimeRemaining = roundDuration;
         MonsterKills = 0;
         PlayersReadyCount = 0;
+        reportedDeaths.Clear();
 
         for (int i = 0; i < survivors.Count; i++)
         {
@@ -173,6 +176,7 @@ public class ManiaGameManager : MonoBehaviour
         TimeRemaining = roundDuration;
         MonsterKills = 0;
         PlayersReadyCount = 0;
+        reportedDeaths.Clear();
 
         for (int i = 0; i < survivors.Count; i++)
         {
@@ -197,6 +201,13 @@ public class ManiaGameManager : MonoBehaviour
 
     public void ReportSurvivorDeath(UnitHealth survivor, GameObject damageSource)
     {
+        if (survivor == null || reportedDeaths.Contains(survivor))
+        {
+            return;
+        }
+
+        reportedDeaths.Add(survivor);
+
         bool killerIsMonster = damageSource != null
             && (damageSource.GetComponentInParent<PredatorClassManager>() != null
                 || damageSource.CompareTag("Monster")

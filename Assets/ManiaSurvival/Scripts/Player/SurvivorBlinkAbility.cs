@@ -4,13 +4,15 @@ using UnityEngine;
 public class SurvivorBlinkAbility : MonoBehaviour
 {
     [Header("Blink")]
-    public float blinkDistance = 5.5f;
+    public float blinkDistance = 6f;
     public float blinkCooldown = 9f;
     public float collisionCheckRadius = 0.4f;
+    [Tooltip("When true, AbilityController owns mana/cooldown. This component only moves.")]
+    public bool useAbilityControllerAuthority = true;
 
-    [Header("Mana")]
+    [Header("Legacy Mana (ignored when AbilityController is active)")]
     public string abilityDisplayName = "Blink";
-    [Min(0)] public int manaCost = 3;
+    [Min(0)] public int manaCost = 6;
 
     [Header("UI")]
     public AbilityCooldownButton cooldownButton;
@@ -27,10 +29,13 @@ public class SurvivorBlinkAbility : MonoBehaviour
     [Tooltip("Hazard layers like HellPit/Water. Blink destination is rejected if inside these volumes.")]
     public LayerMask hazardLayers;
 
+    [Header("VFX")]
+    public GameObject blinkVfxPrefab;
+
     private UnitHealth unitHealth;
     private CharacterController characterController;
     private SurvivorMovement survivorMovement;
-    private SurvivorMana mana;
+    private SurvivorMana legacyMana;
     private float nextBlinkTime;
 
     private void Awake()
@@ -38,21 +43,18 @@ public class SurvivorBlinkAbility : MonoBehaviour
         unitHealth = GetComponent<UnitHealth>();
         characterController = GetComponent<CharacterController>();
         survivorMovement = GetComponent<SurvivorMovement>();
-        mana = SurvivorMana.EnsureOn(gameObject, manaCost);
-        if (cooldownButton != null)
+        if (!useAbilityControllerAuthority)
         {
-            cooldownButton.SetAbilityInfo(abilityDisplayName, manaCost);
+            legacyMana = SurvivorMana.EnsureOn(gameObject, manaCost);
+            if (cooldownButton != null)
+            {
+                cooldownButton.SetAbilityInfo(abilityDisplayName, manaCost);
+            }
         }
     }
 
-    public void Blinkstep()
+    public bool TryBlinkStep()
     {
-        if (cooldownButton != null && cooldownButton.IsCoolingDown)
-        {
-            Debug.Log("blink on cooldown");
-            return;
-        }
-
         if (unitHealth == null)
         {
             unitHealth = GetComponent<UnitHealth>();
@@ -60,50 +62,55 @@ public class SurvivorBlinkAbility : MonoBehaviour
 
         if (unitHealth == null || unitHealth.IsDead)
         {
-            Debug.Log("blink blocked");
-            return;
+            Debug.Log("[AbilityBlock] Blink blocked: unit dead");
+            return false;
         }
 
-        if (Time.time < nextBlinkTime)
+        if (!useAbilityControllerAuthority)
         {
-            Debug.Log("blink on cooldown");
-            return;
+            if (cooldownButton != null && cooldownButton.IsCoolingDown)
+            {
+                return false;
+            }
+
+            if (Time.time < nextBlinkTime)
+            {
+                return false;
+            }
         }
 
         Vector3 blinkDirection = GetBlinkDirection();
         if (blinkDirection.sqrMagnitude <= 0.001f)
         {
-            Debug.Log("blink blocked");
-            return;
+            Debug.Log("[AbilityBlock] Blink blocked: no direction");
+            return false;
         }
 
         if (!TryGetBlinkDestination(blinkDirection, out Vector3 destination, out string failReason))
         {
-            if (!string.IsNullOrEmpty(failReason))
+            if (string.IsNullOrEmpty(failReason))
             {
-                Debug.Log(failReason);
-            }
-            else
-            {
-                Debug.Log("blink blocked");
+                failReason = "blocked path";
             }
 
-            return;
+            Debug.Log("[AbilityBlock] Blink blocked: " + failReason);
+            return false;
         }
 
-        if (manaCost > 0)
+        if (!useAbilityControllerAuthority && manaCost > 0)
         {
-            if (mana == null)
+            if (legacyMana == null)
             {
-                mana = SurvivorMana.EnsureOn(gameObject, manaCost);
+                legacyMana = SurvivorMana.EnsureOn(gameObject, manaCost);
             }
 
-            if (mana == null || !mana.SpendMana(manaCost))
+            if (legacyMana == null || !legacyMana.SpendMana(manaCost))
             {
-                Debug.Log("blink blocked: not enough mana");
-                return;
+                return false;
             }
         }
+
+        Vector3 origin = transform.position;
 
         if (characterController != null)
         {
@@ -117,31 +124,42 @@ public class SurvivorBlinkAbility : MonoBehaviour
             characterController.enabled = true;
         }
 
-        nextBlinkTime = Time.time + blinkCooldown;
-        if (cooldownButton != null)
+        float traveled = Vector3.Distance(origin, destination);
+
+        if (blinkVfxPrefab != null)
         {
-            cooldownButton.StartCooldown(blinkCooldown);
+            Instantiate(blinkVfxPrefab, destination, Quaternion.identity);
         }
-        Debug.Log("blink used");
+
+        if (!useAbilityControllerAuthority)
+        {
+            nextBlinkTime = Time.time + blinkCooldown;
+            if (cooldownButton != null)
+            {
+                cooldownButton.StartCooldown(blinkCooldown);
+            }
+        }
+
+        Debug.Log("[SurvivorAbility] Blink cast direction " + blinkDirection + " distance "
+            + traveled.ToString("0.0"));
+        return true;
+    }
+
+    public void Blinkstep()
+    {
+        TryBlinkStep();
     }
 
     private Vector3 GetBlinkDirection()
     {
-        Vector3 direction = transform.forward;
-        direction.y = 0f;
-        direction = direction.normalized;
-
-        if (survivorMovement != null && survivorMovement.useCameraRelativeMovement && survivorMovement.cameraTransform != null)
+        if (survivorMovement != null)
         {
-            Vector3 cameraForward = survivorMovement.cameraTransform.forward;
-            cameraForward.y = 0f;
-            if (cameraForward.sqrMagnitude > 0.001f)
-            {
-                direction = cameraForward.normalized;
-            }
+            return survivorMovement.GetAimDirection();
         }
 
-        return direction;
+        Vector3 direction = transform.forward;
+        direction.y = 0f;
+        return direction.sqrMagnitude > 0.001f ? direction.normalized : Vector3.forward;
     }
 
     private bool TryGetBlinkDestination(Vector3 blinkDirection, out Vector3 destination, out string failReason)
@@ -212,7 +230,6 @@ public class SurvivorBlinkAbility : MonoBehaviour
             return false;
         }
 
-        // Units can be blinked THROUGH, but not landed INSIDE.
         Collider[] unitHits = Physics.OverlapSphere(destination, radius, ~0, QueryTriggerInteraction.Ignore);
         for (int i = 0; i < unitHits.Length; i++)
         {
@@ -291,7 +308,6 @@ public class SurvivorBlinkAbility : MonoBehaviour
                 continue;
             }
 
-            // Blink should pass through living units.
             if (IsPassThroughUnit(hit))
             {
                 continue;

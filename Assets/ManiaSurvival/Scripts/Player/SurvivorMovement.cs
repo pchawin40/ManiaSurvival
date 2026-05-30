@@ -113,6 +113,28 @@ public class SurvivorMovement : MonoBehaviour
         RotateToward(moveDirection);
     }
 
+    public Vector3 GetAimDirection()
+    {
+        Vector2 input = GetMoveInput();
+        Vector3 direction = BuildWorldDirection(input);
+        direction.y = 0f;
+        if (direction.sqrMagnitude > 0.001f)
+        {
+            return direction.normalized;
+        }
+
+        direction = lastMoveDirection;
+        direction.y = 0f;
+        if (direction.sqrMagnitude > 0.001f)
+        {
+            return direction.normalized;
+        }
+
+        direction = transform.forward;
+        direction.y = 0f;
+        return direction.sqrMagnitude > 0.001f ? direction.normalized : Vector3.forward;
+    }
+
     private bool CanUseCharacterController()
     {
         if (characterController == null || !characterController.enabled || !characterController.gameObject.activeInHierarchy)
