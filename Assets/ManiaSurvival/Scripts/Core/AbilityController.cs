@@ -28,7 +28,7 @@ public class AbilityController : MonoBehaviour
 
     [Header("Survivor Slot Cooldowns")]
     public float survivorSlot1Cooldown = 2.5f;
-    public float survivorSlot2Cooldown = 8f;
+    public float survivorSlot2Cooldown = 6f;
     public float survivorSlot3Cooldown = 10f;
     public float survivorSlot4Cooldown = 16f;
 
@@ -320,7 +320,7 @@ public class AbilityController : MonoBehaviour
                 case 3:
                     return predatorClassManager.CastAbility2();
                 case 4:
-                    return predatorClassManager.CastAbility3();
+                    return predatorClassManager.CastUltimate();
                 default:
                     return false;
             }

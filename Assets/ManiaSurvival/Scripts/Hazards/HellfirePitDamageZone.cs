@@ -8,46 +8,57 @@ public class HellfirePitDamageZone : MonoBehaviour
     [Header("Damage")]
     public float damagePerSecond = 100f;
 
+    [Header("Manual Damage Bounds")]
+    public bool useManualDamageBounds = true;
+    public Vector3 localDamageCenter = new Vector3(0f, -1.48f, 0f);
+    public Vector3 localDamageSize = new Vector3(9.5f, 1f, 10f);
+    public float verticalTolerance = 3f;
+
+    [Header("Candidate Trigger")]
+    [Tooltip("Trigger volume used only to detect nearby units. Damage still requires manual feet bounds.")]
+    public Vector3 triggerLocalCenter = new Vector3(0f, -1.48f, 0f);
+    public Vector3 triggerLocalSize = new Vector3(14f, 3f, 10f);
+
     [Header("Debug")]
     public bool showHellfireDebugLogs = true;
+    public bool showHellfireDebugGizmos = true;
+    [Tooltip("One-time feet check for a known green-floor position that must stay outside damage.")]
+    public Vector3 safetyCheckWorldPosition = new Vector3(-16.29f, 1.72f, -3.17f);
 
-    private readonly HashSet<UnitHealth> occupants = new HashSet<UnitHealth>();
+    private readonly HashSet<UnitHealth> triggerCandidates = new HashSet<UnitHealth>();
+    private readonly HashSet<UnitHealth> feetInsideUnits = new HashSet<UnitHealth>();
+    private readonly HashSet<UnitHealth> loggedFeetOutsideInTrigger = new HashSet<UnitHealth>();
     private readonly Dictionary<UnitHealth, float> pendingDamage = new Dictionary<UnitHealth, float>();
     private BoxCollider damageTrigger;
-    private Bounds damageBounds;
+    private bool loggedSafetyCheck;
 
     private void Awake()
     {
         DisableVisualCollidersOnParent();
         damageTrigger = GetComponent<BoxCollider>();
-        EnsureDamageTrigger();
+        EnsureCandidateTrigger();
     }
 
     private void Start()
     {
-        AlignToWalkableFloor();
+        LogSafetyCheckPosition();
     }
 
-    private void AlignToWalkableFloor()
+    private void LogSafetyCheckPosition()
     {
-        HellfirePitWalkableFloor floor = transform.parent != null
-            ? transform.parent.GetComponentInChildren<HellfirePitWalkableFloor>()
-            : null;
-        if (floor == null)
+        if (!showHellfireDebugLogs || loggedSafetyCheck)
         {
             return;
         }
 
-        BoxCollider floorBox = floor.GetComponent<BoxCollider>();
-        if (floorBox == null)
-        {
-            return;
-        }
-
-        Bounds floorBounds = floorBox.bounds;
-        Vector3 size = new Vector3(floorBounds.size.x, Mathf.Max(1f, 3f), floorBounds.size.z);
-        Vector3 center = floorBounds.center + Vector3.up * (size.y * 0.5f - floorBounds.extents.y);
-        SetDamageBounds(center, size);
+        loggedSafetyCheck = true;
+        Vector3 localFeet = transform.InverseTransformPoint(safetyCheckWorldPosition);
+        bool inside = IsLocalFeetInsideManualDamageBounds(localFeet);
+        Debug.Log("[HellfirePit] Safety check position " + safetyCheckWorldPosition
+            + " localFeet=" + localFeet
+            + " insideManualBounds=" + inside
+            + " center=" + localDamageCenter
+            + " size=" + localDamageSize);
     }
 
     private void DisableVisualCollidersOnParent()
@@ -66,8 +77,7 @@ public class HellfirePitDamageZone : MonoBehaviour
                 continue;
             }
 
-            HellfirePitWalkableFloor walkable = col.GetComponent<HellfirePitWalkableFloor>();
-            if (walkable != null)
+            if (col.GetComponent<HellfirePitWalkableFloor>() != null)
             {
                 continue;
             }
@@ -78,32 +88,34 @@ public class HellfirePitDamageZone : MonoBehaviour
 
     private void Update()
     {
-        RefreshOccupantsFromBounds();
+        ReconcileFeetInsideCandidates();
         ApplyAccumulatedDamage();
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        TryRegister(other);
+        AddTriggerCandidate(other);
     }
 
     private void OnTriggerStay(Collider other)
     {
-        TryRegister(other);
+        AddTriggerCandidate(other);
     }
 
     private void OnTriggerExit(Collider other)
     {
-        TryUnregister(other);
+        RemoveTriggerCandidate(other.GetComponentInParent<UnitHealth>());
     }
 
     private void OnDisable()
     {
-        occupants.Clear();
+        triggerCandidates.Clear();
+        feetInsideUnits.Clear();
+        loggedFeetOutsideInTrigger.Clear();
         pendingDamage.Clear();
     }
 
-    public void EnsureDamageTrigger()
+    public void EnsureCandidateTrigger()
     {
         if (damageTrigger == null)
         {
@@ -116,101 +128,94 @@ public class HellfirePitDamageZone : MonoBehaviour
         }
 
         damageTrigger.isTrigger = true;
-        damageBounds = damageTrigger.bounds;
+        damageTrigger.center = triggerLocalCenter;
+        damageTrigger.size = triggerLocalSize;
 
         if (showHellfireDebugLogs)
         {
-            Debug.Log("[HellfirePit] Damage trigger verified: " + name
-                + ", trigger true, center=" + transform.position
-                + ", size=" + damageTrigger.size);
+            Debug.Log("[HellfirePit] Candidate trigger verified: " + name + ", center=" + triggerLocalCenter
+                + ", size=" + triggerLocalSize);
         }
     }
 
-    public void SetDamageBounds(Vector3 worldCenter, Vector3 size)
+    private void ReconcileFeetInsideCandidates()
     {
-        transform.position = worldCenter;
-        transform.rotation = Quaternion.identity;
-        transform.localScale = Vector3.one;
-
-        if (damageTrigger == null)
-        {
-            damageTrigger = GetComponent<BoxCollider>();
-        }
-
-        damageTrigger.size = size;
-        damageTrigger.center = Vector3.zero;
-        damageTrigger.isTrigger = true;
-        damageBounds = new Bounds(worldCenter, size);
-    }
-
-    private void RefreshOccupantsFromBounds()
-    {
-        if (damageTrigger != null)
-        {
-            damageBounds = damageTrigger.bounds;
-        }
-
-        HashSet<UnitHealth> insideNow = new HashSet<UnitHealth>();
-        UnitHealth[] allUnits = FindObjectsByType<UnitHealth>(FindObjectsSortMode.None);
-        for (int i = 0; i < allUnits.Length; i++)
-        {
-            UnitHealth health = allUnits[i];
-            if (!IsValidTarget(health))
-            {
-                continue;
-            }
-
-            Vector3 sample = health.transform.position + Vector3.up * 0.75f;
-            if (damageBounds.Contains(sample))
-            {
-                insideNow.Add(health);
-            }
-        }
-
-        foreach (UnitHealth health in insideNow)
-        {
-            if (occupants.Add(health))
-            {
-                pendingDamage[health] = 0f;
-                if (showHellfireDebugLogs)
-                {
-                    Debug.Log("[HellfirePit] " + health.name + " entered");
-                }
-            }
-        }
-
-        if (occupants.Count == 0)
+        if (triggerCandidates.Count == 0)
         {
             return;
         }
 
-        UnitHealth[] snapshot = new UnitHealth[occupants.Count];
-        occupants.CopyTo(snapshot);
-        for (int i = 0; i < snapshot.Length; i++)
-        {
-            if (snapshot[i] == null || !insideNow.Contains(snapshot[i]))
-            {
-                RemoveOccupant(snapshot[i]);
-            }
-        }
-    }
-
-    private void ApplyAccumulatedDamage()
-    {
-        if (occupants.Count == 0)
-        {
-            return;
-        }
-
-        UnitHealth[] snapshot = new UnitHealth[occupants.Count];
-        occupants.CopyTo(snapshot);
+        UnitHealth[] snapshot = new UnitHealth[triggerCandidates.Count];
+        triggerCandidates.CopyTo(snapshot);
 
         for (int i = 0; i < snapshot.Length; i++)
         {
             UnitHealth health = snapshot[i];
             if (!IsValidTarget(health))
             {
-                RemoveOccupant(health);
+                RemoveTriggerCandidate(health);
+                continue;
+            }
+
+            bool inside = IsFeetInsideManualDamageBounds(health);
+            bool wasInside = feetInsideUnits.Contains(health);
+
+            if (inside)
+            {
+                if (!wasInside)
+                {
+                    feetInsideUnits.Add(health);
+                    pendingDamage[health] = 0f;
+                    if (showHellfireDebugLogs)
+                    {
+                        Debug.Log("[HellfirePit] " + health.name + " feet entered red damage area");
+                    }
+                }
+
+                continue;
+            }
+
+            if (wasInside)
+            {
+                feetInsideUnits.Remove(health);
+                pendingDamage.Remove(health);
+                if (showHellfireDebugLogs)
+                {
+                    Debug.Log("[HellfirePit] " + health.name + " feet exited red damage area");
+                }
+            }
+
+            if (!loggedFeetOutsideInTrigger.Contains(health))
+            {
+                loggedFeetOutsideInTrigger.Add(health);
+                if (showHellfireDebugLogs)
+                {
+                    Vector3 localFeet = transform.InverseTransformPoint(health.transform.position);
+                    Debug.Log("[HellfirePit] " + health.name
+                        + " in trigger but feet outside manual damage bounds. localFeet=" + localFeet
+                        + ", center=" + localDamageCenter + ", size=" + localDamageSize);
+                }
+            }
+        }
+    }
+
+    private void ApplyAccumulatedDamage()
+    {
+        if (feetInsideUnits.Count == 0)
+        {
+            return;
+        }
+
+        UnitHealth[] snapshot = new UnitHealth[feetInsideUnits.Count];
+        feetInsideUnits.CopyTo(snapshot);
+
+        for (int i = 0; i < snapshot.Length; i++)
+        {
+            UnitHealth health = snapshot[i];
+            if (!IsValidTarget(health) || !IsFeetInsideManualDamageBounds(health))
+            {
+                feetInsideUnits.Remove(health);
+                pendingDamage.Remove(health);
                 continue;
             }
 
@@ -236,45 +241,140 @@ public class HellfirePitDamageZone : MonoBehaviour
         }
     }
 
-    private void TryRegister(Collider other)
+    private void AddTriggerCandidate(Collider other)
     {
         UnitHealth health = other.GetComponentInParent<UnitHealth>();
-        if (!IsValidTarget(health) || !occupants.Add(health))
+        if (!IsValidTarget(health))
         {
             return;
         }
 
-        pendingDamage[health] = 0f;
+        if (!triggerCandidates.Add(health))
+        {
+            return;
+        }
+
+        loggedFeetOutsideInTrigger.Remove(health);
         if (showHellfireDebugLogs)
         {
-            Debug.Log("[HellfirePit] " + health.name + " entered");
+            Debug.Log("[HellfirePit] " + health.name + " entered trigger only at feet "
+                + health.transform.position);
         }
     }
 
-    private void TryUnregister(Collider other)
-    {
-        RemoveOccupant(other.GetComponentInParent<UnitHealth>());
-    }
-
-    private void RemoveOccupant(UnitHealth health)
+    private void RemoveTriggerCandidate(UnitHealth health)
     {
         if (health == null)
         {
             return;
         }
 
-        if (occupants.Remove(health))
+        triggerCandidates.Remove(health);
+        loggedFeetOutsideInTrigger.Remove(health);
+
+        if (feetInsideUnits.Remove(health))
         {
             pendingDamage.Remove(health);
             if (showHellfireDebugLogs)
             {
-                Debug.Log("[HellfirePit] " + health.name + " exited");
+                Debug.Log("[HellfirePit] " + health.name + " feet exited red damage area");
             }
         }
+    }
+
+    private bool IsFeetInsideManualDamageBounds(UnitHealth health)
+    {
+        if (health == null || !useManualDamageBounds)
+        {
+            return false;
+        }
+
+        Vector3 localFeet = transform.InverseTransformPoint(health.transform.position);
+        return IsLocalFeetInsideManualDamageBounds(localFeet);
+    }
+
+    private bool IsLocalFeetInsideManualDamageBounds(Vector3 localFeet)
+    {
+        float halfX = localDamageSize.x * 0.5f;
+        float halfZ = localDamageSize.z * 0.5f;
+
+        if (Mathf.Abs(localFeet.x - localDamageCenter.x) > halfX)
+        {
+            return false;
+        }
+
+        if (Mathf.Abs(localFeet.z - localDamageCenter.z) > halfZ)
+        {
+            return false;
+        }
+
+        float yMin = localDamageCenter.y - 0.5f;
+        float yMax = localDamageCenter.y + verticalTolerance;
+        return localFeet.y >= yMin && localFeet.y <= yMax;
     }
 
     private bool IsValidTarget(UnitHealth health)
     {
         return health != null && !health.IsDead;
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        if (!showHellfireDebugGizmos)
+        {
+            return;
+        }
+
+        DrawManualDamageBoundsGizmo();
+        DrawTriggerGizmo();
+        DrawWalkableFloorGizmo();
+    }
+
+    private void DrawManualDamageBoundsGizmo()
+    {
+        Matrix4x4 previousMatrix = Gizmos.matrix;
+        Gizmos.matrix = transform.localToWorldMatrix;
+
+        float gizmoHeight = verticalTolerance + 0.5f;
+        float gizmoCenterY = localDamageCenter.y + ((verticalTolerance - 0.5f) * 0.5f);
+        Vector3 gizmoCenter = new Vector3(localDamageCenter.x, gizmoCenterY, localDamageCenter.z);
+        Vector3 gizmoSize = new Vector3(localDamageSize.x, gizmoHeight, localDamageSize.z);
+
+        Gizmos.color = new Color(1f, 0.15f, 0.05f, 0.9f);
+        Gizmos.DrawWireCube(gizmoCenter, gizmoSize);
+
+        Gizmos.matrix = previousMatrix;
+    }
+
+    private void DrawTriggerGizmo()
+    {
+        BoxCollider box = damageTrigger != null ? damageTrigger : GetComponent<BoxCollider>();
+        if (box == null)
+        {
+            return;
+        }
+
+        Gizmos.color = new Color(1f, 0.92f, 0.1f, 0.85f);
+        Gizmos.DrawWireCube(box.bounds.center, box.bounds.size);
+    }
+
+    private void DrawWalkableFloorGizmo()
+    {
+        HellfirePitWalkableFloor floor = transform.parent != null
+            ? transform.parent.GetComponentInChildren<HellfirePitWalkableFloor>()
+            : null;
+        if (floor == null)
+        {
+            return;
+        }
+
+        BoxCollider floorBox = floor.GetComponent<BoxCollider>();
+        if (floorBox == null)
+        {
+            return;
+        }
+
+        Gizmos.color = new Color(0.2f, 0.85f, 0.25f, 0.85f);
+        Gizmos.DrawWireCube(floorBox.bounds.center, floorBox.bounds.size);
     }
 }

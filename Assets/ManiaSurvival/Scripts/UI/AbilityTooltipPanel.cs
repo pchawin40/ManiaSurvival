@@ -257,11 +257,11 @@ public class AbilityTooltipPanel : MonoBehaviour
                     {
                         className = "Relentless Hook",
                         abilityName = "Barrage",
-                        description = "Rapid knockback blasts.",
+                        description = "Rapid cone knockback blasts for 2.4 seconds.",
                         cooldown = 14f,
-                        effect = "Ultimate pressure",
+                        effect = "2 damage + knockback every 0.3s",
                         cost = "None",
-                        rangeTarget = "Forward pressure",
+                        rangeTarget = "8 unit cone in front",
                         tip = "Scatter survivors."
                     };
             }
@@ -276,9 +276,9 @@ public class AbilityTooltipPanel : MonoBehaviour
                     abilityName = "Heal Dart",
                     description = "Restores health to a wounded ally.",
                     cooldown = 2.5f,
-                    effect = "Heal 1 HP",
+                    effect = "Heal 6 HP",
                     cost = "None",
-                    rangeTarget = "Nearest wounded ally or aimed direction",
+                    rangeTarget = "Nearest wounded ally or self if hurt",
                     tip = "Save hurt allies."
                 };
             case 2:
@@ -287,10 +287,10 @@ public class AbilityTooltipPanel : MonoBehaviour
                     className = "Field Medic",
                     abilityName = "Heal Pulse",
                     description = "Emits a healing wave around you.",
-                    cooldown = 8f,
-                    effect = "Area heal",
+                    cooldown = 6f,
+                    effect = "Area heal 4 HP",
                     cost = "None",
-                    rangeTarget = "Area around caster",
+                    rangeTarget = "Area around caster (5 units)",
                     tip = "Use near allies."
                 };
             case 3:
@@ -310,9 +310,9 @@ public class AbilityTooltipPanel : MonoBehaviour
                 {
                     className = "Field Medic",
                     abilityName = "Sanctuary",
-                    description = "Drops a brief protection zone.",
+                    description = "Drops a healing zone at your position.",
                     cooldown = 16f,
-                    effect = "Protect allies",
+                    effect = "Healing zone: 2 HP/s for 4s",
                     cost = "None",
                     rangeTarget = "Area at caster",
                     tip = "Use under pressure."

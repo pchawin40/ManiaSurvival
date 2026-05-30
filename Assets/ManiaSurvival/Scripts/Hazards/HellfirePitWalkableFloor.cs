@@ -16,6 +16,7 @@ public class HellfirePitWalkableFloor : MonoBehaviour
 
     [Header("Debug")]
     public bool showHellfireDebugLogs = true;
+    public bool showHellfireDebugGizmos = true;
 
     private BoxCollider floorCollider;
 
@@ -74,5 +75,23 @@ public class HellfirePitWalkableFloor : MonoBehaviour
             parentInverse.z);
 
         EnsureSolidFloor();
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        if (!showHellfireDebugGizmos)
+        {
+            return;
+        }
+
+        BoxCollider box = GetComponent<BoxCollider>();
+        if (box == null)
+        {
+            return;
+        }
+
+        Bounds bounds = box.bounds;
+        Gizmos.color = new Color(0.2f, 0.85f, 0.25f, 0.35f);
+        Gizmos.DrawWireCube(bounds.center, bounds.size);
     }
 }

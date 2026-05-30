@@ -162,6 +162,7 @@ MonoBehaviour:
   floorSize: {x: 12, y: 0.3, z: 10}
   floorCenter: {x: -14, y: 0, z: 0}
   showHellfireDebugLogs: 1
+  showHellfireDebugGizmos: 1
 --- !u!1 &771100011
 GameObject:
   m_ObjectHideFlags: 0
@@ -214,8 +215,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 12, y: 3, z: 10}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Size: {x: 14, y: 3, z: 10}
+  m_Center: {x: 0, y: -1.48, z: 0}
 --- !u!114 &771100014
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -229,7 +230,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HellfirePitDamageZone
   damagePerSecond: 100
+  useManualDamageBounds: 1
+  localDamageCenter: {x: 0, y: -1.48, z: 0}
+  localDamageSize: {x: 9.5, y: 1, z: 10}
+  verticalTolerance: 3
+  triggerLocalCenter: {x: 0, y: -1.48, z: 0}
+  triggerLocalSize: {x: 14, y: 3, z: 10}
   showHellfireDebugLogs: 1
+  showHellfireDebugGizmos: 1
+  safetyCheckWorldPosition: {x: -16.29, y: 1.72, z: -3.17}
 --- !u!1 &3706214757475825248
 GameObject:
   m_ObjectHideFlags: 0

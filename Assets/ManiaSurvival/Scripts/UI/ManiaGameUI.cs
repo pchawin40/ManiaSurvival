@@ -888,10 +888,10 @@ public class ManiaGameUI : MonoBehaviour
 
         abilityInfoText.text =
             "Field Medic\n"
-            + "1. Heal Dart — Restores health to a wounded ally.\n"
-            + "2. Heal Pulse — Emits a healing wave around you.\n"
+            + "1. Heal Dart — Heal 6 HP to a wounded ally (or self if hurt).\n"
+            + "2. Heal Pulse — Area heal 4 HP to nearby allies.\n"
             + "3. Tether — Dash quickly toward an ally.\n"
-            + "4. Sanctuary — Drops a zone that protects allies briefly.";
+            + "4. Sanctuary — Healing zone: 2 HP/s for 4 seconds.";
     }
 
     private void ApplySurvivorAbilityLabels()

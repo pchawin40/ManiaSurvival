@@ -65,7 +65,18 @@ public class PredatorClassManager : MonoBehaviour
     // CyberNinja: cooldown reset on kill.
     public float cyberSwiftStrikeCooldown = 8f;
     private float nextCyberSwiftStrikeTime;
+    [Header("Relentless Hook - Barrage")]
+    public float barrageDuration = 2.4f;
+    public float barragePulseInterval = 0.3f;
+    public float barrageRange = 8f;
+    public float barrageHalfAngle = 45f;
+    public int barrageDamagePerPulse = 2;
+    public float barrageKnockbackMin = 0.9f;
+    public float barrageKnockbackMax = 1.2f;
+
     private Coroutine relentlessBarrageRoutine;
+    private bool isBarrageActive;
+    private readonly List<GameObject> barragePulseVfx = new List<GameObject>();
 
     private void Awake()
     {
@@ -92,11 +103,7 @@ public class PredatorClassManager : MonoBehaviour
 
     private void OnDisable()
     {
-        if (relentlessBarrageRoutine != null)
-        {
-            StopCoroutine(relentlessBarrageRoutine);
-            relentlessBarrageRoutine = null;
-        }
+        StopRelentlessBarrage("disabled");
     }
 
     // Slot 0: melee / primary.
@@ -185,13 +192,13 @@ public class PredatorClassManager : MonoBehaviour
             case PredatorClass.Juggernaut: StartCoroutine(CastJuggernautMeteorStrikeCoroutine()); break;
             case PredatorClass.CyberNinja: CastCyberNinjaDragonblade(); break;
             case PredatorClass.Vanguard: CastVanguardEarthshatter(); break;
-            case PredatorClass.RelentlessHook: StartRelentlessBarrage(); break;
+            case PredatorClass.RelentlessHook: return StartRelentlessBarrage();
         }
 
         return true;
     }
 
-    // Optional explicit ultimate route: same as slot 3 map.
+    // Slot 4 / ultimate.
     public bool CastUltimate()
     {
         Debug.Log("[PredatorClassManager] Executing ability: " + activeClass + "/Ultimate");
@@ -200,7 +207,6 @@ public class PredatorClassManager : MonoBehaviour
             return false;
         }
 
-        // Uses same blueprint mapping's fourth action.
         switch (activeClass)
         {
             case PredatorClass.SwarmOverlord: CastSwarmOverlordMoltenCore(); break;
@@ -209,20 +215,56 @@ public class PredatorClassManager : MonoBehaviour
             case PredatorClass.Juggernaut: StartCoroutine(CastJuggernautMeteorStrikeCoroutine()); break;
             case PredatorClass.CyberNinja: CastCyberNinjaDragonblade(); break;
             case PredatorClass.Vanguard: CastVanguardEarthshatter(); break;
-            case PredatorClass.RelentlessHook: StartRelentlessBarrage(); break;
+            case PredatorClass.RelentlessHook: return StartRelentlessBarrage();
         }
 
         return true;
     }
 
-    private void StartRelentlessBarrage()
+    private bool StartRelentlessBarrage()
+    {
+        if (isBarrageActive || relentlessBarrageRoutine != null)
+        {
+            LogPredatorAbility("Barrage rejected: already active.");
+            return false;
+        }
+
+        if (unitHealth == null || unitHealth.IsDead)
+        {
+            LogPredatorAbility("Barrage rejected: predator dead.");
+            return false;
+        }
+
+        if (!IsRoundActive())
+        {
+            LogPredatorAbility("Barrage rejected: round not active.");
+            return false;
+        }
+
+        if (!isActiveAndEnabled || !gameObject.activeInHierarchy)
+        {
+            LogPredatorAbility("Barrage rejected: predator inactive.");
+            return false;
+        }
+
+        relentlessBarrageRoutine = StartCoroutine(CastRelentlessBarrageCoroutine());
+        return relentlessBarrageRoutine != null;
+    }
+
+    private void StopRelentlessBarrage(string reason)
     {
         if (relentlessBarrageRoutine != null)
         {
             StopCoroutine(relentlessBarrageRoutine);
+            relentlessBarrageRoutine = null;
         }
 
-        relentlessBarrageRoutine = StartCoroutine(CastRelentlessWholeHogCoroutine());
+        if (isBarrageActive)
+        {
+            isBarrageActive = false;
+            ClearBarragePulseVfx();
+            LogPredatorAbility("Barrage ended (" + reason + ")");
+        }
     }
 
     private bool TryConsumeSharedGcd(int triggerHash)
@@ -955,41 +997,115 @@ public class PredatorClassManager : MonoBehaviour
         yield break;
     }
 
-    private IEnumerator CastRelentlessWholeHogCoroutine()
+    private IEnumerator CastRelentlessBarrageCoroutine()
     {
-        const float duration = 2.4f;
-        const float pulseInterval = 0.3f;
-        const float range = 8f;
-        const float halfAngle = 45f;
-        const int damage = 2;
-        const float knockback = 0.9f;
+        isBarrageActive = true;
+        LogPredatorAbility("Barrage started");
 
+        float duration = Mathf.Max(0.1f, barrageDuration);
+        float pulseInterval = Mathf.Max(0.05f, barragePulseInterval);
         float end = Time.time + duration;
         int pulseNumber = 0;
 
-        while (Time.time < end && isActiveAndEnabled && gameObject.activeInHierarchy && IsRoundActive())
+        while (Time.time < end)
         {
-            pulseNumber++;
-            Vector3 origin = GetChestCastOrigin();
-            Vector3 forward = GetFlatForward();
-            UnitHealth[] hits = GetSurvivorsInCone(origin, forward, range, halfAngle);
-
-            for (int i = 0; i < hits.Length; i++)
+            if (!isActiveAndEnabled || !gameObject.activeInHierarchy || unitHealth == null || unitHealth.IsDead || !IsRoundActive())
             {
-                if (hits[i] == null || hits[i].IsDead || hits[i].gameObject == gameObject)
-                {
-                    continue;
-                }
-
-                hits[i].TakeDamage(damage, gameObject);
-                ApplyKnockback(hits[i], (hits[i].transform.position - transform.position).normalized, knockback);
+                break;
             }
 
-            Debug.Log("[PredatorAbility] Barrage pulse " + pulseNumber + " hit " + hits.Length + " survivors");
+            pulseNumber++;
+            int hitCount = FireRelentlessBarragePulse(pulseNumber);
+            LogPredatorAbility("Barrage pulse " + pulseNumber + " hit " + hitCount + " survivors");
+
+            if (Time.time + pulseInterval >= end)
+            {
+                break;
+            }
+
             yield return new WaitForSeconds(pulseInterval);
         }
 
+        isBarrageActive = false;
         relentlessBarrageRoutine = null;
+        ClearBarragePulseVfx();
+        LogPredatorAbility("Barrage ended");
+    }
+
+    private int FireRelentlessBarragePulse(int pulseNumber)
+    {
+        Vector3 origin = GetChestCastOrigin();
+        Vector3 forward = GetFlatForward();
+        UnitHealth[] hits = GetSurvivorsInCone(origin, forward, barrageRange, barrageHalfAngle);
+        int hitCount = 0;
+
+        SpawnBarragePulseVfx(origin, forward, barrageRange, 0.28f);
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            UnitHealth target = hits[i];
+            if (target == null || target.IsDead || target.gameObject == gameObject)
+            {
+                continue;
+            }
+
+            target.TakeDamage(barrageDamagePerPulse, gameObject);
+            Vector3 knockDir = target.transform.position - transform.position;
+            knockDir.y = 0f;
+            if (knockDir.sqrMagnitude <= 0.001f)
+            {
+                knockDir = forward;
+            }
+
+            float knockDistance = Random.Range(barrageKnockbackMin, barrageKnockbackMax);
+            ApplyKnockback(target, knockDir.normalized, knockDistance);
+            hitCount++;
+        }
+
+        return hitCount;
+    }
+
+    private void SpawnBarragePulseVfx(Vector3 origin, Vector3 forward, float range, float lifetime)
+    {
+        GameObject vfx = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        vfx.name = "BarragePulseVFX";
+        Collider col = vfx.GetComponent<Collider>();
+        if (col != null)
+        {
+            Destroy(col);
+        }
+
+        forward.y = 0f;
+        forward.Normalize();
+        vfx.transform.position = origin + forward * (range * 0.5f) + Vector3.up * 0.45f;
+        vfx.transform.rotation = Quaternion.LookRotation(forward);
+        vfx.transform.localScale = new Vector3(2.8f, 0.65f, range);
+        ApplySimpleVfxColor(vfx, new Color(1f, 0.35f, 0.08f, 0.8f));
+        barragePulseVfx.Add(vfx);
+        Destroy(vfx, Mathf.Max(0.1f, lifetime));
+    }
+
+    private void ClearBarragePulseVfx()
+    {
+        for (int i = barragePulseVfx.Count - 1; i >= 0; i--)
+        {
+            if (barragePulseVfx[i] != null)
+            {
+                Destroy(barragePulseVfx[i]);
+            }
+        }
+
+        barragePulseVfx.Clear();
+    }
+
+    private void LogPredatorAbility(string message)
+    {
+        if (!showDebugLogs)
+        {
+            return;
+        }
+
+        Debug.Log("[PredatorAbility] " + message);
     }
 
     // ──────────────────────────────────────────────────────────────────────────

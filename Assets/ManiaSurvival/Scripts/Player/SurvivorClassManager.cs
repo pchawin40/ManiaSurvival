@@ -38,30 +38,28 @@ public class SurvivorClassManager : MonoBehaviour
     public float ability3Cooldown = 10f;
     public float ultimateCooldown = 20f;
 
-    [Header("Medic - Biotic Dart")]
+    [Header("Medic - Heal Dart")]
     public GameObject bioticDartProjectilePrefab;
     public float bioticDartSpeed = 18f;
     public float bioticDartLifetime = 2f;
     public float bioticDartRange = 20f;
-    public int bioticDartAllyHeal = 18;
+    public int healDartAmount = 6;
     public int bioticDartPredatorDamage = 6;
 
-    [Header("Medic - Regen Burst")]
-    public float regenBurstDuration = 3f;
-    public float regenBurstRadius = 6f;
-    public int regenBurstHealPerTick = 4;
-    public float regenBurstTickInterval = 0.85f;
+    [Header("Medic - Heal Pulse")]
+    public float healPulseRadius = 5f;
+    public int healPulseAmount = 4;
 
     [Header("Medic - Guardian Angel")]
     public float guardianAngelRange = 18f;
     public float guardianAngelDashDuration = 0.2f;
     public float guardianAngelStopDistance = 1.25f;
 
-    [Header("Medic - Immortality Field")]
+    [Header("Medic - Sanctuary")]
     public GameObject immortalityFieldPrefab;
-    public float immortalityFieldDuration = 6f;
-    public float immortalityFieldRadius = 5f;
-    [Range(0.01f, 0.5f)] public float immortalityMinHealthPercent = 0.10f;
+    public float sanctuaryDuration = 4f;
+    public float sanctuaryRadius = 5f;
+    public int sanctuaryHealPerSecond = 2;
 
     [Header("Warden - Rocket Flail")]
     public float rocketFlailRange = 2.6f;
@@ -149,8 +147,7 @@ public class SurvivorClassManager : MonoBehaviour
         switch (activeClass)
         {
             case SurvivorClass.Medic:
-                ExecuteMedicPrimary();
-                break;
+                return ExecuteMedicPrimary();
             case SurvivorClass.Warden:
                 ExecuteWardenPrimary();
                 break;
@@ -181,8 +178,7 @@ public class SurvivorClassManager : MonoBehaviour
         switch (activeClass)
         {
             case SurvivorClass.Medic:
-                StartCoroutine(MedicRegenBurstCoroutine());
-                break;
+                return ExecuteMedicHealPulse();
             case SurvivorClass.Warden:
                 StartCoroutine(WardenShieldBashCoroutine());
                 break;
@@ -213,8 +209,7 @@ public class SurvivorClassManager : MonoBehaviour
         switch (activeClass)
         {
             case SurvivorClass.Medic:
-                StartCoroutine(MedicGuardianAngelCoroutine());
-                break;
+                return TryStartMedicTether();
             case SurvivorClass.Warden:
                 TriggerAnimation(Ability3Hash);
                 Debug.Log("Warden activated Battle Cadence!");
@@ -247,8 +242,7 @@ public class SurvivorClassManager : MonoBehaviour
         switch (activeClass)
         {
             case SurvivorClass.Medic:
-                ExecuteMedicImmortalityField();
-                break;
+                return ExecuteMedicSanctuary();
             case SurvivorClass.Warden:
                 ExecuteWardenSoundBarrier();
                 break;
@@ -311,10 +305,35 @@ public class SurvivorClassManager : MonoBehaviour
     // Medic
     // ═════════════════════════════════════════════════════════════════════════
 
-    private void ExecuteMedicPrimary()
+    private bool ExecuteMedicPrimary()
     {
-        Vector3 direction = GetForwardDirection();
+        UnitHealth target = FindClosestAlly(transform.position, bioticDartRange, requireDamaged: true);
+        if (target == null && unitHealth != null && !unitHealth.IsDead && unitHealth.currentHealth < unitHealth.maxHealth)
+        {
+            target = unitHealth;
+        }
+
+        if (target == null)
+        {
+            if (showDebugLogs)
+            {
+                Debug.Log("[SurvivorAbility] Heal Dart found no wounded target.");
+            }
+
+            return false;
+        }
+
         Vector3 spawn = GetProjectileSpawnPosition();
+        Vector3 direction = target.transform.position - spawn;
+        direction.y = 0f;
+        if (direction.sqrMagnitude <= 0.001f)
+        {
+            direction = GetForwardDirection();
+        }
+        else
+        {
+            direction.Normalize();
+        }
 
         if (bioticDartProjectilePrefab != null)
         {
@@ -326,42 +345,63 @@ public class SurvivorClassManager : MonoBehaviour
                 projectile = obj.AddComponent<BioticDartProjectile>();
             }
 
-            projectile.Initialize(this, direction, bioticDartSpeed, bioticDartLifetime, bioticDartRange);
-            return;
+            projectile.Initialize(this, direction, bioticDartSpeed, bioticDartLifetime, bioticDartRange, target);
+            return true;
         }
 
-        // Fallback: line-of-sight ray.
-        if (Physics.Raycast(spawn, direction, out RaycastHit hit, bioticDartRange, targetLayers, QueryTriggerInteraction.Ignore))
-        {
-            UnitHealth target = hit.collider.GetComponentInParent<UnitHealth>();
-            ApplyBioticDartEffect(target);
-        }
+        ApplyBioticDartEffect(target);
+        return true;
     }
 
-    private IEnumerator MedicRegenBurstCoroutine()
+    private bool ExecuteMedicHealPulse()
     {
-        float elapsed = 0f;
-        float tick = Mathf.Max(0.1f, regenBurstTickInterval);
+        UnitHealth[] allies = FindAlliesInRange(transform.position, healPulseRadius);
+        int healedCount = 0;
 
-        while (elapsed < regenBurstDuration)
+        for (int i = 0; i < allies.Length; i++)
         {
-            UnitHealth[] allies = FindAlliesInRange(transform.position, regenBurstRadius);
-            for (int i = 0; i < allies.Length; i++)
+            UnitHealth ally = allies[i];
+            if (ally == null || ally.IsDead)
             {
-                if (allies[i] != null && !allies[i].IsDead)
-                {
-                    allies[i].Heal(regenBurstHealPerTick);
-                }
+                continue;
             }
 
-            yield return new WaitForSeconds(tick);
-            elapsed += tick;
+            if (ally == unitHealth && ally.currentHealth >= ally.maxHealth)
+            {
+                continue;
+            }
+
+            ally.Heal(healPulseAmount);
+            healedCount++;
         }
+
+        if (showDebugLogs)
+        {
+            Debug.Log("[SurvivorAbility] Heal Pulse healed " + healedCount + " allies");
+        }
+
+        return true;
     }
 
-    private IEnumerator MedicGuardianAngelCoroutine()
+    private bool TryStartMedicTether()
     {
         UnitHealth ally = FindClosestAlly(transform.position, guardianAngelRange, requireDamaged: false);
+        if (ally == null)
+        {
+            if (showDebugLogs)
+            {
+                Debug.Log("[SurvivorAbility] Tether found no ally target.");
+            }
+
+            return false;
+        }
+
+        StartCoroutine(MedicGuardianAngelCoroutine(ally));
+        return true;
+    }
+
+    private IEnumerator MedicGuardianAngelCoroutine(UnitHealth ally)
+    {
         if (ally == null)
         {
             yield break;
@@ -385,22 +425,28 @@ public class SurvivorClassManager : MonoBehaviour
         }
     }
 
-    private void ExecuteMedicImmortalityField()
+    private bool ExecuteMedicSanctuary()
     {
         if (immortalityFieldPrefab == null)
         {
-            return;
+            if (showDebugLogs)
+            {
+                Debug.Log("[SurvivorAbility] Sanctuary missing field prefab.");
+            }
+
+            return false;
         }
 
         GameObject field = Instantiate(immortalityFieldPrefab, transform.position, Quaternion.identity);
-        Debug.Log("[AbilityVFX] Spawned VFX: " + field.name + ", position=" + field.transform.position + ", duration=" + immortalityFieldDuration.ToString("0.00") + "s");
-        ImmortalityFieldZone zone = field.GetComponent<ImmortalityFieldZone>();
+        Debug.Log("[AbilityVFX] Spawned VFX: " + field.name + ", position=" + field.transform.position + ", duration=" + sanctuaryDuration.ToString("0.00") + "s");
+        SanctuaryHealZone zone = field.GetComponent<SanctuaryHealZone>();
         if (zone == null)
         {
-            zone = field.AddComponent<ImmortalityFieldZone>();
+            zone = field.AddComponent<SanctuaryHealZone>();
         }
 
-        zone.Initialize(immortalityFieldRadius, immortalityFieldDuration, immortalityMinHealthPercent, survivorTag);
+        zone.Initialize(this, sanctuaryRadius, sanctuaryDuration, sanctuaryHealPerSecond, survivorTag, showDebugLogs);
+        return true;
     }
 
     private void ApplyBioticDartEffect(UnitHealth target)
@@ -412,7 +458,12 @@ public class SurvivorClassManager : MonoBehaviour
 
         if (IsAlly(target))
         {
-            target.Heal(bioticDartAllyHeal);
+            target.Heal(healDartAmount);
+            if (showDebugLogs)
+            {
+                Debug.Log("[SurvivorAbility] Heal Dart healed " + target.name + " for " + healDartAmount);
+            }
+
             return;
         }
 
@@ -973,8 +1024,15 @@ public class SurvivorClassManager : MonoBehaviour
         private float lifetime;
         private float range;
         private float distanceTravelled;
+        private UnitHealth homingTarget;
 
-        public void Initialize(SurvivorClassManager manager, Vector3 dir, float moveSpeed, float life, float maxRange)
+        public void Initialize(
+            SurvivorClassManager manager,
+            Vector3 dir,
+            float moveSpeed,
+            float life,
+            float maxRange,
+            UnitHealth target)
         {
             owner = manager;
             direction = dir.normalized;
@@ -982,6 +1040,7 @@ public class SurvivorClassManager : MonoBehaviour
             lifetime = Mathf.Max(0.1f, life);
             range = Mathf.Max(1f, maxRange);
             distanceTravelled = 0f;
+            homingTarget = target;
         }
 
         private void Update()
@@ -990,6 +1049,23 @@ public class SurvivorClassManager : MonoBehaviour
             {
                 Destroy(gameObject);
                 return;
+            }
+
+            if (homingTarget != null && !homingTarget.IsDead)
+            {
+                Vector3 toTarget = homingTarget.transform.position - transform.position;
+                toTarget.y = 0f;
+                if (toTarget.sqrMagnitude > 0.01f)
+                {
+                    direction = toTarget.normalized;
+                }
+
+                if (toTarget.sqrMagnitude <= 0.64f)
+                {
+                    owner.ApplyBioticDartEffect(homingTarget);
+                    Destroy(gameObject);
+                    return;
+                }
             }
 
             float step = speed * Time.deltaTime;
@@ -1111,25 +1187,38 @@ public class SurvivorClassManager : MonoBehaviour
         }
     }
 
-    private class ImmortalityFieldZone : MonoBehaviour
+    private class SanctuaryHealZone : MonoBehaviour
     {
+        private SurvivorClassManager owner;
         private float radius;
         private float duration;
-        private float minPercent;
+        private int healPerSecond;
         private string allyTag;
+        private bool logEvents;
+        private readonly HashSet<UnitHealth> healedAllies = new HashSet<UnitHealth>();
 
-        public void Initialize(float zoneRadius, float zoneDuration, float minimumHealthPercent, string allySurvivorTag)
+        public void Initialize(
+            SurvivorClassManager zoneOwner,
+            float zoneRadius,
+            float zoneDuration,
+            int healPerTick,
+            string allySurvivorTag,
+            bool debugLogs)
         {
+            owner = zoneOwner;
             radius = Mathf.Max(0.5f, zoneRadius);
             duration = Mathf.Max(0.1f, zoneDuration);
-            minPercent = Mathf.Clamp(minimumHealthPercent, 0.01f, 0.5f);
+            healPerSecond = Mathf.Max(1, healPerTick);
             allyTag = allySurvivorTag;
+            logEvents = debugLogs;
             StartCoroutine(RunZoneCoroutine());
         }
 
         private IEnumerator RunZoneCoroutine()
         {
             float elapsed = 0f;
+            float tick = 1f;
+
             while (elapsed < duration)
             {
                 Collider[] hits = Physics.OverlapSphere(transform.position, radius, ~0, QueryTriggerInteraction.Ignore);
@@ -1141,15 +1230,17 @@ public class SurvivorClassManager : MonoBehaviour
                         continue;
                     }
 
-                    int minHealth = Mathf.Max(1, Mathf.RoundToInt(health.maxHealth * minPercent));
-                    if (health.currentHealth < minHealth)
-                    {
-                        health.currentHealth = minHealth;
-                    }
+                    health.Heal(healPerSecond);
+                    healedAllies.Add(health);
                 }
 
-                elapsed += 0.1f;
-                yield return new WaitForSeconds(0.1f);
+                elapsed += tick;
+                yield return new WaitForSeconds(tick);
+            }
+
+            if (logEvents)
+            {
+                Debug.Log("[SurvivorAbility] Sanctuary healed/protected " + healedAllies.Count + " allies");
             }
 
             Destroy(gameObject);
