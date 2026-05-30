@@ -323,7 +323,7 @@ public class AbilityTooltipPanel : MonoBehaviour
                         abilityName = "Barrage",
                         description = "Rapid long-range knockback blasts.",
                         cooldown = 16f,
-                        effect = "Ultimate cone barrage. 10 damage per pulse + heavy knockback 2.8–4.0",
+                        effect = "Ultimate cone barrage. 35 damage per pulse + heavy knockback 2.8–4.0",
                         cost = "60 mana",
                         rangeTarget = "20 unit cone in front",
                         tip = "Scatter survivors — RUN NOW."

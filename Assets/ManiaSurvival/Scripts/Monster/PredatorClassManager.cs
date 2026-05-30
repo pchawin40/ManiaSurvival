@@ -93,7 +93,7 @@ public class PredatorClassManager : MonoBehaviour
     public float barragePulseInterval = 0.3f;
     public float barrageRange = 20f;
     public float barrageHalfAngle = 70f;
-    public int barrageDamagePerPulse = 10;
+    public int barrageDamagePerPulse = 35;
     public float barrageKnockbackMin = 2.8f;
     public float barrageKnockbackMax = 4f;
 
