@@ -512,11 +512,22 @@ public class AbilityController : MonoBehaviour
 
         switch (slotNumber)
         {
-            case 1: return Mathf.Max(0f, survivorSlot1Cooldown);
-            case 2: return Mathf.Max(0f, survivorSlot2Cooldown);
-            case 3: return Mathf.Max(0f, survivorSlot3Cooldown);
-            default: return Mathf.Max(0f, survivorSlot4Cooldown);
+            case 1: return Mathf.Max(0f, survivorSlot1Cooldown) * GetAiSurvivorCooldownMultiplier();
+            case 2: return Mathf.Max(0f, survivorSlot2Cooldown) * GetAiSurvivorCooldownMultiplier();
+            case 3: return Mathf.Max(0f, survivorSlot3Cooldown) * GetAiSurvivorCooldownMultiplier();
+            default: return Mathf.Max(0f, survivorSlot4Cooldown) * GetAiSurvivorCooldownMultiplier();
         }
+    }
+
+    private float GetAiSurvivorCooldownMultiplier()
+    {
+        if (controlsPredator)
+        {
+            return 1f;
+        }
+
+        OfflineSurvivorBotAI botAi = GetComponent<OfflineSurvivorBotAI>();
+        return botAi != null ? botAi.GetAbilityCooldownMultiplier() : 1f;
     }
 
     private bool ExecuteSlot(int slotNumber)

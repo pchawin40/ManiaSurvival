@@ -33,9 +33,9 @@ public static class WaterfallManaRegenBootstrap
         trigger.size = new Vector3(10f, 2.5f, 10f);
 
         ManaRegenZone zone = zoneRoot.AddComponent<ManaRegenZone>();
-        zone.survivorBonusManaRegenPerSecond = 12f;
-        zone.predatorBonusManaRegenPerSecond = 34f;
-        zone.bonusManaRegenPerSecond = 12f;
+        zone.survivorBonusManaRegenPerSecond = 2f;
+        zone.predatorBonusManaRegenPerSecond = 10f;
+        zone.bonusManaRegenPerSecond = 2f;
         zone.showDebugLogs = false;
     }
 

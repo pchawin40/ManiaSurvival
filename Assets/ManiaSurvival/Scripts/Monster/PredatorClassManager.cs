@@ -12,12 +12,12 @@ public class PredatorClassManager : MonoBehaviour
 {
     private const float SharedGlobalCooldown = 0.25f;
 
-    // Required cached hashes.
-    private static readonly int MeleeAttackHash = Animator.StringToHash("MeleeAttack");
-    private static readonly int Ability1Hash = Animator.StringToHash("Ability1");
-    private static readonly int Ability2Hash = Animator.StringToHash("Ability2");
+    // Required cached hashes (Primary = MeleeAttack, slot2 = Ability1, slot3 = Ability2).
+    private static readonly int MeleeAttackHash = UnitAnimationHelper.Predator.Primary;
+    private static readonly int Ability1Hash = UnitAnimationHelper.Predator.Ability2;
+    private static readonly int Ability2Hash = UnitAnimationHelper.Predator.Ability3;
     private static readonly int Ability3Hash = Animator.StringToHash("Ability3");
-    private static readonly int UltimateHash = Animator.StringToHash("Ultimate");
+    private static readonly int UltimateHash = UnitAnimationHelper.Predator.Ultimate;
 
     [Header("Class")]
     public PredatorClass activeClass = PredatorClass.SwarmOverlord;
@@ -125,6 +125,13 @@ public class PredatorClassManager : MonoBehaviour
     [Range(0f, 1f)] public float barragePulseAlpha = 0.42f;
     [Tooltip("Fan mesh segment count for Barrage warning/pulse VFX.")]
     public int barrageVfxSegments = 14;
+
+    [Header("Relentless Hook - Cast Presentation")]
+    public float sprayCastWindup = 0.12f;
+    public float hookCastWindup = 0.25f;
+    public float tonicCastWindup = 0.2f;
+    public float barrageCastWindup = 0.35f;
+    public bool logCastPresentation = true;
 
     [Header("Relentless Hook - Feel")]
     public bool enableAbilityFeel = true;
@@ -549,11 +556,7 @@ public class PredatorClassManager : MonoBehaviour
         {
             if (useExternalCooldownAuthority)
             {
-                if (animator != null)
-                {
-                    animator.SetTrigger(triggerHash);
-                }
-
+                TriggerPredatorAnimation(triggerHash);
                 return true;
             }
 
@@ -566,13 +569,39 @@ public class PredatorClassManager : MonoBehaviour
             return false;
         }
 
-        if (animator != null)
-        {
-            animator.SetTrigger(triggerHash);
-        }
+        TriggerPredatorAnimation(triggerHash);
 
         nextGlobalCastTime = Time.time + SharedGlobalCooldown;
         return true;
+    }
+
+    private void TriggerPredatorAnimation(int triggerHash)
+    {
+        if (animator == null)
+        {
+            animator = GetComponent<Animator>();
+        }
+
+        UnitAnimationHelper.TrySetAnimatorTrigger(animator, triggerHash, null, logCastPresentation, this);
+    }
+
+    private void PlayRelentlessCastSound(int slotNumber)
+    {
+        AbilityDetail detail = GetAbilityDetail(slotNumber);
+        if (detail.castSound == null)
+        {
+            return;
+        }
+
+        if (abilityAudioSource == null)
+        {
+            abilityAudioSource = GetComponent<AudioSource>();
+        }
+
+        if (abilityAudioSource != null)
+        {
+            abilityAudioSource.PlayOneShot(detail.castSound, abilitySfxVolume);
+        }
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -1136,6 +1165,7 @@ public class PredatorClassManager : MonoBehaviour
         Vector3 forward = GetFlatForward(logAim: true);
 
         PlayRelentlessSfx(spraySound, AbilityPlaceholderSound.Spray, Random.Range(0.94f, 1.06f));
+        PlayRelentlessCastSound(1);
 
         LogPredatorAbility("Spray direction=" + forward);
         LogPredatorAbility("Spray cast origin=" + origin + " forward=" + forward
@@ -1219,13 +1249,40 @@ public class PredatorClassManager : MonoBehaviour
             Debug.DrawRay(origin, Quaternion.Euler(0f, -halfAngle, 0f) * forward * range, Color.red, 1.2f);
         }
 
+        QueueSprayPresentationVfx(origin, forward, range, halfAngle);
+
+        LogPredatorAbility("Spray hit " + hits.Count + " survivors");
+    }
+
+    private void QueueSprayPresentationVfx(Vector3 origin, Vector3 forward, float range, float halfAngle)
+    {
+        if (sprayCastWindup <= 0f)
+        {
+            SpawnSprayConeVfx(origin, forward, range, halfAngle);
+            if (enableAbilityFeel)
+            {
+                PredatorAbilityFeelVfx.SpawnSprayPellets(origin, forward, range, halfAngle, 7, 0.22f);
+            }
+
+            return;
+        }
+
+        StartCoroutine(DelayedSprayPresentationVfx(origin, forward, range, halfAngle, sprayCastWindup));
+    }
+
+    private IEnumerator DelayedSprayPresentationVfx(
+        Vector3 origin,
+        Vector3 forward,
+        float range,
+        float halfAngle,
+        float delay)
+    {
+        yield return new WaitForSeconds(Mathf.Max(0f, delay));
         SpawnSprayConeVfx(origin, forward, range, halfAngle);
         if (enableAbilityFeel)
         {
             PredatorAbilityFeelVfx.SpawnSprayPellets(origin, forward, range, halfAngle, 7, 0.22f);
         }
-
-        LogPredatorAbility("Spray hit " + hits.Count + " survivors");
     }
 
     private bool TryEvaluateSprayTarget(
@@ -1423,6 +1480,12 @@ public class PredatorClassManager : MonoBehaviour
 
     private IEnumerator CastRelentlessChainHookCoroutine()
     {
+        PlayRelentlessCastSound(2);
+        if (hookCastWindup > 0f)
+        {
+            yield return new WaitForSeconds(hookCastWindup);
+        }
+
         float range = Mathf.Max(1f, hookRange);
         float pullForwardDistance = Mathf.Max(1f, hookPullForwardDistance);
         float pullDuration = Mathf.Max(0.05f, hookPullDuration);
@@ -1489,6 +1552,12 @@ public class PredatorClassManager : MonoBehaviour
         if (unitHealth == null || unitHealth.IsDead)
         {
             yield break;
+        }
+
+        PlayRelentlessCastSound(3);
+        if (tonicCastWindup > 0f)
+        {
+            yield return new WaitForSeconds(tonicCastWindup);
         }
 
         PlayRelentlessSfx(tonicSound, AbilityPlaceholderSound.Tonic);
@@ -1796,6 +1865,12 @@ public class PredatorClassManager : MonoBehaviour
     {
         isBarrageActive = true;
         LogPredatorAbility("Barrage started");
+
+        PlayRelentlessCastSound(4);
+        if (barrageCastWindup > 0f)
+        {
+            yield return new WaitForSeconds(barrageCastWindup);
+        }
 
         Vector3 origin = GetChestCastOrigin();
         Vector3 forward = GetFlatForward(logAim: true);

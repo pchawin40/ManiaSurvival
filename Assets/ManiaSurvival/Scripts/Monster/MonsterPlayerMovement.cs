@@ -29,6 +29,7 @@ public class MonsterPlayerMovement : MonoBehaviour
     private float abilitySpeedMultiplier = 1f;
     private bool hasStoredAim;
     private bool loggedInactiveController;
+    private Animator animator;
 
     public bool HasStoredAim => hasStoredAim;
 
@@ -58,6 +59,7 @@ public class MonsterPlayerMovement : MonoBehaviour
     {
         characterController = GetComponent<CharacterController>();
         unitHealth = GetComponent<UnitHealth>();
+        animator = GetComponent<Animator>();
     }
 
     private void Update()
@@ -75,16 +77,24 @@ public class MonsterPlayerMovement : MonoBehaviour
         Vector2 input = GetMoveInput();
         UpdateAimFromInput(input);
         Vector3 moveDirection = BuildWorldDirection(input);
+        float effectiveSpeed = moveSpeed * carriedItemSpeedMultiplier * abilitySpeedMultiplier;
 
         if (moveDirection.sqrMagnitude > 0.001f)
         {
             ApplyGravity();
-            TryMove((moveDirection * moveSpeed * carriedItemSpeedMultiplier * abilitySpeedMultiplier + Vector3.up * verticalVelocity) * Time.deltaTime);
+            TryMove((moveDirection * effectiveSpeed + Vector3.up * verticalVelocity) * Time.deltaTime);
             RotateToward(moveDirection);
+            UpdateMoveAnimation(effectiveSpeed);
             return;
         }
 
+        UpdateMoveAnimation(0f);
         ApplyGravityOnly();
+    }
+
+    private void UpdateMoveAnimation(float speed)
+    {
+        UnitAnimationHelper.TrySetAnimatorFloat(animator, UnitAnimationHelper.Predator.MoveSpeed, speed);
     }
 
     public void SetMoveInput(Vector2 input)

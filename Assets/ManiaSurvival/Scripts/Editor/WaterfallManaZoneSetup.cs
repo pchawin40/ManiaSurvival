@@ -28,9 +28,9 @@ public static class WaterfallManaZoneSetup
             ManaRegenZone existingZone = existing.GetComponent<ManaRegenZone>();
             if (existingZone != null)
             {
-                existingZone.survivorBonusManaRegenPerSecond = 12f;
-                existingZone.predatorBonusManaRegenPerSecond = 34f;
-                existingZone.bonusManaRegenPerSecond = 12f;
+                existingZone.survivorBonusManaRegenPerSecond = 2f;
+                existingZone.predatorBonusManaRegenPerSecond = 10f;
+                existingZone.bonusManaRegenPerSecond = 2f;
             }
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -85,9 +85,9 @@ public static class WaterfallManaZoneSetup
         trigger.size = new Vector3(10f, 2.5f, 10f);
 
         ManaRegenZone zone = zoneRoot.AddComponent<ManaRegenZone>();
-        zone.survivorBonusManaRegenPerSecond = 12f;
-        zone.predatorBonusManaRegenPerSecond = 34f;
-        zone.bonusManaRegenPerSecond = 12f;
+        zone.survivorBonusManaRegenPerSecond = 2f;
+        zone.predatorBonusManaRegenPerSecond = 10f;
+        zone.bonusManaRegenPerSecond = 2f;
         zone.showDebugLogs = true;
 
         EditorSceneManager.MarkSceneDirty(scene);

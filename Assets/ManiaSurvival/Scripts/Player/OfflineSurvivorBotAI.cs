@@ -21,8 +21,14 @@ public class OfflineSurvivorBotAI : MonoBehaviour
     public float hellfireAvoidRadius = 4f;
 
     [Header("Combat")]
-    public float medicThinkInterval = 0.75f;
-    public float healDartTargetPercent = 0.85f;
+    [Tooltip("Seconds between medic AI decision ticks.")]
+    public float medicThinkInterval = 1.25f;
+    [Tooltip("Multiplies AbilityController cooldowns while this bot is enabled.")]
+    public float aiAbilityCooldownMultiplier = 2f;
+    [Tooltip("Extra random delay after a successful medic cast, on top of ability cooldown.")]
+    public float minAbilityInterval = 4f;
+    public float maxAbilityInterval = 7f;
+    public float healDartTargetPercent = 0.75f;
     public float healPulseWoundedPercent = 0.7f;
     public float healPulseCriticalPercent = 0.4f;
     public float sanctuaryInjuredPercent = 0.5f;
@@ -47,7 +53,13 @@ public class OfflineSurvivorBotAI : MonoBehaviour
     private float temporarySpeedMultiplier = 1f;
     private float temporarySpeedEffectEndTime;
     private float knockbackLockUntil;
+    private float nextMedicActionReadyTime;
     private Quaternion playStartRotation;
+
+    public float GetAbilityCooldownMultiplier()
+    {
+        return enabled ? Mathf.Max(1f, aiAbilityCooldownMultiplier) : 1f;
+    }
 
     private void Awake()
     {
@@ -410,13 +422,29 @@ public class OfflineSurvivorBotAI : MonoBehaviour
 
     private bool TryCastMedicSlot(int slotNumber, string abilityLabel)
     {
+        if (Time.time < nextMedicActionReadyTime)
+        {
+            LogMedicDecision("Medic skipped " + abilityLabel + ": pacing interval");
+            return false;
+        }
+
         if (!CanUseAbilitySlot(slotNumber))
         {
             LogMedicDecision("Medic skipped " + abilityLabel + ": cooldown/mana");
             return false;
         }
 
+        float cooldownBefore = abilityController.GetCooldownRemaining(slotNumber);
         abilityController.UseAbilitySlot(slotNumber);
+        float cooldownAfter = abilityController.GetCooldownRemaining(slotNumber);
+        if (cooldownAfter <= 0.01f || cooldownAfter < cooldownBefore)
+        {
+            return false;
+        }
+
+        float minInterval = Mathf.Min(minAbilityInterval, maxAbilityInterval);
+        float maxInterval = Mathf.Max(minAbilityInterval, maxAbilityInterval);
+        nextMedicActionReadyTime = Time.time + Random.Range(minInterval, maxInterval);
         LogMedicDecision("Medic cast " + abilityLabel + " via AbilityController slot " + slotNumber);
         return true;
     }

@@ -50,11 +50,13 @@ public class SurvivorMovement : MonoBehaviour
     private float temporarySpeedEffectEndTime;
     private Coroutine temporarySpeedEffectRoutine;
     private float externalMovementLockUntil;
+    private Animator animator;
 
     private void Awake()
     {
         characterController = GetComponent<CharacterController>();
         health = GetComponent<UnitHealth>();
+        animator = GetComponent<Animator>();
         CurrentStamina = maxStamina;
     }
 
@@ -118,6 +120,13 @@ public class SurvivorMovement : MonoBehaviour
         ApplyGravity();
         TryMove((moveDirection * moveSpeed + Vector3.up * verticalVelocity) * Time.deltaTime);
         RotateToward(moveDirection);
+        UpdateMoveAnimation(moveDirection, moveSpeed);
+    }
+
+    private void UpdateMoveAnimation(Vector3 moveDirection, float moveSpeed)
+    {
+        float speed = moveDirection.sqrMagnitude > 0.001f ? moveSpeed : 0f;
+        UnitAnimationHelper.TrySetAnimatorFloat(animator, UnitAnimationHelper.Survivor.MoveSpeed, speed);
     }
 
     public Vector3 GetAimDirection()

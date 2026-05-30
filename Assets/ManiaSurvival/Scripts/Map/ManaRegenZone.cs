@@ -5,12 +5,12 @@ using UnityEngine;
 public class ManaRegenZone : MonoBehaviour
 {
     [Header("Regen By Role")]
-    [Tooltip("Extra mana/sec for Survivors while inside. ~12 fills a 20 pool in under 2 seconds.")]
-    public float survivorBonusManaRegenPerSecond = 12f;
-    [Tooltip("Extra mana/sec for Predators while inside. ~34 + base regen refills a 100 pool quickly.")]
-    public float predatorBonusManaRegenPerSecond = 34f;
+    [Tooltip("Extra mana/sec for Survivors while inside. Default 2/sec on top of passive regen.")]
+    public float survivorBonusManaRegenPerSecond = 2f;
+    [Tooltip("Extra mana/sec for Predators while inside. Default 10/sec on top of passive regen.")]
+    public float predatorBonusManaRegenPerSecond = 10f;
     [Tooltip("Fallback bonus when role-specific value is 0.")]
-    public float bonusManaRegenPerSecond = 12f;
+    public float bonusManaRegenPerSecond = 2f;
 
     [Header("Debug")]
     public bool showDebugLogs = true;

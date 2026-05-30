@@ -15,10 +15,10 @@ public enum SurvivorClass
 [RequireComponent(typeof(Animator))]
 public class SurvivorClassManager : MonoBehaviour
 {
-    private static readonly int AttackHash = Animator.StringToHash("Attack");
-    private static readonly int Ability2Hash = Animator.StringToHash("Ability2");
-    private static readonly int Ability3Hash = Animator.StringToHash("Ability3");
-    private static readonly int UltimateHash = Animator.StringToHash("Ultimate");
+    private static readonly int AttackHash = UnitAnimationHelper.Survivor.Primary;
+    private static readonly int Ability2Hash = UnitAnimationHelper.Survivor.Ability2;
+    private static readonly int Ability3Hash = UnitAnimationHelper.Survivor.Ability3;
+    private static readonly int UltimateHash = UnitAnimationHelper.Survivor.Ultimate;
 
     [Header("Class")]
     public SurvivorClass activeClass = SurvivorClass.Medic;
@@ -75,6 +75,14 @@ public class SurvivorClassManager : MonoBehaviour
     public int sanctuaryHealPerSecond = 3;
     [Tooltip("Seconds between sanctuary heal ticks.")]
     public float sanctuaryTickInterval = 1.25f;
+
+    [Header("Medic - Cast Presentation")]
+    [Tooltip("Visual windup before projectile/VFX. Gameplay stays immediate for close-range hits.")]
+    public float bioticDartCastWindup = 0.12f;
+    public float healPulseCastWindup = 0.25f;
+    public float tetherBlinkCastWindup = 0.05f;
+    public float sanctuaryCastWindup = 0.35f;
+    public bool logCastPresentation = true;
 
     [Header("Medic - Ability Identity")]
     public string medicClassDisplayName = "Field Medic";
@@ -305,7 +313,7 @@ public class SurvivorClassManager : MonoBehaviour
             return false;
         }
 
-        TriggerAnimation(AttackHash);
+        TriggerCastPresentation(AttackHash, medicSlot1Detail);
 
         switch (activeClass)
         {
@@ -339,7 +347,7 @@ public class SurvivorClassManager : MonoBehaviour
             return false;
         }
 
-        TriggerAnimation(Ability2Hash);
+        TriggerCastPresentation(Ability2Hash, medicSlot2Detail);
 
         switch (activeClass)
         {
@@ -373,12 +381,17 @@ public class SurvivorClassManager : MonoBehaviour
             return false;
         }
 
-        TriggerAnimation(Ability3Hash);
+        TriggerCastPresentation(Ability3Hash, medicSlot3Detail);
 
         switch (activeClass)
         {
             case SurvivorClass.Medic:
-                return TryStartMedicTether();
+                if (TryStartMedicTether())
+                {
+                    return true;
+                }
+
+                return TrySurvivorBlink();
             case SurvivorClass.Warden:
                 TriggerAnimation(Ability3Hash);
                 Debug.Log("Warden activated Battle Cadence!");
@@ -409,12 +422,23 @@ public class SurvivorClassManager : MonoBehaviour
             return false;
         }
 
-        TriggerAnimation(UltimateHash);
+        TriggerCastPresentation(UltimateHash, medicSlot4Detail);
 
         switch (activeClass)
         {
             case SurvivorClass.Medic:
-                return ExecuteMedicSanctuary();
+                if (immortalityFieldPrefab == null)
+                {
+                    if (showDebugLogs)
+                    {
+                        Debug.Log("[SurvivorAbility] Sanctuary missing field prefab.");
+                    }
+
+                    return false;
+                }
+
+                StartCoroutine(ExecuteMedicSanctuaryPresentation());
+                return true;
             case SurvivorClass.Warden:
                 ExecuteWardenSoundBarrier();
                 break;
@@ -443,10 +467,31 @@ public class SurvivorClassManager : MonoBehaviour
             animator = GetComponent<Animator>();
         }
 
-        if (animator != null)
+        UnitAnimationHelper.TrySetAnimatorTrigger(animator, triggerHash, null, logCastPresentation, this);
+    }
+
+    private void TriggerCastPresentation(int triggerHash, AbilityDetail detail)
+    {
+        TriggerAnimation(triggerHash);
+        PlayAbilityCastSound(detail);
+    }
+
+    private void PlayAbilityCastSound(AbilityDetail detail)
+    {
+        if (detail.castSound == null)
         {
-            animator.SetTrigger(triggerHash);
+            return;
         }
+
+        AudioSource source = GetComponent<AudioSource>();
+        if (source == null)
+        {
+            source = gameObject.AddComponent<AudioSource>();
+            source.playOnAwake = false;
+            source.spatialBlend = 0f;
+        }
+
+        source.PlayOneShot(detail.castSound);
     }
 
     private bool TryConsumeCooldown(string abilityName, float baseCooldown, ref float nextReadyAt)
@@ -509,33 +554,118 @@ public class SurvivorClassManager : MonoBehaviour
             direction = toTarget.normalized;
         }
 
+        Vector3 spawn = GetProjectileSpawnPosition(direction);
+        SurvivorAbilityFeelVfx.SpawnBioticDartMuzzleFlash(spawn, direction);
+
         if (IsUnitWithinFlatRange(target, transform.position, bioticDartCloseRangeInstant))
         {
-            ApplyBioticDartEffect(target);
+            if (bioticDartCastWindup > 0f)
+            {
+                StartCoroutine(ApplyBioticDartAfterWindup(target, bioticDartCastWindup));
+            }
+            else
+            {
+                ApplyBioticDartEffect(target);
+            }
+
             return true;
         }
-
-        Vector3 spawn = GetProjectileSpawnPosition(direction);
 
         if (bioticDartProjectilePrefab != null)
         {
-            GameObject obj = Instantiate(bioticDartProjectilePrefab, spawn, Quaternion.LookRotation(direction));
-            Debug.Log("[AbilityVFX] Spawned VFX: " + obj.name + ", position=" + obj.transform.position + ", duration=" + bioticDartLifetime.ToString("0.00") + "s");
-            BioticDartProjectile projectile = obj.GetComponent<BioticDartProjectile>();
-            if (projectile == null)
-            {
-                projectile = obj.AddComponent<BioticDartProjectile>();
-            }
-
-            projectile.Initialize(this, direction, bioticDartSpeed, bioticDartLifetime, bioticDartRange, target);
+            StartCoroutine(SpawnBioticDartProjectileAfterWindup(spawn, direction, target));
             return true;
         }
 
-        ApplyBioticDartEffect(target);
+        if (bioticDartCastWindup > 0f)
+        {
+            StartCoroutine(ApplyBioticDartAfterWindup(target, bioticDartCastWindup));
+        }
+        else
+        {
+            ApplyBioticDartEffect(target);
+        }
+
         return true;
     }
 
+    private IEnumerator ApplyBioticDartAfterWindup(UnitHealth target, float windup)
+    {
+        if (windup > 0f)
+        {
+            yield return new WaitForSeconds(windup);
+        }
+
+        ApplyBioticDartEffect(target);
+    }
+
+    private IEnumerator SpawnBioticDartProjectileAfterWindup(
+        Vector3 spawn,
+        Vector3 direction,
+        UnitHealth target)
+    {
+        if (bioticDartCastWindup > 0f)
+        {
+            yield return new WaitForSeconds(bioticDartCastWindup);
+        }
+
+        if (target == null || target.IsDead)
+        {
+            yield break;
+        }
+
+        GameObject obj = Instantiate(bioticDartProjectilePrefab, spawn, Quaternion.LookRotation(direction));
+        Debug.Log("[AbilityVFX] Spawned VFX: " + obj.name + ", position=" + obj.transform.position + ", duration=" + bioticDartLifetime.ToString("0.00") + "s");
+        BioticDartProjectile projectile = obj.GetComponent<BioticDartProjectile>();
+        if (projectile == null)
+        {
+            projectile = obj.AddComponent<BioticDartProjectile>();
+        }
+
+        projectile.Initialize(this, direction, bioticDartSpeed, bioticDartLifetime, bioticDartRange, target);
+    }
+
     private bool ExecuteMedicHealPulse()
+    {
+        if (!WouldMedicHealPulseHealAnyone())
+        {
+            Debug.Log("[AbilityBlock] Heal Pulse blocked: no wounded allies in range");
+            return false;
+        }
+
+        if (healPulseCastWindup > 0f)
+        {
+            StartCoroutine(ExecuteMedicHealPulsePresentation());
+            return true;
+        }
+
+        return ApplyMedicHealPulse();
+    }
+
+    private bool WouldMedicHealPulseHealAnyone()
+    {
+        UnitHealth[] allies = FindAlliesInRange(transform.position, healPulseRadius);
+        for (int i = 0; i < allies.Length; i++)
+        {
+            UnitHealth ally = allies[i];
+            if (ally == null || ally.IsDead || ally.currentHealth >= ally.maxHealth)
+            {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private IEnumerator ExecuteMedicHealPulsePresentation()
+    {
+        yield return new WaitForSeconds(Mathf.Max(0f, healPulseCastWindup));
+        ApplyMedicHealPulse();
+    }
+
+    private bool ApplyMedicHealPulse()
     {
         UnitHealth[] allies = FindAlliesInRange(transform.position, healPulseRadius);
         int healedCount = 0;
@@ -559,6 +689,7 @@ public class SurvivorClassManager : MonoBehaviour
 
         if (healedCount > 0)
         {
+            SurvivorAbilityFeelVfx.SpawnHealPulseRing(transform.position, healPulseRadius);
             if (showDebugLogs)
             {
                 Debug.Log("[SurvivorAbility] Heal Pulse healed " + healedCount + " allies for " + totalHealed + " HP");
@@ -587,7 +718,33 @@ public class SurvivorClassManager : MonoBehaviour
         }
 
         StartCoroutine(MedicGuardianAngelCoroutine(ally));
+        if (tetherBlinkCastWindup > 0f)
+        {
+            SurvivorAbilityFeelVfx.SpawnBlinkFlash(transform.position);
+        }
+
         return true;
+    }
+
+    private IEnumerator ExecuteMedicSanctuaryPresentation()
+    {
+        if (immortalityFieldPrefab == null)
+        {
+            if (showDebugLogs)
+            {
+                Debug.Log("[SurvivorAbility] Sanctuary missing field prefab.");
+            }
+
+            yield break;
+        }
+
+        SurvivorAbilityFeelVfx.SpawnSanctuaryWindupRing(transform.position, sanctuaryRadius, sanctuaryCastWindup);
+        if (sanctuaryCastWindup > 0f)
+        {
+            yield return new WaitForSeconds(sanctuaryCastWindup);
+        }
+
+        ExecuteMedicSanctuary();
     }
 
     private IEnumerator MedicGuardianAngelCoroutine(UnitHealth ally)
@@ -933,7 +1090,15 @@ public class SurvivorClassManager : MonoBehaviour
             blink = gameObject.AddComponent<SurvivorBlinkAbility>();
         }
 
-        return blink.TryBlinkStep();
+        Vector3 before = transform.position;
+        bool blinked = blink.TryBlinkStep();
+        if (blinked)
+        {
+            SurvivorAbilityFeelVfx.SpawnBlinkFlash(before);
+            SurvivorAbilityFeelVfx.SpawnBlinkFlash(transform.position);
+        }
+
+        return blinked;
     }
 
     private void ExecuteWeaverSwiftStep()

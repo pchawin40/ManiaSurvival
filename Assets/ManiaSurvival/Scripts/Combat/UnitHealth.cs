@@ -36,7 +36,17 @@ public class UnitHealth : MonoBehaviour
     public Color damageTextColor = new Color(1f, 0.42f, 0.12f, 1f);
     public Color healTextColor = new Color(0.25f, 0.95f, 0.35f, 1f);
 
+    [Header("Animation")]
+    public bool enableHitDeathAnimations = true;
+    public float hitReactionCooldown = 0.25f;
+    [Tooltip("Optional delay before hiding/destroying the visual after Death trigger.")]
+    public float deathAnimationDelay = 0.75f;
+    public bool logAnimationTriggers = false;
+
     private UnitHealthVisualFeedback visualFeedback;
+    private Animator cachedAnimator;
+    private float nextHitReactionTime;
+    private bool deathVisualHandled;
 
     void Awake()
     {
@@ -116,6 +126,8 @@ public class UnitHealth : MonoBehaviour
                       " (" + previousHealth + " -> " + currentHealth + ").");
         }
 
+        TryPlayHitReaction();
+
         if (currentHealth <= 0)
         {
             Die(damageSource);
@@ -174,6 +186,8 @@ public class UnitHealth : MonoBehaviour
         currentHealth = maxHealth;
         temporaryDamageMultiplier = 1f;
         temporaryProtectionEndTime = 0f;
+        deathVisualHandled = false;
+        nextHitReactionTime = 0f;
     }
 
     public float GetHealthPercent()
@@ -216,6 +230,80 @@ public class UnitHealth : MonoBehaviour
             feed.ShowDeathMessage(this, damageSource);
         }
 
+        TryPlayDeathAnimation();
+
+        if (disableOnDeath || destroyOnDeath)
+        {
+            if (deathAnimationDelay > 0f && !deathVisualHandled)
+            {
+                StartCoroutine(DelayedDeathVisualCleanup());
+                return;
+            }
+        }
+
+        ApplyImmediateDeathVisualCleanup();
+    }
+
+    private void TryPlayHitReaction()
+    {
+        if (!enableHitDeathAnimations || Time.time < nextHitReactionTime)
+        {
+            return;
+        }
+
+        Animator anim = ResolveAnimator();
+        bool played = UnitAnimationHelper.TrySetAnimatorTrigger(
+            anim,
+            CompareTag("Monster") || CompareTag("Predator")
+                ? UnitAnimationHelper.Predator.Hit
+                : UnitAnimationHelper.Survivor.Hit,
+            "Hit",
+            logAnimationTriggers,
+            this);
+
+        if (played)
+        {
+            nextHitReactionTime = Time.time + Mathf.Max(0.05f, hitReactionCooldown);
+        }
+    }
+
+    private void TryPlayDeathAnimation()
+    {
+        if (!enableHitDeathAnimations)
+        {
+            return;
+        }
+
+        Animator anim = ResolveAnimator();
+        UnitAnimationHelper.TrySetAnimatorTrigger(
+            anim,
+            CompareTag("Monster") || CompareTag("Predator")
+                ? UnitAnimationHelper.Predator.Death
+                : UnitAnimationHelper.Survivor.Death,
+            "Death",
+            logAnimationTriggers,
+            this);
+    }
+
+    private Animator ResolveAnimator()
+    {
+        if (cachedAnimator == null)
+        {
+            cachedAnimator = GetComponent<Animator>();
+        }
+
+        return cachedAnimator;
+    }
+
+    private System.Collections.IEnumerator DelayedDeathVisualCleanup()
+    {
+        deathVisualHandled = true;
+        yield return new WaitForSeconds(Mathf.Max(0f, deathAnimationDelay));
+        ApplyImmediateDeathVisualCleanup();
+    }
+
+    private void ApplyImmediateDeathVisualCleanup()
+    {
         if (disableOnDeath)
         {
             gameObject.SetActive(false);
