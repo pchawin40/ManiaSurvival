@@ -74,6 +74,10 @@ public class AbilityController : MonoBehaviour
     public GameObject groundEffectPrefab;
     public float groundEffectDuration = 2.5f;
 
+    [Header("Cast Feedback")]
+    public bool logAbilityCasts = true;
+    public bool notifyUiOnCast = true;
+
     private readonly float[] nextReadyTimeBySlot = new float[4];
     private int lastProcessedSlot = -1;
     private int lastProcessedFrame = -1;
@@ -279,6 +283,7 @@ public class AbilityController : MonoBehaviour
             float cooldownDuration = GetSlotCooldown(clampedSlot);
             nextReadyTimeBySlot[clampedSlot - 1] = now + cooldownDuration;
             LogFlow($"[AbilityController] Starting cooldown for slot {clampedSlot}: {cooldownDuration:0.00}s");
+            LogAbilityCast(clampedSlot);
             SpawnDebugVfx(clampedSlot, assignedVfx);
             PlaySlotSound(clampedSlot);
             SpawnGroundEffect(clampedSlot);
@@ -341,6 +346,87 @@ public class AbilityController : MonoBehaviour
     public float GetSlotManaCost(int slotNumber)
     {
         return GetSlotManaCostInternal(slotNumber);
+    }
+
+    public float GetSlotCooldownDuration(int slotNumber)
+    {
+        return GetSlotCooldown(slotNumber);
+    }
+
+    public AbilityDetail GetAbilityDetail(int slotNumber)
+    {
+        return ResolveAbilityDetail(slotNumber);
+    }
+
+    private AbilityDetail GetAbilityDetailInternal(int slotNumber)
+    {
+        int clampedSlot = Mathf.Clamp(slotNumber, 1, 4);
+
+        if (controlsPredator)
+        {
+            if (predatorClassManager == null)
+            {
+                predatorClassManager = GetComponent<PredatorClassManager>();
+            }
+
+            if (predatorClassManager != null)
+            {
+                return predatorClassManager.GetAbilityDetail(clampedSlot);
+            }
+        }
+        else
+        {
+            if (survivorClassManager == null)
+            {
+                survivorClassManager = GetComponent<SurvivorClassManager>();
+            }
+
+            if (survivorClassManager != null)
+            {
+                return survivorClassManager.GetAbilityDetail(clampedSlot);
+            }
+        }
+
+        return AbilityDetail.CreateFallback(clampedSlot, controlsPredator ? "Predator" : "Survivor");
+    }
+
+    private AbilityDetail ResolveAbilityDetail(int slotNumber)
+    {
+        AbilityDetail detail = GetAbilityDetailInternal(slotNumber);
+        if (detail.IsConfigured)
+        {
+            return detail;
+        }
+
+        return AbilityPresentationFallback.ResolveForUi(controlsPredator, slotNumber, detail);
+    }
+
+    public string GetClassDisplayName()
+    {
+        if (controlsPredator)
+        {
+            return predatorClassManager != null
+                ? predatorClassManager.GetClassDisplayName()
+                : "Predator";
+        }
+
+        return survivorClassManager != null
+            ? survivorClassManager.GetClassDisplayName()
+            : "Survivor";
+    }
+
+    public string GetClassSummary()
+    {
+        if (controlsPredator)
+        {
+            return predatorClassManager != null
+                ? predatorClassManager.GetClassSummary()
+                : "Predator";
+        }
+
+        return survivorClassManager != null
+            ? survivorClassManager.GetClassSummary()
+            : "Survivor";
     }
 
     public bool HasSufficientMana(int slotNumber)
@@ -558,23 +644,36 @@ public class AbilityController : MonoBehaviour
 
     private string GetResolvedAbilityName(int slotNumber)
     {
-        if (controlsPredator)
+        AbilityDetail detail = GetAbilityDetail(slotNumber);
+        string className = GetClassDisplayName();
+        if (detail.HasDisplayName)
         {
-            switch (slotNumber)
-            {
-                case 1: return "Relentless Hook - Shrapnel Spray";
-                case 2: return "Relentless Hook - Harpoon Tether";
-                case 3: return "Relentless Hook - Rejuvenation Tonic";
-                default: return "Relentless Hook - Endless Barrage";
-            }
+            return className + " - " + detail.displayName;
         }
 
-        switch (slotNumber)
+        return className + " - Slot " + slotNumber;
+    }
+
+    private void LogAbilityCast(int slotNumber)
+    {
+        AbilityDetail detail = GetAbilityDetail(slotNumber);
+        string roleLabel = controlsPredator ? "Predator" : GetClassDisplayName();
+        string abilityLabel = detail.HasDisplayName ? detail.displayName : "Slot " + slotNumber;
+
+        if (logAbilityCasts)
         {
-            case 1: return "Field Medic - Biotic Dart";
-            case 2: return "Field Medic - Healing Pulse";
-            case 3: return "Field Medic - Tether";
-            default: return "Field Medic - Protection Zone";
+            Debug.Log("[AbilityCast] " + roleLabel + " used " + abilityLabel);
+        }
+
+        if (!notifyUiOnCast)
+        {
+            return;
+        }
+
+        ManiaGameUI ui = FindFirstObjectByType<ManiaGameUI>();
+        if (ui != null)
+        {
+            ui.ShowAbilityCastFlash(detail);
         }
     }
 
@@ -655,13 +754,25 @@ public class AbilityController : MonoBehaviour
 
     private void SpawnDebugVfx(int slotNumber, bool hasAssignedVfx)
     {
+        AbilityDetail detail = GetAbilityDetail(slotNumber);
+
+        if (detail.castVfxPrefab != null)
+        {
+            GameObject castVfx = Instantiate(detail.castVfxPrefab, transform.position, transform.rotation);
+            Debug.Log("[AbilityVFX] Spawned cast VFX: " + castVfx.name + " for slot " + slotNumber);
+            Destroy(castVfx, Mathf.Max(0.1f, placeholderVfxLifetime));
+            return;
+        }
+
         if (hasAssignedVfx || !spawnPlaceholderVfx)
         {
             return;
         }
 
         PrimitiveType type = slotNumber == 4 ? PrimitiveType.Cylinder : PrimitiveType.Sphere;
-        Color tint = controlsPredator ? new Color(1f, 0.4f, 0.1f, 1f) : new Color(0.2f, 0.95f, 0.4f, 1f);
+        Color tint = detail.themeColor.a > 0.01f
+            ? detail.themeColor
+            : (controlsPredator ? new Color(1f, 0.4f, 0.1f, 1f) : new Color(0.2f, 0.95f, 0.4f, 1f));
         float size = slotNumber == 4 ? 1.6f : 0.45f;
         Vector3 pos = transform.position + Vector3.up * (slotNumber == 4 ? 0.05f : 1f);
 
@@ -693,12 +804,19 @@ public class AbilityController : MonoBehaviour
 
     private void PlaySlotSound(int slotNumber)
     {
+        AbilityDetail detail = GetAbilityDetail(slotNumber);
+        AudioClip clip = detail.castSound != null ? detail.castSound : GetSlotSound(slotNumber);
+
         if (controlsPredator)
         {
+            if (clip != null)
+            {
+                PlayAbilityClip(clip, AbilityPlaceholderSound.Generic, clip == null);
+            }
+
             return;
         }
 
-        AudioClip clip = GetSlotSound(slotNumber);
         AbilityPlaceholderSound fallback = slotNumber <= 2
             ? AbilityPlaceholderSound.Heal
             : AbilityPlaceholderSound.Generic;

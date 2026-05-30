@@ -76,6 +76,15 @@ public class SurvivorClassManager : MonoBehaviour
     [Tooltip("Seconds between sanctuary heal ticks.")]
     public float sanctuaryTickInterval = 1.25f;
 
+    [Header("Medic - Ability Identity")]
+    public string medicClassDisplayName = "Field Medic";
+    [TextArea(2, 4)]
+    public string medicClassSummary = "Medic — Heal / mobility support. Weak alone, strong near allies.";
+    public AbilityDetail medicSlot1Detail;
+    public AbilityDetail medicSlot2Detail;
+    public AbilityDetail medicSlot3Detail;
+    public AbilityDetail medicSlot4Detail;
+
     [Header("Warden - Rocket Flail")]
     public float rocketFlailRange = 2.6f;
     public float rocketFlailArc = 100f;
@@ -145,6 +154,138 @@ public class SurvivorClassManager : MonoBehaviour
         unitHealth = GetComponent<UnitHealth>();
         characterController = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
+        EnsureMedicAbilityDetails();
+    }
+
+    public string GetClassDisplayName()
+    {
+        switch (activeClass)
+        {
+            case SurvivorClass.Medic:
+                return medicClassDisplayName;
+            case SurvivorClass.Warden:
+                return "Field Warden";
+            default:
+                return "Spirit Weaver";
+        }
+    }
+
+    public string GetClassSummary()
+    {
+        if (activeClass == SurvivorClass.Medic)
+        {
+            return medicClassSummary;
+        }
+
+        return GetClassDisplayName();
+    }
+
+    public AbilityDetail GetAbilityDetail(int slotNumber)
+    {
+        EnsureMedicAbilityDetails();
+
+        if (activeClass == SurvivorClass.Medic)
+        {
+            switch (slotNumber)
+            {
+                case 1: return medicSlot1Detail;
+                case 2: return medicSlot2Detail;
+                case 3: return medicSlot3Detail;
+                case 4: return medicSlot4Detail;
+            }
+        }
+
+        return AbilityDetail.CreateFallback(slotNumber, activeClass.ToString());
+    }
+
+    private void EnsureMedicAbilityDetails()
+    {
+        if (!medicSlot1Detail.IsConfigured)
+        {
+            medicSlot1Detail = CreateDefaultMedicSlot1Detail();
+        }
+
+        if (!medicSlot2Detail.IsConfigured)
+        {
+            medicSlot2Detail = CreateDefaultMedicSlot2Detail();
+        }
+
+        if (!medicSlot3Detail.IsConfigured)
+        {
+            medicSlot3Detail = CreateDefaultMedicSlot3Detail();
+        }
+
+        if (!medicSlot4Detail.IsConfigured)
+        {
+            medicSlot4Detail = CreateDefaultMedicSlot4Detail();
+        }
+
+        SyncMedicPresentationHooks();
+    }
+
+    private void SyncMedicPresentationHooks()
+    {
+        if (medicSlot1Detail.castVfxPrefab == null)
+        {
+            medicSlot1Detail.castVfxPrefab = bioticDartProjectilePrefab;
+        }
+
+        if (medicSlot4Detail.castVfxPrefab == null)
+        {
+            medicSlot4Detail.castVfxPrefab = immortalityFieldPrefab;
+        }
+    }
+
+    private static AbilityDetail CreateDefaultMedicSlot1Detail()
+    {
+        return new AbilityDetail
+        {
+            displayName = "Biotic Dart",
+            buttonLabel = "Biotic",
+            shortDescription = "Heal an ally or knock the predator back.",
+            flavorText = "A quick shot that saves friends or creates breathing room.",
+            roleTag = "Heal / Peel",
+            themeColor = new Color(0.35f, 0.95f, 0.55f, 1f)
+        };
+    }
+
+    private static AbilityDetail CreateDefaultMedicSlot2Detail()
+    {
+        return new AbilityDetail
+        {
+            displayName = "Heal Pulse",
+            buttonLabel = "Pulse",
+            shortDescription = "Heal nearby wounded allies.",
+            flavorText = "A short-range burst of field medicine.",
+            roleTag = "Area Heal",
+            themeColor = new Color(0.45f, 0.85f, 1f, 1f)
+        };
+    }
+
+    private static AbilityDetail CreateDefaultMedicSlot3Detail()
+    {
+        return new AbilityDetail
+        {
+            displayName = "Tether / Blink",
+            buttonLabel = "Tether",
+            shortDescription = "Dash to an ally. No ally: blink forward.",
+            flavorText = "Emergency movement for saving allies or escaping danger.",
+            roleTag = "Mobility",
+            themeColor = new Color(0.72f, 0.62f, 1f, 1f)
+        };
+    }
+
+    private static AbilityDetail CreateDefaultMedicSlot4Detail()
+    {
+        return new AbilityDetail
+        {
+            displayName = "Sanctuary",
+            buttonLabel = "Sanct.",
+            shortDescription = "Create a healing safe zone.",
+            flavorText = "A temporary holdout zone when everything goes wrong.",
+            roleTag = "Ultimate / Zone",
+            themeColor = new Color(1f, 0.82f, 0.35f, 1f)
+        };
     }
 
     public bool ExecutePrimary()

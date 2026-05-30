@@ -47,6 +47,8 @@ public class AbilityTooltipPanel : MonoBehaviour
         public string cost;
         public string rangeTarget;
         public string tip;
+        public string roleTag;
+        public Color themeColor;
     }
 
     private void Awake()
@@ -94,12 +96,18 @@ public class AbilityTooltipPanel : MonoBehaviour
         }
 
         AbilityTooltipData data = GetTooltipData(isPredator, slotNumber);
+        AbilityDetail detail = GetAbilityDetail(isPredator, slotNumber);
         data.cooldown = GetLiveCooldown(isPredator, slotNumber, data.cooldown);
         data.cost = GetLiveManaCostText(isPredator, slotNumber, data.cost);
         string status = GetAbilityStatus(isPredator, slotNumber);
 
         ApplyTooltipFontSizes();
         SetText(tooltipAbilityNameText, data.abilityName);
+        if (tooltipAbilityNameText != null && detail.themeColor.a > 0.01f)
+        {
+            tooltipAbilityNameText.color = detail.themeColor;
+        }
+
         SetText(tooltipBodyText, BuildCompactBody(data, status));
 
         tooltipRoot.SetActive(true);
@@ -221,17 +229,43 @@ public class AbilityTooltipPanel : MonoBehaviour
     {
         if (!compactMode || showDetailedTooltip)
         {
-            return data.description + "\n\n"
+            return BuildRoleTagLine(data.roleTag, data.themeColor)
+                + data.description + "\n\n"
                 + "Cost: " + data.cost + "\n"
                 + "CD: " + data.cooldown.ToString("0.0") + "s\n"
-                + "Effect: " + data.effect + "\n"
-                + "Tip: " + data.tip + "\n"
                 + status;
         }
 
-        return data.description + "\n"
-            + data.cost + " • " + data.cooldown.ToString("0") + "s CD"
-            + (string.IsNullOrEmpty(status) || status == "Ready" ? string.Empty : "\n" + status);
+        string body = BuildRoleTagLine(data.roleTag, data.themeColor)
+            + data.description + "\n"
+            + data.cost + " • " + data.cooldown.ToString("0.##") + "s CD";
+
+        if (!string.IsNullOrEmpty(status) && status != "Ready")
+        {
+            body += "\n" + status;
+        }
+
+        return body;
+    }
+
+    private static string BuildRoleTagLine(string roleTag, Color themeColor)
+    {
+        if (string.IsNullOrWhiteSpace(roleTag))
+        {
+            return string.Empty;
+        }
+
+        string hex = ColorUtility.ToHtmlStringRGB(themeColor.a > 0.01f ? themeColor : Color.white);
+        return "<color=#" + hex + "><size=80%>" + roleTag + "</size></color>\n";
+    }
+
+    private AbilityDetail GetAbilityDetail(bool isPredator, int slotNumber)
+    {
+        AbilityController controller = GetAbilityController(isPredator);
+        AbilityDetail liveDetail = controller != null
+            ? controller.GetAbilityDetail(slotNumber)
+            : default;
+        return AbilityPresentationFallback.ResolveForUi(isPredator, slotNumber, liveDetail);
     }
 
     private void FitPanelToContent()
@@ -420,112 +454,29 @@ public class AbilityTooltipPanel : MonoBehaviour
 
     private AbilityTooltipData GetTooltipData(bool isPredator, int slotNumber)
     {
-        if (isPredator)
-        {
-            switch (slotNumber)
-            {
-                case 1:
-                    return new AbilityTooltipData
-                    {
-                        className = "Relentless Hook",
-                        abilityName = "Spray",
-                        description = "Short-range forward shotgun blast.",
-                        cooldown = 3.75f,
-                        effect = "16 dmg cone + knockback 6.5",
-                        cost = "8 mana",
-                        rangeTarget = "8 unit cone in front",
-                        tip = "Fight up close and scare survivors."
-                    };
-                case 2:
-                    return new AbilityTooltipData
-                    {
-                        className = "Relentless Hook",
-                        abilityName = "Hook",
-                        description = "Pulls one Survivor from long range.",
-                        cooldown = 9f,
-                        effect = "Long-range chain pull + 10 damage on hit",
-                        cost = "25 mana",
-                        rangeTarget = "24 unit line skillshot",
-                        tip = "Catch fleeing prey."
-                    };
-                case 3:
-                    return new AbilityTooltipData
-                    {
-                        className = "Relentless Hook",
-                        abilityName = "Tonic",
-                        description = "Channel toxic gas while recovering.",
-                        cooldown = 10f,
-                        effect = "Heal 35, slow self, toxic gas DPS + heavy poison slow",
-                        cost = "35 mana",
-                        rangeTarget = "Self + 4.5 unit gas radius",
-                        tip = "Use before diving."
-                    };
-                default:
-                    return new AbilityTooltipData
-                    {
-                        className = "Relentless Hook",
-                        abilityName = "Barrage",
-                        description = "Rapid long-range knockback blasts.",
-                        cooldown = 16f,
-                        effect = "Ultimate bomb line: repeated damage/knockback, leaves temporary craters",
-                        cost = "60 mana",
-                        rangeTarget = "20 unit cone in front",
-                        tip = "Scatter survivors — RUN NOW."
-                    };
-            }
-        }
+        AbilityController controller = GetAbilityController(isPredator);
+        AbilityDetail liveDetail = controller != null
+            ? controller.GetAbilityDetail(slotNumber)
+            : default;
+        AbilityDetail detail = AbilityPresentationFallback.ResolveForUi(isPredator, slotNumber, liveDetail);
 
-        switch (slotNumber)
+        float fallbackCooldown = controller != null
+            ? controller.GetSlotCooldownDuration(slotNumber)
+            : 0f;
+        string fallbackCost = controller != null
+            ? controller.GetSlotManaCost(slotNumber).ToString("0") + " mana"
+            : string.Empty;
+
+        return new AbilityTooltipData
         {
-            case 1:
-                return new AbilityTooltipData
-                {
-                    className = "Field Medic",
-                    abilityName = "Biotic Dart",
-                    description = "Heal ally or knock predator back.",
-                    cooldown = 2.5f,
-                    effect = "Heal 3 HP or 6 dmg + knockback",
-                    cost = "2 mana",
-                    rangeTarget = "First target in aim line",
-                    tip = "Allies block shots to monsters behind them."
-                };
-            case 2:
-                return new AbilityTooltipData
-                {
-                    className = "Field Medic",
-                    abilityName = "Heal Pulse",
-                    description = "Heal you and nearby wounded allies.",
-                    cooldown = 8f,
-                    effect = "Heal 4 HP each",
-                    cost = "5 mana",
-                    rangeTarget = "Radius around you",
-                    tip = "Stand near allies."
-                };
-            case 3:
-                return new AbilityTooltipData
-                {
-                    className = "Field Medic",
-                    abilityName = "Tether",
-                    description = "Dash to ally. No ally: blink forward.",
-                    cooldown = 10f,
-                    effect = "Mobility escape",
-                    cost = "4 mana",
-                    rangeTarget = "Ally or aim direction",
-                    tip = "Escape or regroup."
-                };
-            default:
-                return new AbilityTooltipData
-                {
-                    className = "Field Medic",
-                    abilityName = "Sanctuary",
-                    description = "Drop a strong healing zone.",
-                    cooldown = 28f,
-                    effect = "3 HP/tick for 7s in radius",
-                    cost = "12 mana",
-                    rangeTarget = "At your position",
-                    tip = "Use under pressure."
-                };
-        }
+            className = controller != null ? controller.GetClassDisplayName() : string.Empty,
+            abilityName = detail.displayName,
+            description = detail.shortDescription,
+            cooldown = fallbackCooldown,
+            cost = fallbackCost,
+            roleTag = detail.roleTag,
+            themeColor = detail.themeColor
+        };
     }
 
     private void ApplyTooltipFontSizes()

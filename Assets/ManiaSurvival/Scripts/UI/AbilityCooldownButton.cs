@@ -34,7 +34,12 @@ public class AbilityCooldownButton : MonoBehaviour
     [Tooltip("If true, the Ability Name Text is overwritten with the formatted label. Turn off if you want to author the label manually.")]
     public bool useAbilityLabel = true;
 
+    [Header("Icon")]
+    public Image abilityIconImage;
+    public bool hideIconWhenMissing = true;
+
     private float legacyCooldownEndTime;
+    private AbilityDetail cachedDetail;
 
     public bool IsCoolingDown
     {
@@ -73,6 +78,36 @@ public class AbilityCooldownButton : MonoBehaviour
         manaCost = Mathf.Max(0, cost);
         CacheReferences();
         ApplyAbilityLabel();
+    }
+
+    public void SetAbilityPresentation(AbilityDetail detail, int cost)
+    {
+        cachedDetail = detail;
+        string label = detail.GetButtonLabelOrDisplayName();
+        if (string.IsNullOrWhiteSpace(label) && detail.IsConfigured)
+        {
+            label = detail.displayName;
+        }
+
+        SetAbilityInfo(label, cost);
+        ApplyAbilityIcon(detail.icon);
+    }
+
+    private void ApplyAbilityIcon(Sprite icon)
+    {
+        if (abilityIconImage == null)
+        {
+            return;
+        }
+
+        if (icon != null)
+        {
+            abilityIconImage.sprite = icon;
+            abilityIconImage.enabled = true;
+            return;
+        }
+
+        abilityIconImage.enabled = !hideIconWhenMissing;
     }
 
     public void ApplyAbilityLabel()

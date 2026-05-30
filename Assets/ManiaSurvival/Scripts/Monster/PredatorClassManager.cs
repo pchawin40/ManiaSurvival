@@ -147,6 +147,15 @@ public class PredatorClassManager : MonoBehaviour
     public AudioClip barrageBombSound;
     public AudioClip barrageEndSound;
 
+    [Header("Relentless Hook - Ability Identity")]
+    public string relentlessHookDisplayName = "Relentless Hook";
+    [TextArea(2, 4)]
+    public string relentlessHookClassSummary = "Relentless Hook — Catch predator. Pull survivors, zone them, punish bad positioning.";
+    public AbilityDetail relentlessSlot1Detail;
+    public AbilityDetail relentlessSlot2Detail;
+    public AbilityDetail relentlessSlot3Detail;
+    public AbilityDetail relentlessSlot4Detail;
+
     private Coroutine relentlessBarrageRoutine;
     private bool isBarrageActive;
     private readonly List<GameObject> barragePulseVfx = new List<GameObject>();
@@ -169,6 +178,142 @@ public class PredatorClassManager : MonoBehaviour
         {
             abilityAudioSource = GetComponent<AudioSource>();
         }
+
+        EnsureRelentlessAbilityDetails();
+    }
+
+    public string GetClassDisplayName()
+    {
+        return activeClass == PredatorClass.RelentlessHook ? relentlessHookDisplayName : activeClass.ToString();
+    }
+
+    public string GetClassSummary()
+    {
+        if (activeClass == PredatorClass.RelentlessHook)
+        {
+            return relentlessHookClassSummary;
+        }
+
+        return GetClassDisplayName();
+    }
+
+    public AbilityDetail GetAbilityDetail(int slotNumber)
+    {
+        EnsureRelentlessAbilityDetails();
+
+        switch (slotNumber)
+        {
+            case 1: return relentlessSlot1Detail;
+            case 2: return relentlessSlot2Detail;
+            case 3: return relentlessSlot3Detail;
+            case 4: return relentlessSlot4Detail;
+            default: return AbilityDetail.CreateFallback(slotNumber, relentlessHookDisplayName);
+        }
+    }
+
+    private void EnsureRelentlessAbilityDetails()
+    {
+        if (!relentlessSlot1Detail.IsConfigured)
+        {
+            relentlessSlot1Detail = CreateDefaultRelentlessSlot1Detail();
+        }
+
+        if (!relentlessSlot2Detail.IsConfigured)
+        {
+            relentlessSlot2Detail = CreateDefaultRelentlessSlot2Detail();
+        }
+
+        if (!relentlessSlot3Detail.IsConfigured)
+        {
+            relentlessSlot3Detail = CreateDefaultRelentlessSlot3Detail();
+        }
+
+        if (!relentlessSlot4Detail.IsConfigured)
+        {
+            relentlessSlot4Detail = CreateDefaultRelentlessSlot4Detail();
+        }
+
+        SyncRelentlessPresentationHooks();
+    }
+
+    private void SyncRelentlessPresentationHooks()
+    {
+        if (relentlessSlot1Detail.castSound == null)
+        {
+            relentlessSlot1Detail.castSound = spraySound;
+        }
+
+        if (relentlessSlot2Detail.castSound == null)
+        {
+            relentlessSlot2Detail.castSound = hookFireSound;
+        }
+
+        if (relentlessSlot2Detail.hitSound == null)
+        {
+            relentlessSlot2Detail.hitSound = hookHitSound;
+        }
+
+        if (relentlessSlot3Detail.castSound == null)
+        {
+            relentlessSlot3Detail.castSound = tonicSound;
+        }
+
+        if (relentlessSlot4Detail.castSound == null)
+        {
+            relentlessSlot4Detail.castSound = barrageStartSound;
+        }
+    }
+
+    private static AbilityDetail CreateDefaultRelentlessSlot1Detail()
+    {
+        return new AbilityDetail
+        {
+            displayName = "Razor Spray",
+            buttonLabel = "Spray",
+            shortDescription = "Fire a short cone blast that damages and knocks survivors back.",
+            flavorText = "A brutal fan of shrapnel meant to break formations.",
+            roleTag = "Cone / Poke",
+            themeColor = new Color(1f, 0.45f, 0.25f, 1f)
+        };
+    }
+
+    private static AbilityDetail CreateDefaultRelentlessSlot2Detail()
+    {
+        return new AbilityDetail
+        {
+            displayName = "Harpoon Hook",
+            buttonLabel = "Hook",
+            shortDescription = "Pull a survivor out of position.",
+            flavorText = "One bad step and the predator drags you into danger.",
+            roleTag = "Catch / Control",
+            themeColor = new Color(0.85f, 0.55f, 0.25f, 1f)
+        };
+    }
+
+    private static AbilityDetail CreateDefaultRelentlessSlot3Detail()
+    {
+        return new AbilityDetail
+        {
+            displayName = "Toxic Tonic",
+            buttonLabel = "Tonic",
+            shortDescription = "Heal yourself and release a slowing danger cloud.",
+            flavorText = "The predator recovers while the air turns poisonous.",
+            roleTag = "Self Heal / Zone",
+            themeColor = new Color(0.35f, 0.95f, 0.45f, 1f)
+        };
+    }
+
+    private static AbilityDetail CreateDefaultRelentlessSlot4Detail()
+    {
+        return new AbilityDetail
+        {
+            displayName = "Barrage",
+            buttonLabel = "Barrage",
+            shortDescription = "Warn, then fire repeated cone blasts in front of you.",
+            flavorText = "A telegraphed storm of violence. Move or get shredded.",
+            roleTag = "Ultimate / Burst",
+            themeColor = new Color(1f, 0.3f, 0.2f, 1f)
+        };
     }
 
     private void Update()

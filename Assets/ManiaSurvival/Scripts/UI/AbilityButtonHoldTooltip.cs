@@ -96,24 +96,21 @@ public class AbilityButtonHoldTooltip : MonoBehaviour, IPointerDownHandler, IPoi
 
     private string GetAbilityNameForLog()
     {
-        if (isPredatorButton)
+        if (gameUi == null)
         {
-            switch (abilitySlot)
-            {
-                case 1: return "Spray";
-                case 2: return "Hook";
-                case 3: return "Tonic";
-                default: return "Barrage";
-            }
+            return "Ability";
         }
 
-        switch (abilitySlot)
+        AbilityController controller = isPredatorButton
+            ? gameUi.predatorAbilityController
+            : gameUi.survivorAbilityController;
+
+        if (controller == null)
         {
-            case 1: return "Biotic Dart";
-            case 2: return "Heal Pulse";
-            case 3: return "Tether";
-            default: return "Sanctuary";
+            return "Ability";
         }
+
+        return controller.GetAbilityDetail(abilitySlot).displayName;
     }
 
     private void CastAbility()
