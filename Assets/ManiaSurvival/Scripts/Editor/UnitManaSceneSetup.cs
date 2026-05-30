@@ -47,7 +47,7 @@ public static class UnitManaSceneSetup
 
         if (added > 0)
         {
-            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneDirtyUtility.MarkSceneDirtyIfEditing(scene);
         }
 
         Debug.Log("[MapSetup] Ensured UnitMana on SampleScene players. Added/updated " + added + " component(s).");

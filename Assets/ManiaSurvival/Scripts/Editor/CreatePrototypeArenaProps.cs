@@ -47,7 +47,7 @@ public static class CreatePrototypeArenaProps
 
         EnsureDynamicTerrainBootstrap();
         Undo.RegisterCreatedObjectUndo(parent.gameObject, "Create Prototype Terrain Props");
-        EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+        EditorSceneDirtyUtility.MarkActiveSceneDirtyIfEditing();
         Debug.Log("[PrototypeArenaTerrain] Created " + created + " props (" + skipped + " skipped) under '" + ParentObjectName + "'.");
     }
 
@@ -61,7 +61,7 @@ public static class CreatePrototypeArenaProps
         }
 
         Undo.DestroyObjectImmediate(existing);
-        EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+        EditorSceneDirtyUtility.MarkActiveSceneDirtyIfEditing();
     }
 
     private static Transform CreateParent()

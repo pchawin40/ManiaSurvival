@@ -103,7 +103,7 @@ public class PrototypeMapPropsGenerator : EditorWindow
         }
 
         Undo.RegisterCreatedObjectUndo(parent.gameObject, "Generate Prototype Props");
-        EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+        EditorSceneDirtyUtility.MarkActiveSceneDirtyIfEditing();
 
         if (logPlacementSummary)
         {
@@ -123,7 +123,7 @@ public class PrototypeMapPropsGenerator : EditorWindow
         }
 
         Undo.DestroyObjectImmediate(existing);
-        EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+        EditorSceneDirtyUtility.MarkActiveSceneDirtyIfEditing();
         Debug.Log("[PrototypeMapProps] Cleared '" + ParentObjectName + "'.");
     }
 

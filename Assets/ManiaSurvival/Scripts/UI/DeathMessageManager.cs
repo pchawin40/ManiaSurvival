@@ -260,7 +260,7 @@ public class DeathMessageManager : MonoBehaviour
         tmp.color = genericKillColor;
         tmp.text = string.Empty;
         tmp.raycastTarget = false;
-        tmp.enableWordWrapping = true;
+        tmp.textWrappingMode = TextWrappingModes.Normal;
 
         deathMessageText = tmp;
         messageRect = rect;

@@ -33,7 +33,7 @@ public static class WaterfallManaZoneSetup
                 existingZone.bonusManaRegenPerSecond = 2f;
             }
 
-            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneDirtyUtility.MarkSceneDirtyIfEditing(scene);
             Debug.Log("[MapSetup] " + ZoneName + " already exists — tuned regen rates.");
             Selection.activeGameObject = existing;
             return;
@@ -90,7 +90,7 @@ public static class WaterfallManaZoneSetup
         zone.bonusManaRegenPerSecond = 2f;
         zone.showDebugLogs = true;
 
-        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneDirtyUtility.MarkSceneDirtyIfEditing(scene);
         Selection.activeGameObject = zoneRoot;
         Debug.Log("[MapSetup] Created " + ZoneName + " at " + position);
     }

@@ -562,7 +562,7 @@ public class AbilityTooltipPanel : MonoBehaviour
             font,
             FontStyles.Normal);
 
-        tooltipBodyText.enableWordWrapping = true;
+        tooltipBodyText.textWrappingMode = TextWrappingModes.Normal;
         tooltipBodyText.overflowMode = TextOverflowModes.Overflow;
         tooltipBodyText.lineSpacing = -2f;
 

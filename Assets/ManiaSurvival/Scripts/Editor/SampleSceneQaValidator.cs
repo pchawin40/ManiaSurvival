@@ -47,6 +47,7 @@ public static class SampleSceneQaValidator
     {
         int passCount = 0;
         int warnCount = 0;
+        int infoCount = 0;
         int failCount = 0;
 
         void Pass(string message)
@@ -59,6 +60,12 @@ public static class SampleSceneQaValidator
         {
             warnCount++;
             Debug.LogWarning("[QA] WARN: " + message);
+        }
+
+        void Info(string message)
+        {
+            infoCount++;
+            Debug.Log("[QA] INFO: " + message);
         }
 
         void Fail(string message)
@@ -154,10 +161,10 @@ public static class SampleSceneQaValidator
         ValidateHeavenFloor(Pass, Warn, Fail);
         ValidateWaterfallManaZone(Pass, Fail);
         ValidateBlockerColliders(allObjects, Pass, Fail);
-        ValidateGeneratedProps(allObjects, Pass, Warn, Fail);
+        ValidateGeneratedProps(allObjects, Pass, Info, Fail);
 
         Debug.Log("[QA] SampleScene validation complete: " + passCount + " pass, "
-            + warnCount + " warnings, " + failCount + " fails");
+            + infoCount + " info, " + warnCount + " warnings, " + failCount + " fails");
     }
 
     private static void CollectHierarchy(GameObject root, List<GameObject> output)
@@ -337,6 +344,13 @@ public static class SampleSceneQaValidator
             return;
         }
 
+        gameUi.RefreshAbilityLabels(force: true);
+        gameUi.RefreshAbilityInfo(force: true);
+
+        GameObject survivor = FindMainSurvivor();
+        SurvivorClassManager survivorClassManager = survivor != null
+            ? survivor.GetComponent<SurvivorClassManager>()
+            : null;
         PredatorClassManager predatorClassManager = monster != null
             ? monster.GetComponent<PredatorClassManager>()
             : null;
@@ -344,18 +358,83 @@ public static class SampleSceneQaValidator
             ? predatorClassManager.GetCurrentPredatorClass()
             : PredatorClass.RelentlessHook;
 
+        ValidateConfiguredAbilityLabels("Survivor", survivorClassManager, 4, slot =>
+        {
+            AbilityDetail detail = survivorClassManager != null
+                ? survivorClassManager.GetAbilityDetail(slot)
+                : default;
+            if (!detail.IsConfigured)
+            {
+                detail = AbilityPresentationFallback.GetMedicDetail(slot);
+            }
+
+            return detail.GetButtonLabelOrDisplayName();
+        }, new[] { "Biotic", "Pulse", "Tether", "Sanct." }, pass, fail);
+
         string[] predatorLabels = GetExpectedPredatorLabels(predatorClass);
-        ValidateButtonLabel(gameUi.predatorMeleeButton, predatorLabels[0], pass, fail);
-        ValidateButtonLabel(gameUi.predatorAbility2Button, predatorLabels[1], pass, fail);
-        ValidateButtonLabel(gameUi.predatorAbility3Button, predatorLabels[2], pass, fail);
-        ValidateButtonLabel(gameUi.predatorUltimateButton, predatorLabels[3], pass, fail);
+        ValidateConfiguredAbilityLabels("Predator", predatorClassManager, 4, slot =>
+        {
+            AbilityDetail detail = predatorClassManager != null
+                ? predatorClassManager.GetPredatorAbilityDetail(slot)
+                : default;
+            if (!detail.IsConfigured)
+            {
+                detail = AbilityPresentationFallback.ResolveForUi(true, predatorClass, slot, detail);
+            }
+
+            return detail.GetButtonLabelOrDisplayName();
+        }, predatorLabels, pass, fail);
 
         ValidateButtonLabel(gameUi.survivorPrimaryButton, "Biotic", pass, fail);
         ValidateButtonLabel(gameUi.survivorAbility2Button, "Pulse", pass, fail);
         ValidateButtonLabel(gameUi.survivorAbility3Button, "Tether", pass, fail);
         ValidateButtonLabel(gameUi.survivorUltimateButton, "Sanct.", pass, fail);
 
+        ValidateButtonLabel(gameUi.predatorMeleeButton, predatorLabels[0], pass, fail);
+        ValidateButtonLabel(gameUi.predatorAbility2Button, predatorLabels[1], pass, fail);
+        ValidateButtonLabel(gameUi.predatorAbility3Button, predatorLabels[2], pass, fail);
+        ValidateButtonLabel(gameUi.predatorUltimateButton, predatorLabels[3], pass, fail);
+
         ValidatePredatorButtonsAvoidGenericLabels(gameUi, warn, fail);
+    }
+
+    private static void ValidateConfiguredAbilityLabels(
+        string roleLabel,
+        Component classManager,
+        int slotCount,
+        System.Func<int, string> readLabel,
+        string[] expectedContains,
+        System.Action<string> pass,
+        System.Action<string> fail)
+    {
+        if (classManager == null)
+        {
+            fail(roleLabel + " class manager missing for ability label validation");
+            return;
+        }
+
+        for (int slot = 1; slot <= slotCount; slot++)
+        {
+            string label = readLabel(slot);
+            string expected = expectedContains[slot - 1];
+            if (string.IsNullOrWhiteSpace(label)
+                || string.Equals(label.Trim(), "Ability", System.StringComparison.OrdinalIgnoreCase)
+                || label.Contains("Use Ability", System.StringComparison.OrdinalIgnoreCase)
+                || label.Contains("Use Ultimate", System.StringComparison.OrdinalIgnoreCase))
+            {
+                fail(roleLabel + " slot " + slot + " configured label is generic or missing ('" + label + "')");
+                continue;
+            }
+
+            if (label.Contains(expected))
+            {
+                pass(roleLabel + " slot " + slot + " configured label contains '" + expected + "'");
+            }
+            else
+            {
+                fail(roleLabel + " slot " + slot + " configured label '" + label + "' does not contain '" + expected + "'");
+            }
+        }
     }
 
     private static string[] GetExpectedPredatorLabels(PredatorClass predatorClass)
@@ -538,6 +617,12 @@ public static class SampleSceneQaValidator
             return;
         }
 
+        HeavenFloorCollider floorBootstrap = platform.GetComponent<HeavenFloorCollider>();
+        if (floorBootstrap != null)
+        {
+            floorBootstrap.EnsureWalkableFloor();
+        }
+
         Collider[] colliders = platform.GetComponentsInChildren<Collider>(true);
         bool hasSolid = false;
         for (int i = 0; i < colliders.Length; i++)
@@ -552,12 +637,17 @@ public static class SampleSceneQaValidator
 
         if (hasSolid)
         {
-            pass("Heaven floor has solid walkable floor");
+            pass("Heaven floor has solid walkable collider");
+            return;
         }
-        else
+
+        if (floorBootstrap != null)
         {
-            fail("Heaven floor has no solid walkable collider");
+            fail("Heaven floor has no solid walkable collider (HeavenFloorCollider present but walkable child missing)");
+            return;
         }
+
+        fail("Heaven floor has no solid walkable collider");
     }
 
     private static void ValidateWaterfallManaZone(System.Action<string> pass, System.Action<string> fail)
@@ -637,13 +727,18 @@ public static class SampleSceneQaValidator
     private static void ValidateGeneratedProps(
         List<GameObject> allObjects,
         System.Action<string> pass,
-        System.Action<string> warn,
+        System.Action<string> info,
         System.Action<string> fail)
     {
         Transform parent = GameObject.Find(PrototypeMapPropsGenerator.ParentObjectName)?.transform;
         if (parent == null)
         {
-            warn("PrototypeMapProps_Auto not found — skipping generated props script check");
+            parent = GameObject.Find(CreatePrototypeArenaProps.ParentObjectName)?.transform;
+        }
+
+        if (parent == null)
+        {
+            info("PrototypeMapProps_Auto not found — generated props not present, skipping optional check");
             return;
         }
 

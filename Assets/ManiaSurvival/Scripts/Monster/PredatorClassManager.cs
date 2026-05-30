@@ -413,7 +413,7 @@ public partial class PredatorClassManager : MonoBehaviour
             case PredatorClass.SwarmOverlord: return CastSwarmHive();
             case PredatorClass.SubterraneanStalker: CastSubterraneanTectonicFault(); break;
             case PredatorClass.DoomShieldColossus: CastDoomShieldCageMatch(); break;
-            case PredatorClass.Juggernaut: StartCoroutine(CastJuggernautMeteorStrikeCoroutine()); break;
+            case PredatorClass.Juggernaut: return CastJuggernautMeteor();
             case PredatorClass.CyberNinja: CastCyberNinjaDragonblade(); break;
             case PredatorClass.Vanguard: CastVanguardEarthshatter(); break;
             case PredatorClass.RelentlessHook: return StartRelentlessBarrage();
