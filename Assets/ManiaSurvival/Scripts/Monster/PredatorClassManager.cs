@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public enum PredatorClass { SwarmOverlord, SubterraneanStalker, DoomShieldColossus, Juggernaut, CyberNinja, Vanguard, RelentlessHook }
@@ -64,6 +65,7 @@ public class PredatorClassManager : MonoBehaviour
     // CyberNinja: cooldown reset on kill.
     public float cyberSwiftStrikeCooldown = 8f;
     private float nextCyberSwiftStrikeTime;
+    private Coroutine relentlessBarrageRoutine;
 
     private void Awake()
     {
@@ -85,6 +87,15 @@ public class PredatorClassManager : MonoBehaviour
         if (dragonbladeEndTime > 0f && Time.time >= dragonbladeEndTime)
         {
             dragonbladeEndTime = 0f;
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (relentlessBarrageRoutine != null)
+        {
+            StopCoroutine(relentlessBarrageRoutine);
+            relentlessBarrageRoutine = null;
         }
     }
 
@@ -174,7 +185,7 @@ public class PredatorClassManager : MonoBehaviour
             case PredatorClass.Juggernaut: StartCoroutine(CastJuggernautMeteorStrikeCoroutine()); break;
             case PredatorClass.CyberNinja: CastCyberNinjaDragonblade(); break;
             case PredatorClass.Vanguard: CastVanguardEarthshatter(); break;
-            case PredatorClass.RelentlessHook: StartCoroutine(CastRelentlessWholeHogCoroutine()); break;
+            case PredatorClass.RelentlessHook: StartRelentlessBarrage(); break;
         }
 
         return true;
@@ -198,10 +209,20 @@ public class PredatorClassManager : MonoBehaviour
             case PredatorClass.Juggernaut: StartCoroutine(CastJuggernautMeteorStrikeCoroutine()); break;
             case PredatorClass.CyberNinja: CastCyberNinjaDragonblade(); break;
             case PredatorClass.Vanguard: CastVanguardEarthshatter(); break;
-            case PredatorClass.RelentlessHook: StartCoroutine(CastRelentlessWholeHogCoroutine()); break;
+            case PredatorClass.RelentlessHook: StartRelentlessBarrage(); break;
         }
 
         return true;
+    }
+
+    private void StartRelentlessBarrage()
+    {
+        if (relentlessBarrageRoutine != null)
+        {
+            StopCoroutine(relentlessBarrageRoutine);
+        }
+
+        relentlessBarrageRoutine = StartCoroutine(CastRelentlessWholeHogCoroutine());
     }
 
     private bool TryConsumeSharedGcd(int triggerHash)
@@ -391,7 +412,7 @@ public class PredatorClassManager : MonoBehaviour
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            characterController.Move(dir * speed * Time.deltaTime);
+            TryMoveSelf(dir * speed * Time.deltaTime);
             yield return null;
         }
 
@@ -494,7 +515,7 @@ public class PredatorClassManager : MonoBehaviour
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            characterController.Move(dir * speed * Time.deltaTime);
+            TryMoveSelf(dir * speed * Time.deltaTime);
             yield return null;
         }
 
@@ -555,7 +576,7 @@ public class PredatorClassManager : MonoBehaviour
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            CollisionFlags flags = characterController.Move(dir * speed * Time.deltaTime);
+            CollisionFlags flags = TryMoveSelf(dir * speed * Time.deltaTime);
             if ((flags & CollisionFlags.Sides) != 0)
             {
                 slammedOnWall = true;
@@ -686,7 +707,7 @@ public class PredatorClassManager : MonoBehaviour
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            characterController.Move(dir * speed * Time.deltaTime);
+            TryMoveSelf(dir * speed * Time.deltaTime);
             yield return null;
         }
 
@@ -760,7 +781,7 @@ public class PredatorClassManager : MonoBehaviour
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            characterController.Move(dir * speed * Time.deltaTime);
+            TryMoveSelf(dir * speed * Time.deltaTime);
             if (pinned == null)
             {
                 pinned = FindClosestSurvivor(transform.position, 1.1f);
@@ -820,86 +841,155 @@ public class PredatorClassManager : MonoBehaviour
 
     private void CastRelentlessHookScrapGun()
     {
-        const int pellets = 10;
-        for (int i = 0; i < pellets; i++)
+        const float range = 7f;
+        const float halfAngle = 35f;
+        const int damage = 2;
+
+        Vector3 origin = GetChestCastOrigin();
+        Vector3 forward = GetFlatForward();
+        UnitHealth[] candidates = GetSurvivorsInRange(origin + forward * (range * 0.5f), range + 1f);
+        List<UnitHealth> hits = new List<UnitHealth>();
+
+        for (int i = 0; i < candidates.Length; i++)
         {
-            Vector3 dir = Quaternion.Euler(Random.Range(-10f, 10f), Random.Range(-20f, 20f), 0f) * transform.forward;
-            if (Physics.Raycast(GetProjectileSpawnPosition(), dir, out RaycastHit hit, 8f, targetLayers, QueryTriggerInteraction.Ignore))
+            UnitHealth candidate = candidates[i];
+            if (candidate == null || candidate.IsDead || candidate.gameObject == gameObject)
             {
-                UnitHealth h = hit.collider.GetComponentInParent<UnitHealth>();
-                if (h != null && h.CompareTag(survivorTag) && !h.IsDead)
-                {
-                    h.TakeDamage(3, gameObject);
-                }
+                continue;
+            }
+
+            Vector3 toTarget = candidate.transform.position - origin;
+            toTarget.y = 0f;
+            float distance = toTarget.magnitude;
+            float angle = distance <= 0.05f ? 0f : Vector3.Angle(forward, toTarget.normalized);
+            bool valid = distance > 0.05f && distance <= range && angle <= halfAngle;
+
+            if (showDebugLogs)
+            {
+                Debug.Log("[PredatorAbility] Spray candidate " + candidate.name + ": distance "
+                    + distance.ToString("0.0") + " angle " + angle.ToString("0.0") + " valid "
+                    + (valid ? "yes" : "no"));
+            }
+
+            if (valid)
+            {
+                hits.Add(candidate);
             }
         }
+
+        for (int i = 0; i < hits.Count; i++)
+        {
+            hits[i].TakeDamage(damage, gameObject);
+            SpawnHitMarkerVfx(hits[i].transform.position + Vector3.up * 1f, 0.35f);
+        }
+
+        if (showDebugLogs)
+        {
+            Debug.DrawRay(origin, forward * range, Color.magenta, 1f);
+            Debug.DrawRay(origin, Quaternion.Euler(0f, halfAngle, 0f) * forward * range, Color.magenta, 1f);
+            Debug.DrawRay(origin, Quaternion.Euler(0f, -halfAngle, 0f) * forward * range, Color.magenta, 1f);
+        }
+
+        SpawnForwardBurstVfx(origin, forward, range, 0.35f, new Color(0.85f, 0.35f, 0.95f, 0.55f));
+        Debug.Log("[PredatorAbility] Spray hit " + hits.Count + " survivors");
     }
 
     private IEnumerator CastRelentlessChainHookCoroutine()
     {
-        Vector3 origin = GetProjectileSpawnPosition();
-        Vector3 dir = transform.forward;
+        const float range = 12f;
+        const float pullForwardDistance = 1.75f;
+        const float pullDuration = 0.25f;
+
+        Vector3 origin = GetChestCastOrigin();
+        Vector3 dir = GetFlatForward();
+        string blockReason;
+        UnitHealth target = ResolveHookTarget(origin, dir, range, out blockReason);
+
         if (hookProjectilePrefab != null)
         {
             GameObject hook = Instantiate(hookProjectilePrefab, origin, Quaternion.LookRotation(dir));
-            Debug.Log("[AbilityVFX] Spawned VFX: " + hook.name + ", position=" + hook.transform.position + ", duration=0.50s");
+            Destroy(hook, 0.6f);
+        }
+        else
+        {
+            SpawnHookLineVfx(origin, dir, range, target != null, 0.45f);
         }
 
-        if (Physics.Raycast(origin, dir, out RaycastHit hit, 14f, targetLayers, QueryTriggerInteraction.Ignore))
+        if (target == null)
         {
-            UnitHealth target = hit.collider.GetComponentInParent<UnitHealth>();
-            if (target != null && target.CompareTag(survivorTag) && !target.IsDead)
-            {
-                float duration = 0.2f;
-                float elapsed = 0f;
-                Vector3 start = target.transform.position;
-                Vector3 end = transform.position + transform.forward * 1.0f;
-                while (elapsed < duration)
-                {
-                    elapsed += Time.deltaTime;
-                    Vector3 p = Vector3.Lerp(start, end, elapsed / duration);
-                    MoveUnitToPosition(target, p);
-                    yield return null;
-                }
-            }
+            yield break;
+        }
+
+        Vector3 start = target.transform.position;
+        Vector3 end = GetHookPullDestination(start, pullForwardDistance);
+        Debug.Log("[PredatorAbility] Hook pull start: " + start);
+        Debug.Log("[PredatorAbility] Hook pull destination: " + end);
+
+        yield return PullSurvivorWithControlSuspend(target, end, pullDuration);
+
+        if (target != null && !target.IsDead)
+        {
+            Debug.Log("[PredatorAbility] Hook pull complete: " + target.transform.position);
         }
     }
 
     private IEnumerator CastRelentlessTakeABreatherCoroutine()
     {
-        float duration = 1.8f;
-        float end = Time.time + duration;
-        int localLast = unitHealth != null ? unitHealth.currentHealth : 0;
-        while (Time.time < end && unitHealth != null && !unitHealth.IsDead)
-        {
-            unitHealth.Heal(2);
+        const int healAmount = 20;
 
-            // 50% DR approximation: restore half of incoming damage each frame.
-            if (unitHealth.currentHealth < localLast)
-            {
-                int lost = localLast - unitHealth.currentHealth;
-                unitHealth.Heal(Mathf.Max(1, lost / 2));
-            }
-            localLast = unitHealth.currentHealth;
-            yield return new WaitForSeconds(0.12f);
+        if (unitHealth == null || unitHealth.IsDead)
+        {
+            yield break;
         }
+
+        int before = unitHealth.currentHealth;
+        if (before >= unitHealth.maxHealth)
+        {
+            Debug.Log("[PredatorAbility] Tonic used at full health");
+            yield break;
+        }
+
+        unitHealth.Heal(healAmount);
+        int after = unitHealth.currentHealth;
+        Debug.Log("[PredatorAbility] Tonic healed " + (after - before) + " (" + before + " -> " + after + ")");
+        yield break;
     }
 
     private IEnumerator CastRelentlessWholeHogCoroutine()
     {
-        float duration = 2.8f;
-        float fireStep = 0.08f;
+        const float duration = 2.4f;
+        const float pulseInterval = 0.3f;
+        const float range = 8f;
+        const float halfAngle = 45f;
+        const int damage = 2;
+        const float knockback = 0.9f;
+
         float end = Time.time + duration;
-        while (Time.time < end)
+        int pulseNumber = 0;
+
+        while (Time.time < end && isActiveAndEnabled && gameObject.activeInHierarchy && IsRoundActive())
         {
-            UnitHealth[] hits = GetSurvivorsInRange(transform.position + transform.forward * 2.5f, 3.5f);
+            pulseNumber++;
+            Vector3 origin = GetChestCastOrigin();
+            Vector3 forward = GetFlatForward();
+            UnitHealth[] hits = GetSurvivorsInCone(origin, forward, range, halfAngle);
+
             for (int i = 0; i < hits.Length; i++)
             {
-                hits[i].TakeDamage(2, gameObject);
-                ApplyKnockback(hits[i], (hits[i].transform.position - transform.position).normalized, 0.7f);
+                if (hits[i] == null || hits[i].IsDead || hits[i].gameObject == gameObject)
+                {
+                    continue;
+                }
+
+                hits[i].TakeDamage(damage, gameObject);
+                ApplyKnockback(hits[i], (hits[i].transform.position - transform.position).normalized, knockback);
             }
-            yield return new WaitForSeconds(fireStep);
+
+            Debug.Log("[PredatorAbility] Barrage pulse " + pulseNumber + " hit " + hits.Length + " survivors");
+            yield return new WaitForSeconds(pulseInterval);
         }
+
+        relentlessBarrageRoutine = null;
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -914,6 +1004,367 @@ public class PredatorClassManager : MonoBehaviour
         }
 
         return transform.position + Vector3.up * 1.2f + transform.forward * 1f;
+    }
+
+    private Vector3 GetChestCastOrigin()
+    {
+        return transform.position + Vector3.up * 1.4f;
+    }
+
+    private Vector3 GetFlatForward()
+    {
+        Vector3 forward = transform.forward;
+        forward.y = 0f;
+        if (forward.sqrMagnitude <= 0.001f)
+        {
+            forward = Vector3.forward;
+        }
+
+        return forward.normalized;
+    }
+
+    private bool IsRoundActive()
+    {
+        if (gameManager == null)
+        {
+            gameManager = ManiaGameManager.Instance;
+        }
+
+        return gameManager == null || gameManager.IsPlaying;
+    }
+
+    private UnitHealth ResolveHookTarget(Vector3 origin, Vector3 direction, float range, out string blockReason)
+    {
+        blockReason = "none";
+        direction = direction.sqrMagnitude <= 0.001f ? GetFlatForward() : direction.normalized;
+
+        Debug.Log("[PredatorAbility] Hook cast origin: " + origin);
+        Debug.Log("[PredatorAbility] Hook cast forward: " + direction);
+        Debug.Log("[PredatorAbility] Hook ray length: " + range.ToString("0.0"));
+        Debug.DrawLine(origin, origin + direction * range, Color.cyan, 1f);
+
+        RaycastHit[] hits = Physics.RaycastAll(origin, direction, range, targetLayers, QueryTriggerInteraction.Ignore);
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        UnitHealth rayTarget = null;
+        string firstHitName = "none";
+        string firstHitLayer = "none";
+        string firstHitTag = "none";
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider hitCollider = hits[i].collider;
+            if (hitCollider == null || ShouldIgnoreForHookRay(hitCollider, direction, origin))
+            {
+                continue;
+            }
+
+            if (firstHitName == "none")
+            {
+                firstHitName = hitCollider.name;
+                firstHitLayer = LayerMask.LayerToName(hitCollider.gameObject.layer);
+                firstHitTag = hitCollider.tag;
+            }
+
+            UnitHealth health = hitCollider.GetComponentInParent<UnitHealth>();
+            if (health != null)
+            {
+                if (IsPredatorOwned(health.gameObject))
+                {
+                    continue;
+                }
+
+                bool validSurvivor = health.CompareTag(survivorTag) && !health.IsDead;
+                Debug.Log("[PredatorAbility] Hook ray hit: " + hitCollider.name
+                    + " layer=" + LayerMask.LayerToName(hitCollider.gameObject.layer)
+                    + " tag=" + hitCollider.tag);
+                Debug.Log("[PredatorAbility] Hook valid survivor target? "
+                    + (validSurvivor ? "yes" : "no")
+                    + ", reason=" + (validSurvivor ? "survivor in line" : "not a live survivor"));
+
+                if (validSurvivor)
+                {
+                    rayTarget = health;
+                }
+                else
+                {
+                    blockReason = "blocking unit '" + health.name + "'";
+                    Debug.Log("[PredatorAbility] Hook line of sight blocked by: " + health.name);
+                }
+
+                break;
+            }
+
+            blockReason = "solid collider '" + hitCollider.name + "'";
+            Debug.Log("[PredatorAbility] Hook ray hit: " + hitCollider.name
+                + " layer=" + LayerMask.LayerToName(hitCollider.gameObject.layer)
+                + " tag=" + hitCollider.tag);
+            Debug.Log("[PredatorAbility] Hook valid survivor target? no, reason=blocked by geometry");
+            Debug.Log("[PredatorAbility] Hook line of sight blocked by: " + hitCollider.name);
+            break;
+        }
+
+        if (rayTarget == null && firstHitName == "none")
+        {
+            Debug.Log("[PredatorAbility] Hook ray hit: none");
+            Debug.Log("[PredatorAbility] Hook valid survivor target? no, reason=no collider hit");
+        }
+
+        if (rayTarget != null)
+        {
+            Debug.Log("[PredatorAbility] Hook hit " + rayTarget.name);
+            return rayTarget;
+        }
+
+        UnitHealth fallback = FindClosestSurvivorInForwardArc(origin, direction, range, 20f);
+        if (fallback != null)
+        {
+            if (HasClearHookLineOfSight(origin, fallback, out string losBlocker))
+            {
+                Debug.Log("[PredatorAbility] Hook valid survivor target? yes, reason=fallback arc search on " + fallback.name);
+                Debug.Log("[PredatorAbility] Hook hit " + fallback.name);
+                return fallback;
+            }
+
+            blockReason = "line of sight blocked by '" + losBlocker + "'";
+            Debug.Log("[PredatorAbility] Hook line of sight blocked by: " + losBlocker);
+        }
+
+        Debug.Log("[PredatorAbility] Hook missed (" + blockReason + ")");
+        return null;
+    }
+
+    private UnitHealth FindClosestSurvivorInForwardArc(Vector3 origin, Vector3 direction, float range, float halfAngleDegrees)
+    {
+        UnitHealth[] candidates = GetSurvivorsInRange(origin, range);
+        UnitHealth best = null;
+        float bestDistance = float.MaxValue;
+
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            UnitHealth candidate = candidates[i];
+            if (candidate == null || candidate.IsDead || IsPredatorOwned(candidate.gameObject))
+            {
+                continue;
+            }
+
+            Vector3 toTarget = candidate.transform.position - origin;
+            toTarget.y = 0f;
+            float distance = toTarget.magnitude;
+            if (distance <= 0.05f || distance > range)
+            {
+                continue;
+            }
+
+            float angle = Vector3.Angle(direction, toTarget.normalized);
+            if (angle > halfAngleDegrees)
+            {
+                continue;
+            }
+
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                best = candidate;
+            }
+        }
+
+        return best;
+    }
+
+    private bool HasClearHookLineOfSight(Vector3 origin, UnitHealth target, out string blockerName)
+    {
+        blockerName = "none";
+        if (target == null)
+        {
+            return false;
+        }
+
+        Vector3 targetPoint = target.transform.position + Vector3.up * 1f;
+        Vector3 delta = targetPoint - origin;
+        float distance = delta.magnitude;
+        if (distance <= 0.05f)
+        {
+            return true;
+        }
+
+        RaycastHit[] hits = Physics.RaycastAll(origin, delta.normalized, distance, targetLayers, QueryTriggerInteraction.Ignore);
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider hitCollider = hits[i].collider;
+            if (hitCollider == null || ShouldIgnoreForHookRay(hitCollider, delta.normalized, origin))
+            {
+                continue;
+            }
+
+            UnitHealth health = hitCollider.GetComponentInParent<UnitHealth>();
+            if (health == target)
+            {
+                return true;
+            }
+
+            if (health != null && IsPredatorOwned(health.gameObject))
+            {
+                continue;
+            }
+
+            blockerName = hitCollider.name;
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool ShouldIgnoreForHookRay(Collider collider, Vector3 direction, Vector3 origin)
+    {
+        if (collider == null || collider.isTrigger)
+        {
+            return true;
+        }
+
+        if (IsPredatorOwned(collider.gameObject))
+        {
+            return true;
+        }
+
+        string objectName = collider.gameObject.name;
+        if (objectName.Contains("VFX")
+            || objectName.Contains("TemporaryGroundEffect")
+            || objectName.Contains("SprayBurst")
+            || objectName.Contains("HookHit")
+            || objectName.Contains("HookMiss")
+            || objectName.Contains("TonicSelf")
+            || objectName.Contains("HitMarker"))
+        {
+            return true;
+        }
+
+        if (Mathf.Abs(direction.y) < 0.35f && IsLikelyGroundCollider(collider, origin))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool IsLikelyGroundCollider(Collider collider, Vector3 origin)
+    {
+        if (collider.bounds.max.y < origin.y - 0.25f)
+        {
+            return true;
+        }
+
+        string objectName = collider.gameObject.name;
+        return objectName.IndexOf("Ground", System.StringComparison.OrdinalIgnoreCase) >= 0
+            || objectName.IndexOf("Floor", System.StringComparison.OrdinalIgnoreCase) >= 0
+            || objectName.IndexOf("Map", System.StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    private bool IsPredatorOwned(GameObject candidate)
+    {
+        return candidate == gameObject || candidate.transform.IsChildOf(transform);
+    }
+
+    private IEnumerator PullSurvivorWithControlSuspend(UnitHealth target, Vector3 end, float duration)
+    {
+        if (target == null || target.IsDead)
+        {
+            yield break;
+        }
+
+        OfflineSurvivorBotAI botAi = target.GetComponent<OfflineSurvivorBotAI>();
+        SurvivorMovement survivorMovement = target.GetComponent<SurvivorMovement>();
+        CharacterController targetController = target.GetComponent<CharacterController>();
+
+        bool botWasEnabled = botAi != null && botAi.enabled;
+        bool moveWasEnabled = survivorMovement != null && survivorMovement.enabled;
+        bool controllerWasEnabled = targetController != null && targetController.enabled;
+
+        if (botAi != null)
+        {
+            botAi.enabled = false;
+        }
+
+        if (survivorMovement != null)
+        {
+            survivorMovement.enabled = false;
+        }
+
+        if (targetController != null)
+        {
+            targetController.enabled = false;
+        }
+
+        Vector3 start = target.transform.position;
+        float elapsed = 0f;
+        while (elapsed < duration && target != null && !target.IsDead)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / Mathf.Max(0.05f, duration));
+            Vector3 pullPoint = Vector3.Lerp(start, end, t);
+            pullPoint.y = start.y;
+
+            if (ArenaBounds.Instance != null)
+            {
+                pullPoint = ArenaBounds.Instance.ClampPosition(pullPoint);
+            }
+
+            target.transform.position = pullPoint;
+            yield return null;
+        }
+
+        if (targetController != null && controllerWasEnabled && target.gameObject.activeInHierarchy)
+        {
+            targetController.enabled = true;
+        }
+
+        if (survivorMovement != null)
+        {
+            survivorMovement.enabled = moveWasEnabled;
+        }
+
+        if (botAi != null)
+        {
+            botAi.enabled = botWasEnabled;
+        }
+    }
+
+    private static bool CanUseCharacterController(CharacterController controller, UnitHealth health)
+    {
+        if (controller == null || !controller.enabled || !controller.gameObject.activeInHierarchy)
+        {
+            return false;
+        }
+
+        if (health != null && health.IsDead)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private CollisionFlags TryMoveSelf(Vector3 motion)
+    {
+        if (!CanUseCharacterController(characterController, unitHealth))
+        {
+            return CollisionFlags.None;
+        }
+
+        return characterController.Move(motion);
+    }
+
+    private bool TryMoveCharacterController(CharacterController controller, UnitHealth health, Vector3 motion)
+    {
+        if (!CanUseCharacterController(controller, health))
+        {
+            return false;
+        }
+
+        controller.Move(motion);
+        return true;
     }
 
     private UnitHealth FindClosestSurvivor(Vector3 center, float radius)
@@ -940,7 +1391,7 @@ public class PredatorClassManager : MonoBehaviour
         for (int i = 0; i < hits.Length; i++)
         {
             UnitHealth h = hits[i].GetComponentInParent<UnitHealth>();
-            if (h == null || h.IsDead || !h.CompareTag(survivorTag))
+            if (h == null || h.IsDead || !h.CompareTag(survivorTag) || IsPredatorOwned(h.gameObject))
             {
                 continue;
             }
@@ -952,6 +1403,165 @@ public class PredatorClassManager : MonoBehaviour
         }
 
         return result.ToArray();
+    }
+
+    private UnitHealth[] GetSurvivorsInCone(Vector3 origin, Vector3 forward, float range, float halfAngleDegrees)
+    {
+        forward.y = 0f;
+        if (forward.sqrMagnitude <= 0.001f)
+        {
+            forward = transform.forward;
+            forward.y = 0f;
+        }
+
+        forward.Normalize();
+        UnitHealth[] candidates = GetSurvivorsInRange(origin + forward * (range * 0.5f), range + 1f);
+        System.Collections.Generic.List<UnitHealth> result = new System.Collections.Generic.List<UnitHealth>();
+
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            UnitHealth candidate = candidates[i];
+            if (candidate == null || candidate.IsDead || IsPredatorOwned(candidate.gameObject))
+            {
+                continue;
+            }
+
+            Vector3 toTarget = candidate.transform.position - origin;
+            toTarget.y = 0f;
+            float distance = toTarget.magnitude;
+            if (distance <= 0.05f || distance > range)
+            {
+                continue;
+            }
+
+            float angle = Vector3.Angle(forward, toTarget.normalized);
+            if (angle <= halfAngleDegrees)
+            {
+                result.Add(candidate);
+            }
+        }
+
+        return result.ToArray();
+    }
+
+    private Vector3 GetHookPullDestination(Vector3 targetStart, float pullForwardDistance)
+    {
+        Vector3 desired = transform.position + GetFlatForward() * pullForwardDistance;
+        desired.y = targetStart.y;
+
+        if (ArenaBounds.Instance != null)
+        {
+            desired = ArenaBounds.Instance.ClampPosition(desired);
+        }
+
+        Vector3 delta = desired - targetStart;
+        float distance = delta.magnitude;
+        if (distance <= 0.05f)
+        {
+            return desired;
+        }
+
+        Vector3 rayOrigin = targetStart + Vector3.up * 0.6f;
+        if (Physics.Raycast(rayOrigin, delta.normalized, out RaycastHit hit, distance, targetLayers, QueryTriggerInteraction.Ignore)
+            && !ShouldIgnoreForHookRay(hit.collider, delta.normalized, rayOrigin))
+        {
+            UnitHealth hitUnit = hit.collider.GetComponentInParent<UnitHealth>();
+            if (hitUnit == null)
+            {
+                desired = hit.point - delta.normalized * 0.35f;
+                desired.y = targetStart.y;
+            }
+        }
+
+        if (ArenaBounds.Instance != null)
+        {
+            desired = ArenaBounds.Instance.ClampPosition(desired);
+        }
+
+        return desired;
+    }
+
+    private void SpawnForwardBurstVfx(Vector3 origin, Vector3 forward, float range, float lifetime, Color color)
+    {
+        GameObject vfx = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        vfx.name = "SprayBurstVFX";
+        Collider col = vfx.GetComponent<Collider>();
+        if (col != null)
+        {
+            Destroy(col);
+        }
+
+        forward.y = 0f;
+        forward.Normalize();
+        vfx.transform.position = origin + forward * (range * 0.5f) + Vector3.up * 0.55f;
+        vfx.transform.rotation = Quaternion.LookRotation(forward);
+        vfx.transform.localScale = new Vector3(2.2f, 0.9f, range);
+        ApplySimpleVfxColor(vfx, color);
+        Destroy(vfx, Mathf.Max(0.1f, lifetime));
+    }
+
+    private void SpawnHookLineVfx(Vector3 origin, Vector3 direction, float range, bool hitSomething, float lifetime)
+    {
+        GameObject vfx = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        vfx.name = hitSomething ? "HookHitVFX" : "HookMissVFX";
+        Collider col = vfx.GetComponent<Collider>();
+        if (col != null)
+        {
+            Destroy(col);
+        }
+
+        direction.y = 0f;
+        direction.Normalize();
+        vfx.transform.position = origin + direction * (range * 0.5f) + Vector3.up * 0.8f;
+        vfx.transform.rotation = Quaternion.LookRotation(direction);
+        vfx.transform.localScale = new Vector3(0.15f, 0.15f, range);
+        ApplySimpleVfxColor(vfx, hitSomething ? new Color(0.95f, 0.75f, 0.2f, 0.85f) : new Color(0.7f, 0.7f, 0.7f, 0.55f));
+        Destroy(vfx, Mathf.Max(0.1f, lifetime));
+    }
+
+    private void SpawnHitMarkerVfx(Vector3 position, float lifetime)
+    {
+        GameObject vfx = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        vfx.name = "HitMarkerVFX";
+        Collider col = vfx.GetComponent<Collider>();
+        if (col != null)
+        {
+            Destroy(col);
+        }
+
+        vfx.transform.position = position;
+        vfx.transform.localScale = Vector3.one * 0.45f;
+        ApplySimpleVfxColor(vfx, new Color(1f, 0.35f, 0.35f, 0.85f));
+        Destroy(vfx, Mathf.Max(0.1f, lifetime));
+    }
+
+    private void SpawnSelfBurstVfx(Color color, float lifetime)
+    {
+        GameObject vfx = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        vfx.name = "TonicSelfVFX";
+        Collider col = vfx.GetComponent<Collider>();
+        if (col != null)
+        {
+            Destroy(col);
+        }
+
+        vfx.transform.position = transform.position + Vector3.up * 1.1f;
+        vfx.transform.localScale = Vector3.one * 1.6f;
+        ApplySimpleVfxColor(vfx, color);
+        Destroy(vfx, Mathf.Max(0.1f, lifetime));
+    }
+
+    private void ApplySimpleVfxColor(GameObject vfx, Color color)
+    {
+        Renderer renderer = vfx.GetComponent<Renderer>();
+        if (renderer == null)
+        {
+            return;
+        }
+
+        Material mat = new Material(Shader.Find("Standard"));
+        mat.color = color;
+        renderer.material = mat;
     }
 
     private AutoSentryTurret FindClosestOwnedSentry()
@@ -1015,9 +1625,8 @@ public class PredatorClassManager : MonoBehaviour
     private void LaunchUp(UnitHealth target, float amount)
     {
         CharacterController cc = target.GetComponent<CharacterController>();
-        if (cc != null && cc.enabled)
+        if (TryMoveCharacterController(cc, target, Vector3.up * amount))
         {
-            cc.Move(Vector3.up * amount);
             return;
         }
 
@@ -1039,9 +1648,12 @@ public class PredatorClassManager : MonoBehaviour
         }
 
         CharacterController cc = target.GetComponent<CharacterController>();
-        if (cc != null && cc.enabled)
+        if (TryMoveCharacterController(cc, target, dir.normalized * distance))
         {
-            cc.Move(dir.normalized * distance);
+            if (ArenaBounds.Instance != null)
+            {
+                ArenaBounds.Instance.ClampUnitTransform(target.transform, "ApplyKnockback");
+            }
             return;
         }
 
@@ -1049,10 +1661,18 @@ public class PredatorClassManager : MonoBehaviour
         if (rb != null && !rb.isKinematic)
         {
             rb.AddForce(dir.normalized * distance, ForceMode.Impulse);
+            if (ArenaBounds.Instance != null)
+            {
+                ArenaBounds.Instance.ClampUnitTransform(target.transform, "ApplyKnockback");
+            }
             return;
         }
 
         target.transform.position += dir.normalized * distance;
+        if (ArenaBounds.Instance != null)
+        {
+            ArenaBounds.Instance.ClampUnitTransform(target.transform, "ApplyKnockback");
+        }
     }
 
     private void MoveUnitToPosition(UnitHealth target, Vector3 position)
@@ -1063,13 +1683,21 @@ public class PredatorClassManager : MonoBehaviour
         }
 
         CharacterController cc = target.GetComponent<CharacterController>();
-        if (cc != null && cc.enabled)
+        bool controllerWasEnabled = cc != null && cc.enabled;
+        if (controllerWasEnabled)
         {
-            cc.Move(position - target.transform.position);
+            cc.enabled = false;
         }
-        else
+
+        target.transform.position = position;
+        if (ArenaBounds.Instance != null)
         {
-            target.transform.position = position;
+            ArenaBounds.Instance.ClampUnitTransform(target.transform, "MoveUnitToPosition");
+        }
+
+        if (cc != null && controllerWasEnabled && target.gameObject.activeInHierarchy)
+        {
+            cc.enabled = true;
         }
     }
 }

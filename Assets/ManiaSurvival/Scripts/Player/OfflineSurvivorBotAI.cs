@@ -28,6 +28,8 @@ public class OfflineSurvivorBotAI : MonoBehaviour
     private Coroutine wanderRoutine;
     private Coroutine combatRoutine;
     private bool loggedInactiveController;
+    private bool loggedWanderClamp;
+    private float stuckTimer;
     private Quaternion playStartRotation;
 
     private void Awake()
@@ -42,6 +44,8 @@ public class OfflineSurvivorBotAI : MonoBehaviour
     private void OnEnable()
     {
         loggedInactiveController = false;
+        loggedWanderClamp = false;
+        stuckTimer = 0f;
         playStartRotation = transform.rotation;
         wanderRoutine = StartCoroutine(WanderRoutine());
         combatRoutine = StartCoroutine(CombatRoutine());
@@ -97,10 +101,27 @@ public class OfflineSurvivorBotAI : MonoBehaviour
                 if (toDestination.sqrMagnitude <= stopDistance * stopDistance)
                 {
                     TrySimpleMove(Vector3.zero);
+                    stuckTimer = 0f;
                     break;
                 }
 
+                Vector3 beforeMove = transform.position;
                 TrySimpleMove(toDestination.normalized * moveSpeed);
+                float movedSqr = (transform.position - beforeMove).sqrMagnitude;
+                if (movedSqr < 0.0004f)
+                {
+                    stuckTimer += Time.deltaTime;
+                    if (stuckTimer >= 0.6f)
+                    {
+                        stuckTimer = 0f;
+                        break;
+                    }
+                }
+                else
+                {
+                    stuckTimer = 0f;
+                }
+
                 yield return null;
             }
         }
@@ -142,10 +163,50 @@ public class OfflineSurvivorBotAI : MonoBehaviour
 
     private Vector3 GetRandomWanderDestination()
     {
-        Vector2 offset2D = Random.insideUnitCircle * Mathf.Max(0.1f, wanderRadius);
-        Vector3 destination = transform.position + new Vector3(offset2D.x, 0f, offset2D.y);
-        destination.y = transform.position.y;
-        return destination;
+        float effectiveRadius = GetEffectiveWanderRadius();
+        Vector2 offset2D = Random.insideUnitCircle * effectiveRadius;
+        Vector3 raw = transform.position + new Vector3(offset2D.x, 0f, offset2D.y);
+        raw.y = transform.position.y;
+
+        if (ArenaBounds.Instance == null)
+        {
+            return raw;
+        }
+
+        Vector3 clamped = ArenaBounds.Instance.ClampPosition(raw);
+        clamped.y = transform.position.y;
+
+        if ((clamped - raw).sqrMagnitude > 0.01f && !loggedWanderClamp)
+        {
+            loggedWanderClamp = true;
+            Debug.Log("[AI] Wander target clamped inside arena on '" + gameObject.name + "'.");
+        }
+
+        return clamped;
+    }
+
+    private float GetEffectiveWanderRadius()
+    {
+        float radius = Mathf.Max(0.1f, wanderRadius);
+        if (ArenaBounds.Instance == null)
+        {
+            return radius;
+        }
+
+        float margin = GetMarginToBoundsEdge(transform.position);
+        return Mathf.Min(radius, Mathf.Max(1f, margin - 1f));
+    }
+
+    private float GetMarginToBoundsEdge(Vector3 position)
+    {
+        if (ArenaBounds.Instance == null)
+        {
+            return wanderRadius;
+        }
+
+        float dx = Mathf.Min(position.x - ArenaBounds.Instance.minX, ArenaBounds.Instance.maxX - position.x);
+        float dz = Mathf.Min(position.z - ArenaBounds.Instance.minZ, ArenaBounds.Instance.maxZ - position.z);
+        return Mathf.Min(dx, dz);
     }
 
     private bool CanMoveAsAi()
@@ -183,12 +244,22 @@ public class OfflineSurvivorBotAI : MonoBehaviour
             return false;
         }
 
+        if (!isActiveAndEnabled || !gameObject.activeInHierarchy)
+        {
+            return false;
+        }
+
         if (unitHealth != null && unitHealth.IsDead)
         {
             return false;
         }
 
         characterController.SimpleMove(velocity);
+
+        if (ArenaBounds.Instance != null && !ArenaBounds.Instance.IsInside(transform.position))
+        {
+            ArenaBounds.Instance.ClampUnitTransform(transform, "OfflineSurvivorBotAI");
+        }
 
         if (lockRotationDuringPlay)
         {

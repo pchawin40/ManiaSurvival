@@ -188,7 +188,7 @@ public class ManiaGameUI : MonoBehaviour
         SetupAbilityHoldButton(survivorAbility3Button, 3, false);
         SetupAbilityHoldButton(survivorUltimateButton, 4, false);
         SetupAbilityHoldButton(predatorMeleeButton, 1, true);
-        SetupAbilityHoldButton(predatorAbility1Button, 1, true);
+        // predatorAbility1Button duplicates slot 1 (Spray) — hidden in UpdateRolePanels.
         SetupAbilityHoldButton(predatorAbility2Button, 2, true);
         SetupAbilityHoldButton(predatorAbility3Button, 3, true);
         SetupAbilityHoldButton(predatorUltimateButton, 4, true);
@@ -352,7 +352,14 @@ public class ManiaGameUI : MonoBehaviour
 
         if (predatorAbility1Button != null)
         {
-            predatorAbility1Button.gameObject.SetActive(isPlaying && isMonsterControlled);
+            predatorAbility1Button.gameObject.SetActive(false);
+            LayoutElement hiddenLayout = predatorAbility1Button.GetComponent<LayoutElement>();
+            if (hiddenLayout == null)
+            {
+                hiddenLayout = predatorAbility1Button.gameObject.AddComponent<LayoutElement>();
+            }
+
+            hiddenLayout.ignoreLayout = true;
         }
 
         if (predatorAbility2Button != null)
@@ -898,7 +905,6 @@ public class ManiaGameUI : MonoBehaviour
     private void ApplyPredatorAbilityLabels()
     {
         SetButtonLabel(predatorMeleeButton, null, "Spray");
-        SetButtonLabel(predatorAbility1Button, predatorAbility1Label, "Spray");
         SetButtonLabel(predatorAbility2Button, predatorAbility2Label, "Hook");
         SetButtonLabel(predatorAbility3Button, predatorAbility3Label, "Tonic");
         SetButtonLabel(predatorUltimateButton, predatorUltimateLabel, "Barrage");

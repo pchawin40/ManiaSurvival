@@ -368,6 +368,10 @@ MonoBehaviour:
   cooldownText: {fileID: 126918135}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  gameUi: {fileID: 0}
+  abilitySlot: 1
+  isPredatorSide: 0
+  useAbilityControllerCooldown: 1
   abilityName: 
   manaCost: 0
   manaCostLabelFormat: '{0}
@@ -2268,6 +2272,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   logSurvivorDamage: 1
+  logAbilityEffects: 1
 --- !u!114 &301094448
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2291,6 +2296,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   logSurvivorDamage: 1
+  logAbilityEffects: 1
 --- !u!114 &301094449
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2314,6 +2320,8 @@ MonoBehaviour:
   enableDamageFlash: 1
   damageFlashDuration: 0.12
   damageFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  applyBillboardRotation: 1
+  billboardEulerAngles: {x: 60, y: 0, z: 0}
 --- !u!114 &301094450
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2573,10 +2581,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: HellPit
       objectReference: {fileID: 0}
-    - target: {fileID: 3877733000352176622, guid: c421d8f9c674ca4449c943fc36b10fc1, type: 3}
-      propertyPath: m_IsTrigger
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 6117894337095278978, guid: c421d8f9c674ca4449c943fc36b10fc1, type: 3}
       propertyPath: m_LocalScale.x
       value: 1.5
@@ -2628,10 +2632,7 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 297752927558957415, guid: c421d8f9c674ca4449c943fc36b10fc1, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1415733638}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: c421d8f9c674ca4449c943fc36b10fc1, type: 3}
 --- !u!4 &364770420 stripped
 Transform:
@@ -3345,6 +3346,10 @@ MonoBehaviour:
   cooldownText: {fileID: 0}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  gameUi: {fileID: 0}
+  abilitySlot: 1
+  isPredatorSide: 0
+  useAbilityControllerCooldown: 1
   abilityName: 
   manaCost: 0
   manaCostLabelFormat: '{0}
@@ -6009,6 +6014,10 @@ MonoBehaviour:
   cooldownText: {fileID: 0}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  gameUi: {fileID: 0}
+  abilitySlot: 1
+  isPredatorSide: 0
+  useAbilityControllerCooldown: 1
   abilityName: 
   manaCost: 0
   manaCostLabelFormat: '{0}
@@ -6183,6 +6192,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   logSurvivorDamage: 1
+  logAbilityEffects: 1
 --- !u!114 &637681167 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1154864873043892012, guid: 3d0c97f0a07bcc2438154cc20a88e933, type: 3}
@@ -6424,6 +6434,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   showDebugLogs: 1
+  useExternalCooldownAuthority: 0
   globalCooldownMultiplier: 1.3
   primaryCooldown: 2.5
   ability2Cooldown: 8
@@ -6482,6 +6493,28 @@ MonoBehaviour:
   suzuProjectileLifetime: 2.5
   suzuRadius: 4
   suzuInvulnerabilityDuration: 1
+--- !u!95 &637681186
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 637681156}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 9325fad4cd3ee354a9af6f853012c3cf, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!114 &637681190
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6515,28 +6548,16 @@ MonoBehaviour:
   predatorSlot4Cooldown: 14
   spawnPlaceholderVfx: 1
   placeholderVfxLifetime: 1.25
---- !u!95 &637681186
-Animator:
-  serializedVersion: 7
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 637681156}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 9325fad4cd3ee354a9af6f853012c3cf, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
+  abilityAudioSource: {fileID: 0}
+  slot1Sound: {fileID: 0}
+  slot2Sound: {fileID: 0}
+  slot3Sound: {fileID: 0}
+  slot4Sound: {fileID: 0}
+  failedCastSound: {fileID: 0}
+  logAbilityAudio: 0
+  spawnGroundEffects: 1
+  groundEffectPrefab: {fileID: 0}
+  groundEffectDuration: 2.5
 --- !u!1 &644727013
 GameObject:
   m_ObjectHideFlags: 0
@@ -6742,6 +6763,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   showDebugLogs: 1
+  useExternalCooldownAuthority: 0
   globalCooldownMultiplier: 1.3
   primaryCooldown: 2.5
   ability2Cooldown: 8
@@ -6870,6 +6892,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   logSurvivorDamage: 1
+  logAbilityEffects: 1
 --- !u!114 &661074649
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6889,6 +6912,10 @@ MonoBehaviour:
   cooldownText: {fileID: 1342493038}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  gameUi: {fileID: 0}
+  abilitySlot: 1
+  isPredatorSide: 0
+  useAbilityControllerCooldown: 1
   abilityName: 
   manaCost: 0
   manaCostLabelFormat: '{0}
@@ -7085,6 +7112,10 @@ MonoBehaviour:
   cooldownText: {fileID: 452614036}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  gameUi: {fileID: 0}
+  abilitySlot: 1
+  isPredatorSide: 0
+  useAbilityControllerCooldown: 1
   abilityName: 
   manaCost: 0
   manaCostLabelFormat: '{0}
@@ -7532,6 +7563,10 @@ MonoBehaviour:
   cooldownText: {fileID: 914894289}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  gameUi: {fileID: 0}
+  abilitySlot: 1
+  isPredatorSide: 0
+  useAbilityControllerCooldown: 1
   abilityName: 
   manaCost: 0
   manaCostLabelFormat: '{0}
@@ -8617,6 +8652,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   showDebugLogs: 1
+  useExternalCooldownAuthority: 0
   globalCooldownMultiplier: 1.3
   primaryCooldown: 2.5
   ability2Cooldown: 8
@@ -8745,6 +8781,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   logSurvivorDamage: 1
+  logAbilityEffects: 1
 --- !u!114 &894360463
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8764,6 +8801,10 @@ MonoBehaviour:
   cooldownText: {fileID: 1953037298}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  gameUi: {fileID: 0}
+  abilitySlot: 1
+  isPredatorSide: 0
+  useAbilityControllerCooldown: 1
   abilityName: 
   manaCost: 0
   manaCostLabelFormat: '{0}
@@ -9376,6 +9417,10 @@ MonoBehaviour:
   cooldownText: {fileID: 928868862}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  gameUi: {fileID: 0}
+  abilitySlot: 1
+  isPredatorSide: 0
+  useAbilityControllerCooldown: 1
   abilityName: 
   manaCost: 0
   manaCostLabelFormat: '{0}
@@ -9571,6 +9616,10 @@ MonoBehaviour:
   cooldownText: {fileID: 0}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  gameUi: {fileID: 0}
+  abilitySlot: 1
+  isPredatorSide: 0
+  useAbilityControllerCooldown: 1
   abilityName: 
   manaCost: 0
   manaCostLabelFormat: '{0}
@@ -9868,6 +9917,8 @@ MonoBehaviour:
   enableDamageFlash: 1
   damageFlashDuration: 0.12
   damageFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  applyBillboardRotation: 1
+  billboardEulerAngles: {x: 60, y: 0, z: 0}
 --- !u!114 &966300762
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10202,6 +10253,10 @@ MonoBehaviour:
   cooldownText: {fileID: 0}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  gameUi: {fileID: 0}
+  abilitySlot: 1
+  isPredatorSide: 0
+  useAbilityControllerCooldown: 1
   abilityName: 
   manaCost: 0
   manaCostLabelFormat: '{0}
@@ -10588,6 +10643,7 @@ GameObject:
   - component: {fileID: 1048404671}
   - component: {fileID: 1048404670}
   - component: {fileID: 1048404669}
+  - component: {fileID: 1048404673}
   m_Layer: 0
   m_Name: FriendlyTargetDummy
   m_TagString: Survivor
@@ -10714,6 +10770,8 @@ MonoBehaviour:
   enableDamageFlash: 1
   damageFlashDuration: 0.12
   damageFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  applyBillboardRotation: 1
+  billboardEulerAngles: {x: 60, y: 0, z: 0}
 --- !u!114 &1048404667
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10737,6 +10795,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   logSurvivorDamage: 1
+  logAbilityEffects: 1
 --- !u!114 &1048404668
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10795,6 +10854,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   showDebugLogs: 1
+  useExternalCooldownAuthority: 0
   globalCooldownMultiplier: 1.3
   primaryCooldown: 2.5
   ability2Cooldown: 8
@@ -10900,6 +10960,49 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1048404673
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1048404661}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b66b8a3d0ebd4f29b0b7d2a11e9d4c6f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AbilityController
+  controlsPredator: 0
+  enforceTestLoadouts: 1
+  logAbilityFlow: 1
+  disableLegacyAbilityComponents: 1
+  pipelineTestMode: 1
+  abilityControllerOwnsCooldowns: 1
+  localRoleController: {fileID: 0}
+  gameManager: {fileID: 0}
+  unitHealth: {fileID: 0}
+  survivorClassManager: {fileID: 0}
+  predatorClassManager: {fileID: 0}
+  survivorSlot1Cooldown: 2.5
+  survivorSlot2Cooldown: 8
+  survivorSlot3Cooldown: 10
+  survivorSlot4Cooldown: 16
+  predatorSlot1Cooldown: 1.4
+  predatorSlot2Cooldown: 8
+  predatorSlot3Cooldown: 10
+  predatorSlot4Cooldown: 14
+  spawnPlaceholderVfx: 1
+  placeholderVfxLifetime: 1.25
+  abilityAudioSource: {fileID: 0}
+  slot1Sound: {fileID: 0}
+  slot2Sound: {fileID: 0}
+  slot3Sound: {fileID: 0}
+  slot4Sound: {fileID: 0}
+  failedCastSound: {fileID: 0}
+  logAbilityAudio: 0
+  spawnGroundEffects: 1
+  groundEffectPrefab: {fileID: 0}
+  groundEffectDuration: 2.5
 --- !u!1 &1072993723
 GameObject:
   m_ObjectHideFlags: 0
@@ -12821,6 +12924,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   logSurvivorDamage: 1
+  logAbilityEffects: 1
 --- !u!114 &1291826906
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12844,6 +12948,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   logSurvivorDamage: 1
+  logAbilityEffects: 1
 --- !u!114 &1291826907
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12867,6 +12972,8 @@ MonoBehaviour:
   enableDamageFlash: 1
   damageFlashDuration: 0.12
   damageFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  applyBillboardRotation: 1
+  billboardEulerAngles: {x: 60, y: 0, z: 0}
 --- !u!114 &1291826908
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13010,6 +13117,17 @@ MonoBehaviour:
   predatorAbility2Button: {fileID: 2060645637}
   predatorAbility3Button: {fileID: 1342540088}
   predatorUltimateButton: {fileID: 665206594}
+  survivorAbility1Label: {fileID: 0}
+  survivorAbility2Label: {fileID: 0}
+  survivorAbility3Label: {fileID: 0}
+  survivorUltimateLabel: {fileID: 0}
+  predatorAbility1Label: {fileID: 0}
+  predatorAbility2Label: {fileID: 0}
+  predatorAbility3Label: {fileID: 0}
+  predatorUltimateLabel: {fileID: 0}
+  abilityInfoText: {fileID: 0}
+  abilityTooltipPanel: {fileID: 0}
+  logTooltipEvents: 0
   survivorOnlyObjects: []
   monsterOnlyObjects: []
   enableSimpleMobileJoystick: 1
@@ -13023,6 +13141,8 @@ MonoBehaviour:
   gameManager: {fileID: 1497139249}
   localRoleController: {fileID: 961346313}
   localSurvivorMovement: {fileID: 356814411}
+  survivorAbilityController: {fileID: 0}
+  predatorAbilityController: {fileID: 0}
   soulwoodAvatarUIBridge: {fileID: 1687169535}
 --- !u!114 &1311636433
 MonoBehaviour:
@@ -13463,6 +13583,10 @@ MonoBehaviour:
   cooldownText: {fileID: 644727015}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  gameUi: {fileID: 0}
+  abilitySlot: 1
+  isPredatorSide: 0
+  useAbilityControllerCooldown: 1
   abilityName: 
   manaCost: 0
   manaCostLabelFormat: '{0}
@@ -13859,25 +13983,6 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 297752927558957415, guid: c421d8f9c674ca4449c943fc36b10fc1, type: 3}
   m_PrefabInstance: {fileID: 364770419}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1415733638
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1415733633}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3c7ac4c4f4dc4c4da8d2b3e68a5e6b92, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HellPitHazard
-  instantKill: 1
-  survivorDamagePerSecond: 300
-  monsterDamagePerSecond: 300
-  tickInterval: 0.25
-  instantKillMonster: 1
-  destroyOnMonsterDeath: 0
-  drawGizmo: 1
 --- !u!1 &1423237824
 GameObject:
   m_ObjectHideFlags: 0
@@ -14566,6 +14671,10 @@ MonoBehaviour:
   cooldownText: {fileID: 107132794}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  gameUi: {fileID: 0}
+  abilitySlot: 1
+  isPredatorSide: 0
+  useAbilityControllerCooldown: 1
   abilityName: 
   manaCost: 0
   manaCostLabelFormat: '{0}
@@ -14768,6 +14877,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   showDebugLogs: 1
+  useExternalCooldownAuthority: 0
   globalCooldownMultiplier: 1.3
   primaryCooldown: 2.5
   ability2Cooldown: 8
@@ -14896,6 +15006,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   logSurvivorDamage: 1
+  logAbilityEffects: 1
 --- !u!114 &1534769625
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14915,6 +15026,10 @@ MonoBehaviour:
   cooldownText: {fileID: 2000072849}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  gameUi: {fileID: 0}
+  abilitySlot: 1
+  isPredatorSide: 0
+  useAbilityControllerCooldown: 1
   abilityName: 
   manaCost: 0
   manaCostLabelFormat: '{0}
@@ -15251,6 +15366,10 @@ MonoBehaviour:
   cooldownText: {fileID: 1124545568}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  gameUi: {fileID: 0}
+  abilitySlot: 1
+  isPredatorSide: 0
+  useAbilityControllerCooldown: 1
   abilityName: 
   manaCost: 0
   manaCostLabelFormat: '{0}
@@ -17684,6 +17803,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   logSurvivorDamage: 1
+  logAbilityEffects: 1
 --- !u!223 &1948397539
 Canvas:
   m_ObjectHideFlags: 0
@@ -17730,6 +17850,8 @@ MonoBehaviour:
   enableDamageFlash: 1
   damageFlashDuration: 0.12
   damageFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  applyBillboardRotation: 1
+  billboardEulerAngles: {x: 60, y: 0, z: 0}
 --- !u!114 &1948397541
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -17793,6 +17915,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   logSurvivorDamage: 1
+  logAbilityEffects: 1
 --- !u!114 &1948397544
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -18159,6 +18282,7 @@ GameObject:
   - component: {fileID: 1970627232}
   - component: {fileID: 1970627231}
   - component: {fileID: 1970627230}
+  - component: {fileID: 1970627234}
   m_Layer: 0
   m_Name: TestAllyAnchor
   m_TagString: Survivor
@@ -18285,6 +18409,8 @@ MonoBehaviour:
   enableDamageFlash: 1
   damageFlashDuration: 0.12
   damageFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  applyBillboardRotation: 1
+  billboardEulerAngles: {x: 60, y: 0, z: 0}
 --- !u!114 &1970627228
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -18308,6 +18434,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   logSurvivorDamage: 1
+  logAbilityEffects: 1
 --- !u!114 &1970627229
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -18366,6 +18493,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   showDebugLogs: 1
+  useExternalCooldownAuthority: 0
   globalCooldownMultiplier: 1.3
   primaryCooldown: 2.5
   ability2Cooldown: 8
@@ -18471,6 +18599,49 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1970627234
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1970627222}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b66b8a3d0ebd4f29b0b7d2a11e9d4c6f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AbilityController
+  controlsPredator: 0
+  enforceTestLoadouts: 1
+  logAbilityFlow: 1
+  disableLegacyAbilityComponents: 1
+  pipelineTestMode: 1
+  abilityControllerOwnsCooldowns: 1
+  localRoleController: {fileID: 0}
+  gameManager: {fileID: 0}
+  unitHealth: {fileID: 0}
+  survivorClassManager: {fileID: 0}
+  predatorClassManager: {fileID: 0}
+  survivorSlot1Cooldown: 2.5
+  survivorSlot2Cooldown: 8
+  survivorSlot3Cooldown: 10
+  survivorSlot4Cooldown: 16
+  predatorSlot1Cooldown: 1.4
+  predatorSlot2Cooldown: 8
+  predatorSlot3Cooldown: 10
+  predatorSlot4Cooldown: 14
+  spawnPlaceholderVfx: 1
+  placeholderVfxLifetime: 1.25
+  abilityAudioSource: {fileID: 0}
+  slot1Sound: {fileID: 0}
+  slot2Sound: {fileID: 0}
+  slot3Sound: {fileID: 0}
+  slot4Sound: {fileID: 0}
+  failedCastSound: {fileID: 0}
+  logAbilityAudio: 0
+  spawnGroundEffects: 1
+  groundEffectPrefab: {fileID: 0}
+  groundEffectDuration: 2.5
 --- !u!1 &1973488497
 GameObject:
   m_ObjectHideFlags: 0
@@ -18919,6 +19090,10 @@ MonoBehaviour:
   cooldownText: {fileID: 476633828}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  gameUi: {fileID: 0}
+  abilitySlot: 1
+  isPredatorSide: 0
+  useAbilityControllerCooldown: 1
   abilityName: 
   manaCost: 0
   manaCostLabelFormat: '{0}
@@ -19114,6 +19289,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HeavenPortal
   safeZone: {fileID: 2081617075}
   returnPoint: {fileID: 389332160}
+  teleportVerticalOffset: 1.1
   safeDuration: 15
   cooldownDuration: 0
 --- !u!136 &2017594252
@@ -19453,6 +19629,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   showDebugLogs: 1
+  useExternalCooldownAuthority: 0
   globalCooldownMultiplier: 1.3
   primaryCooldown: 2.5
   ability2Cooldown: 8
@@ -19581,6 +19758,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   logSurvivorDamage: 1
+  logAbilityEffects: 1
 --- !u!114 &2060611934
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19600,6 +19778,10 @@ MonoBehaviour:
   cooldownText: {fileID: 1167456711}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  gameUi: {fileID: 0}
+  abilitySlot: 1
+  isPredatorSide: 0
+  useAbilityControllerCooldown: 1
   abilityName: 
   manaCost: 0
   manaCostLabelFormat: '{0}
@@ -19796,6 +19978,10 @@ MonoBehaviour:
   cooldownText: {fileID: 1187781595}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  gameUi: {fileID: 0}
+  abilitySlot: 1
+  isPredatorSide: 0
+  useAbilityControllerCooldown: 1
   abilityName: 
   manaCost: 0
   manaCostLabelFormat: '{0}
@@ -21097,12 +21283,12 @@ PrefabInstance:
     m_TransformParent: {fileID: 459855935}
     m_Modifications:
     - target: {fileID: 363360154544469868, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
-      propertyPath: attackDamage
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 363360154544469868, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
       propertyPath: autoAttack
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 363360154544469868, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
+      propertyPath: attackDamage
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1901775035134909915, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
       propertyPath: m_Name
@@ -21222,6 +21408,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   logSurvivorDamage: 1
+  logAbilityEffects: 1
 --- !u!114 &8924335234456584558
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21331,8 +21518,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8cf391e6d89f97a4c952060ad50c5a64, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MonsterAbilityController
-  showDeprecationLogs: 0
-  hasLoggedDeprecation: 0
 --- !u!114 &8924335234456584569
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21373,6 +21558,7 @@ MonoBehaviour:
   baseMeleeRange: 2
   baseMeleeDamage: 10
   showDebugLogs: 1
+  useExternalCooldownAuthority: 0
   projectileSpawn: {fileID: 0}
   sentryTurretPrefab: {fileID: 1206151861668355471, guid: ee6053fbbc7d3ae47818b9220b118362, type: 3}
   minionPrefab: {fileID: 6691088928182749788, guid: 83c94c377211b2c4083dfcc00489877a, type: 3}
@@ -21388,6 +21574,28 @@ MonoBehaviour:
   dragonbladeDuration: 6
   dragonbladePrimaryMultiplier: 1.8
   cyberSwiftStrikeCooldown: 8
+--- !u!95 &8924335234456584571
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8924335234456584550}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 52a1862ddae318f4f9989b43e0470797, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!114 &8924335234456584573
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21421,28 +21629,16 @@ MonoBehaviour:
   predatorSlot4Cooldown: 14
   spawnPlaceholderVfx: 1
   placeholderVfxLifetime: 1.25
---- !u!95 &8924335234456584571
-Animator:
-  serializedVersion: 7
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8924335234456584550}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 52a1862ddae318f4f9989b43e0470797, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
+  abilityAudioSource: {fileID: 0}
+  slot1Sound: {fileID: 0}
+  slot2Sound: {fileID: 0}
+  slot3Sound: {fileID: 0}
+  slot4Sound: {fileID: 0}
+  failedCastSound: {fileID: 0}
+  logAbilityAudio: 0
+  spawnGroundEffects: 1
+  groundEffectPrefab: {fileID: 0}
+  groundEffectDuration: 2.5
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

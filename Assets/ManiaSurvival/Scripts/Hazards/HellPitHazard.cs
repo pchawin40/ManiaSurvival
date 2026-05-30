@@ -2,53 +2,214 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
-[RequireComponent(typeof(Collider))]
 public class HellPitHazard : MonoBehaviour
 {
+    private static readonly Dictionary<UnitHealth, float> NextSharedDamageTime = new Dictionary<UnitHealth, float>();
+
     [Header("Damage")]
-    [Tooltip("If true, any eligible unit that touches the HellPit is killed instantly on contact. " +
-             "Recommended for pits that represent a bottomless drop.")]
+    [Tooltip("If true, survivors touching the HellPit are killed instantly on contact.")]
     public bool instantKill = true;
 
-    [Tooltip("Fallback damage-per-second applied while inside the pit (used when instantKill is false).")]
-    public float survivorDamagePerSecond = 15f;
+    public float survivorDamagePerSecond = 100f;
 
-    [Tooltip("Fallback damage-per-second applied to the monster while inside the pit (used when instantKill is false).")]
-    public float monsterDamagePerSecond = 80f;
+    [Tooltip("Damage-per-second applied to the monster while inside the pit.")]
+    public float monsterDamagePerSecond = 100f;
 
     public float tickInterval = 0.25f;
     public bool instantKillMonster = false;
     public bool destroyOnMonsterDeath = false;
+
+    [Header("Walkable Floor")]
+    public bool ensureWalkableFloor = true;
+    public float floorThickness = 0.35f;
+    public float floorSurfaceOffset = 0.05f;
+
+    [Tooltip("Monsters get a solid floor and take monsterDamagePerSecond instead of instant death.")]
+    public bool monsterCanWalkOut = true;
+
+    [Header("Detection")]
+    public float hazardVolumeHeight = 4f;
+    public float occupancyPollInterval = 0.1f;
+    [Tooltip("Extra padding added around the pit bounds on X/Z.")]
+    public float boundsPadding = 0.5f;
+    [Tooltip("Extends the solid floor beyond the red visual so there is no vertical lip blocking entry.")]
+    public float floorApproachPadding = 2f;
 
     [Header("Debug")]
     public bool drawGizmo = true;
 
     private readonly HashSet<UnitHealth> occupants = new HashSet<UnitHealth>();
     private readonly Dictionary<UnitHealth, float> tickTimers = new Dictionary<UnitHealth, float>();
+    private float nextOccupancyPollTime;
+    private Bounds detectionBounds;
 
-    private void Awake()
+    private void Start()
     {
+        ConfigureVisualColliders();
+
+        RefreshDetectionBounds();
+
+        if (ensureWalkableFloor)
+        {
+            EnsureWalkableFloor();
+            RefreshDetectionBounds();
+        }
+
+        Debug.Log("[HellPit] Hazard ready on '" + name + "' bounds=" + detectionBounds.size
+            + " center=" + detectionBounds.center + " monsterDps=" + monsterDamagePerSecond);
+    }
+
+    private void ConfigureVisualColliders()
+    {
+        Collider[] colliders = GetComponents<Collider>();
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            Collider col = colliders[i];
+            if (col == null)
+            {
+                continue;
+            }
+
+            // The red plane mesh must not block CharacterController entry.
+            if (col is MeshCollider)
+            {
+                col.isTrigger = true;
+                col.enabled = false;
+                continue;
+            }
+
+            // Remove any stray solid box left on this object; walkable floor lives on a child.
+            if (col is BoxCollider)
+            {
+                Destroy(col);
+            }
+        }
+    }
+
+    private void RefreshDetectionBounds()
+    {
+        Renderer[] renderers = GetComponentsInChildren<Renderer>();
+        if (renderers.Length > 0)
+        {
+            detectionBounds = ExpandBounds(renderers[0].bounds);
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                detectionBounds.Encapsulate(renderers[i].bounds);
+            }
+
+            detectionBounds = ExpandBounds(detectionBounds);
+            return;
+        }
+
         Collider pitCollider = GetComponent<Collider>();
-        pitCollider.isTrigger = true;
+        if (pitCollider != null)
+        {
+            detectionBounds = ExpandBounds(pitCollider.bounds);
+            return;
+        }
+
+        detectionBounds = new Bounds(transform.position, new Vector3(10f, hazardVolumeHeight, 10f));
     }
 
-    private void OnTriggerEnter(Collider other)
+    private Bounds ExpandBounds(Bounds source)
     {
-        RegisterOccupant(other.GetComponentInParent<UnitHealth>());
+        float height = Mathf.Max(1f, hazardVolumeHeight);
+        Vector3 size = new Vector3(
+            Mathf.Max(1f, source.size.x + boundsPadding * 2f),
+            height,
+            Mathf.Max(1f, source.size.z + boundsPadding * 2f));
+        float floorTop = source.max.y;
+        Vector3 center = new Vector3(source.center.x, floorTop - floorSurfaceOffset + (height * 0.5f), source.center.z);
+        return new Bounds(center, size);
     }
 
-    private void OnTriggerStay(Collider other)
+    public void EnsureWalkableFloor()
     {
-        RegisterOccupant(other.GetComponentInParent<UnitHealth>());
+        const string walkableChildName = "HellWalkableFloor";
+        RefreshDetectionBounds();
+
+        Transform walkable = transform.Find(walkableChildName);
+        if (walkable == null)
+        {
+            GameObject floorObject = new GameObject(walkableChildName);
+            floorObject.transform.SetParent(transform, true);
+            walkable = floorObject.transform;
+        }
+
+        float surfaceY = Mathf.Max(0.02f, detectionBounds.min.y + 0.01f);
+        walkable.position = new Vector3(detectionBounds.center.x, surfaceY - (floorThickness * 0.5f), detectionBounds.center.z);
+        walkable.rotation = Quaternion.identity;
+        walkable.localScale = Vector3.one;
+
+        BoxCollider box = walkable.GetComponent<BoxCollider>();
+        if (box == null)
+        {
+            box = walkable.gameObject.AddComponent<BoxCollider>();
+        }
+
+        box.isTrigger = false;
+        box.size = new Vector3(
+            Mathf.Max(1f, detectionBounds.size.x + floorApproachPadding * 2f),
+            Mathf.Max(0.05f, floorThickness),
+            Mathf.Max(1f, detectionBounds.size.z + floorApproachPadding * 2f));
+        box.center = Vector3.zero;
     }
 
-    private void OnTriggerExit(Collider other)
+    private void PollOccupants()
     {
-        UnregisterOccupant(other.GetComponentInParent<UnitHealth>());
+        RefreshDetectionBounds();
+
+        HashSet<UnitHealth> currentlyInside = new HashSet<UnitHealth>();
+        UnitHealth[] allUnits = FindObjectsByType<UnitHealth>(FindObjectsSortMode.None);
+        for (int i = 0; i < allUnits.Length; i++)
+        {
+            UnitHealth health = allUnits[i];
+            if (!IsEligibleTarget(health) || currentlyInside.Contains(health))
+            {
+                continue;
+            }
+
+            if (IsUnitInsideBounds(health))
+            {
+                currentlyInside.Add(health);
+            }
+        }
+
+        foreach (UnitHealth health in currentlyInside)
+        {
+            RegisterOccupant(health);
+        }
+
+        if (occupants.Count == 0)
+        {
+            return;
+        }
+
+        UnitHealth[] snapshot = new UnitHealth[occupants.Count];
+        occupants.CopyTo(snapshot);
+        for (int i = 0; i < snapshot.Length; i++)
+        {
+            if (snapshot[i] == null || !currentlyInside.Contains(snapshot[i]))
+            {
+                UnregisterOccupant(snapshot[i]);
+            }
+        }
+    }
+
+    private bool IsUnitInsideBounds(UnitHealth health)
+    {
+        Vector3 sample = health.transform.position + Vector3.up * 0.75f;
+        return detectionBounds.Contains(sample);
     }
 
     private void Update()
     {
+        if (Time.time >= nextOccupancyPollTime)
+        {
+            nextOccupancyPollTime = Time.time + Mathf.Max(0.05f, occupancyPollInterval);
+            PollOccupants();
+        }
+
         if (occupants.Count == 0)
         {
             return;
@@ -98,9 +259,13 @@ public class HellPitHazard : MonoBehaviour
             return;
         }
 
-        if (instantKillMonster && IsMonster(unitHealth))
+        if (NextSharedDamageTime.TryGetValue(unitHealth, out float nextAllowedTime) && Time.time < nextAllowedTime)
         {
-            Debug.Log("damage tick");
+            return;
+        }
+
+        if (instantKillMonster && IsMonster(unitHealth) && !monsterCanWalkOut)
+        {
             unitHealth.TakeDamage(unitHealth.currentHealth, gameObject);
             if (destroyOnMonsterDeath)
             {
@@ -112,7 +277,10 @@ public class HellPitHazard : MonoBehaviour
 
         int damageAmount = Mathf.Max(1, Mathf.RoundToInt(damagePerSecond * Mathf.Max(0.01f, tickInterval)));
         unitHealth.TakeDamage(damageAmount, gameObject);
-        Debug.Log("damage tick");
+        NextSharedDamageTime[unitHealth] = Time.time + Mathf.Max(0.01f, tickInterval);
+
+        Debug.Log("[HellPit] damage tick " + damageAmount + " to " + unitHealth.name
+            + " from '" + name + "' (" + unitHealth.currentHealth + "/" + unitHealth.maxHealth + ")");
     }
 
     private float GetDamagePerSecond(UnitHealth unitHealth)
@@ -152,12 +320,7 @@ public class HellPitHazard : MonoBehaviour
 
     private void RegisterOccupant(UnitHealth unitHealth)
     {
-        if (unitHealth == null || unitHealth.IsDead)
-        {
-            return;
-        }
-
-        if (!IsEligibleTarget(unitHealth))
+        if (unitHealth == null || unitHealth.IsDead || !IsEligibleTarget(unitHealth))
         {
             return;
         }
@@ -165,12 +328,19 @@ public class HellPitHazard : MonoBehaviour
         if (occupants.Add(unitHealth))
         {
             tickTimers[unitHealth] = 0f;
-            Debug.Log("[HellPit] " + unitHealth.name + " fell into HellPit.");
+            Debug.Log("[HellPit] " + unitHealth.name + " entered HellPit on '" + name + "'.");
 
-            if (instantKill)
+            if (instantKill && IsSurvivor(unitHealth))
             {
-                // Deal enough damage to guarantee death regardless of current HP.
                 unitHealth.TakeDamage(unitHealth.maxHealth * 2 + 1, gameObject);
+            }
+            else if (instantKillMonster && IsMonster(unitHealth) && !monsterCanWalkOut)
+            {
+                unitHealth.TakeDamage(unitHealth.currentHealth, gameObject);
+                if (destroyOnMonsterDeath)
+                {
+                    Destroy(unitHealth.gameObject);
+                }
             }
         }
     }
@@ -185,7 +355,7 @@ public class HellPitHazard : MonoBehaviour
         if (occupants.Remove(unitHealth))
         {
             tickTimers.Remove(unitHealth);
-            Debug.Log("unit exited HellPit: " + unitHealth.name);
+            Debug.Log("[HellPit] " + unitHealth.name + " exited HellPit on '" + name + "'.");
         }
     }
 
@@ -202,21 +372,31 @@ public class HellPitHazard : MonoBehaviour
             return;
         }
 
-        Collider pitCollider = GetComponent<Collider>();
-        if (pitCollider == null)
-        {
-            return;
-        }
-
+        Bounds bounds = Application.isPlaying ? detectionBounds : ExpandBounds(GetEditorBounds());
         Gizmos.color = new Color(1f, 0.25f, 0.1f, 0.35f);
+        Gizmos.DrawWireCube(bounds.center, bounds.size);
+    }
 
-        if (pitCollider is BoxCollider box)
+    private Bounds GetEditorBounds()
+    {
+        Collider pitCollider = GetComponent<Collider>();
+        if (pitCollider != null)
         {
-            Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, transform.lossyScale);
-            Gizmos.DrawWireCube(box.center, box.size);
-            return;
+            return pitCollider.bounds;
         }
 
-        Gizmos.DrawWireSphere(transform.position, Mathf.Max(1f, Mathf.Max(transform.localScale.x, transform.localScale.z)));
+        Renderer[] renderers = GetComponentsInChildren<Renderer>();
+        if (renderers.Length == 0)
+        {
+            return new Bounds(transform.position, Vector3.one * 4f);
+        }
+
+        Bounds bounds = renderers[0].bounds;
+        for (int i = 1; i < renderers.Length; i++)
+        {
+            bounds.Encapsulate(renderers[i].bounds);
+        }
+
+        return bounds;
     }
 }
