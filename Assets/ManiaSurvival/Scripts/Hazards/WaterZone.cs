@@ -9,7 +9,9 @@ public class WaterZone : MonoBehaviour
     [Min(0f)]
     public float survivorHealPerSecond = 5f;
     [Min(0f)]
-    public float survivorManaPerSecond = 2f;
+    public float survivorManaPerSecond = 4f;
+    [Min(0f)]
+    public float predatorManaPerSecond = 10f;
     [Min(0f)]
     public float hellBruteDamagePerSecond = 8f;
     [Min(0.05f)]
@@ -89,18 +91,22 @@ public class WaterZone : MonoBehaviour
             if (unitHealth.CompareTag("Survivor"))
             {
                 ApplyOverTime(unitHealth, survivorHealPerSecond, healProgress, true);
-                ApplyManaOverTime(unitHealth);
+                ApplyManaOverTime(unitHealth, survivorManaPerSecond);
             }
             else if (IsHellBrute(unitHealth))
             {
                 ApplyOverTime(unitHealth, hellBruteDamagePerSecond, damageProgress, false);
             }
+            else if (unitHealth.CompareTag("Monster") || unitHealth.CompareTag("Predator"))
+            {
+                ApplyManaOverTime(unitHealth, predatorManaPerSecond);
+            }
         }
     }
 
-    private void ApplyManaOverTime(UnitHealth unitHealth)
+    private void ApplyManaOverTime(UnitHealth unitHealth, float manaPerSecond)
     {
-        if (survivorManaPerSecond <= 0f)
+        if (manaPerSecond <= 0f)
         {
             return;
         }
@@ -112,7 +118,7 @@ public class WaterZone : MonoBehaviour
 
         float progress = 0f;
         manaProgress.TryGetValue(unitHealth, out progress);
-        progress += survivorManaPerSecond * tickInterval;
+        progress += manaPerSecond * tickInterval;
 
         int wholePoints = Mathf.FloorToInt(progress);
         if (wholePoints <= 0)
@@ -175,6 +181,12 @@ public class WaterZone : MonoBehaviour
         if (unitHealth.CompareTag("Monster") || unitHealth.CompareTag("Predator"))
         {
             occupants.Add(unitHealth);
+            if (!IsHellBrute(unitHealth))
+            {
+                CacheUnitMana(unitHealth);
+            }
+
+            return;
         }
     }
 
@@ -188,9 +200,8 @@ public class WaterZone : MonoBehaviour
         UnitMana mana = unitHealth.GetComponent<UnitMana>();
         if (mana == null && autoAddManaComponent)
         {
-            mana = UnitMana.EnsureOn(unitHealth.gameObject, unitHealth.CompareTag("Monster"));
-            mana.maxMana = defaultMaxMana;
-            mana.currentMana = defaultMaxMana;
+            bool isPredator = unitHealth.CompareTag("Monster") || unitHealth.CompareTag("Predator");
+            mana = UnitMana.EnsureOn(unitHealth.gameObject, isPredator);
         }
 
         if (mana != null)

@@ -25,7 +25,16 @@ public static class WaterfallManaZoneSetup
         GameObject existing = GameObject.Find(ZoneName);
         if (existing != null)
         {
-            Debug.Log("[MapSetup] " + ZoneName + " already exists.");
+            ManaRegenZone existingZone = existing.GetComponent<ManaRegenZone>();
+            if (existingZone != null)
+            {
+                existingZone.survivorBonusManaRegenPerSecond = 12f;
+                existingZone.predatorBonusManaRegenPerSecond = 34f;
+                existingZone.bonusManaRegenPerSecond = 12f;
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            Debug.Log("[MapSetup] " + ZoneName + " already exists — tuned regen rates.");
             Selection.activeGameObject = existing;
             return;
         }
@@ -73,10 +82,12 @@ public static class WaterfallManaZoneSetup
         BoxCollider trigger = zoneRoot.AddComponent<BoxCollider>();
         trigger.isTrigger = true;
         trigger.center = new Vector3(0f, 1f, 0f);
-        trigger.size = new Vector3(8f, 2f, 8f);
+        trigger.size = new Vector3(10f, 2.5f, 10f);
 
         ManaRegenZone zone = zoneRoot.AddComponent<ManaRegenZone>();
-        zone.bonusManaRegenPerSecond = 20f;
+        zone.survivorBonusManaRegenPerSecond = 12f;
+        zone.predatorBonusManaRegenPerSecond = 34f;
+        zone.bonusManaRegenPerSecond = 12f;
         zone.showDebugLogs = true;
 
         EditorSceneManager.MarkSceneDirty(scene);
@@ -104,15 +115,23 @@ public static class WaterfallManaZoneSetup
 
     private static Vector3 ResolveZonePosition()
     {
+        GameObject pool = GameObject.Find("Heaven_HealingPool");
+        if (pool != null)
+        {
+            Vector3 pos = pool.transform.position;
+            pos.y = 0.05f;
+            return pos;
+        }
+
         GameObject waterfall = GameObject.Find("Heaven_BackWaterfall");
         if (waterfall != null)
         {
             Vector3 pos = waterfall.transform.position;
             pos.y = 0.05f;
-            pos.z += 4f;
+            pos.z += 2.5f;
             return pos;
         }
 
-        return new Vector3(0f, 0.05f, -105f);
+        return new Vector3(0f, 0.05f, -108f);
     }
 }

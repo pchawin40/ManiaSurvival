@@ -16,6 +16,7 @@ public class NeutralTree : MonoBehaviour
     private void Awake()
     {
         CacheReferences();
+        EnsureDestructibleHealth();
         ApplySettings();
     }
 
@@ -50,5 +51,20 @@ public class NeutralTree : MonoBehaviour
         {
             treeCollider.isTrigger = !blocksMovement;
         }
+    }
+
+    private void EnsureDestructibleHealth()
+    {
+        DestructiblePropHealth health = GetComponent<DestructiblePropHealth>();
+        if (health != null)
+        {
+            return;
+        }
+
+        health = gameObject.AddComponent<DestructiblePropHealth>();
+        health.maxHealth = 60;
+        health.currentHealth = 60;
+        health.destroyOnDeath = true;
+        health.hitFlashRenderer = GetComponentInChildren<Renderer>();
     }
 }

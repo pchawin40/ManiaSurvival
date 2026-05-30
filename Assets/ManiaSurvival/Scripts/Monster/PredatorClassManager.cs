@@ -1913,7 +1913,52 @@ public class PredatorClassManager : MonoBehaviour
             hitCount++;
         }
 
+        DamageBarragePropsInCone(origin, forward, range, halfAngle, pulseNumber);
+
         return hitCount;
+    }
+
+    private void DamageBarragePropsInCone(Vector3 origin, Vector3 forward, float range, float halfAngle, int pulseNumber)
+    {
+        int damage = barragePropDamage;
+        if (damage <= 0)
+        {
+            return;
+        }
+
+        Collider[] hits = Physics.OverlapSphere(origin, range, ~0, QueryTriggerInteraction.Ignore);
+        HashSet<DestructiblePropHealth> damagedProps = new HashSet<DestructiblePropHealth>();
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider hit = hits[i];
+            if (hit == null)
+            {
+                continue;
+            }
+
+            DestructiblePropHealth prop = hit.GetComponentInParent<DestructiblePropHealth>();
+            if (prop == null || !prop.IsAlive || !damagedProps.Add(prop))
+            {
+                continue;
+            }
+
+            Vector3 toProp = prop.transform.position - origin;
+            toProp.y = 0f;
+            float distance = toProp.magnitude;
+            if (distance <= 0.05f || distance > range)
+            {
+                continue;
+            }
+
+            if (Vector3.Angle(forward, toProp.normalized) > halfAngle)
+            {
+                continue;
+            }
+
+            prop.TakeDamage(damage, gameObject);
+            LogPredatorAbility("Barrage pulse " + pulseNumber + " damaged prop " + prop.name + " for " + damage);
+        }
     }
 
     private void SpawnBarrageConeVfx(Vector3 forward, float range, float halfAngle, float lifetime, Color tint)

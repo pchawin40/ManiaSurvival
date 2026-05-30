@@ -20788,7 +20788,7 @@ MonoBehaviour:
   chaosTreeCooldown: 12
   chaosTreeSpawnCountMin: 2
   chaosTreeSpawnCountMax: 4
-  chaosTreeLifetime: 16
+  chaosTreeLifetime: 0
   chaosCastRadius: 18
   minDistanceFromPlayers: 3
   tornadoManaCost: 15

@@ -75,7 +75,8 @@ public class NPCChaosCaster : MonoBehaviour
     public float chaosTreeCooldown = 12f;
     public int chaosTreeSpawnCountMin = 2;
     public int chaosTreeSpawnCountMax = 4;
-    public float chaosTreeLifetime = 16f;
+    [Tooltip("Seconds before spawned chaos trees auto-despawn. 0 = persist until destroyed by abilities.")]
+    public float chaosTreeLifetime = 0f;
     public float chaosCastRadius = 18f;
     public float minDistanceFromPlayers = 3f;
 
