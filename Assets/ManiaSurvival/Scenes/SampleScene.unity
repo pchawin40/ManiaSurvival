@@ -6538,10 +6538,10 @@ MonoBehaviour:
   unitHealth: {fileID: 637681161}
   survivorClassManager: {fileID: 637681185}
   predatorClassManager: {fileID: 0}
-  survivorSlot1Cooldown: 2.5
+  survivorSlot1Cooldown: 3
   survivorSlot2Cooldown: 8
-  survivorSlot3Cooldown: 10
-  survivorSlot4Cooldown: 16
+  survivorSlot3Cooldown: 6
+  survivorSlot4Cooldown: 18
   predatorSlot1Cooldown: 1.4
   predatorSlot2Cooldown: 8
   predatorSlot3Cooldown: 10
@@ -10983,10 +10983,10 @@ MonoBehaviour:
   unitHealth: {fileID: 0}
   survivorClassManager: {fileID: 0}
   predatorClassManager: {fileID: 0}
-  survivorSlot1Cooldown: 2.5
+  survivorSlot1Cooldown: 3
   survivorSlot2Cooldown: 8
-  survivorSlot3Cooldown: 10
-  survivorSlot4Cooldown: 16
+  survivorSlot3Cooldown: 6
+  survivorSlot4Cooldown: 18
   predatorSlot1Cooldown: 1.4
   predatorSlot2Cooldown: 8
   predatorSlot3Cooldown: 10
@@ -18622,10 +18622,10 @@ MonoBehaviour:
   unitHealth: {fileID: 0}
   survivorClassManager: {fileID: 0}
   predatorClassManager: {fileID: 0}
-  survivorSlot1Cooldown: 2.5
+  survivorSlot1Cooldown: 3
   survivorSlot2Cooldown: 8
-  survivorSlot3Cooldown: 10
-  survivorSlot4Cooldown: 16
+  survivorSlot3Cooldown: 6
+  survivorSlot4Cooldown: 18
   predatorSlot1Cooldown: 1.4
   predatorSlot2Cooldown: 8
   predatorSlot3Cooldown: 10
@@ -21619,10 +21619,10 @@ MonoBehaviour:
   unitHealth: {fileID: 8924335234456584551}
   survivorClassManager: {fileID: 0}
   predatorClassManager: {fileID: 8924335234456584570}
-  survivorSlot1Cooldown: 2.5
+  survivorSlot1Cooldown: 3
   survivorSlot2Cooldown: 8
-  survivorSlot3Cooldown: 10
-  survivorSlot4Cooldown: 16
+  survivorSlot3Cooldown: 6
+  survivorSlot4Cooldown: 18
   predatorSlot1Cooldown: 1.4
   predatorSlot2Cooldown: 8
   predatorSlot3Cooldown: 10

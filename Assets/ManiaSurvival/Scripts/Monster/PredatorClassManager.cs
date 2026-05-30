@@ -97,11 +97,32 @@ public class PredatorClassManager : MonoBehaviour
     public float barrageKnockbackMin = 2.8f;
     public float barrageKnockbackMax = 4f;
 
+    [Header("Relentless Hook - Feel")]
+    public bool enableAbilityFeel = true;
+    public bool logBarrageVfx = false;
+    public float barrageWarningDuration = 0.25f;
+    public float barrageCraterDuration = 10f;
+    public float barrageBombPropRadius = 2.5f;
+    public int barragePropDamage = 15;
+
+    [Header("Relentless Hook - Audio")]
+    public AudioSource abilityAudioSource;
+    [Range(0f, 1f)] public float abilitySfxVolume = 0.85f;
+    public bool usePlaceholderAbilityAudio = true;
+    public AudioClip spraySound;
+    public AudioClip hookFireSound;
+    public AudioClip hookHitSound;
+    public AudioClip tonicSound;
+    public AudioClip barrageStartSound;
+    public AudioClip barrageBombSound;
+    public AudioClip barrageEndSound;
+
     private Coroutine relentlessBarrageRoutine;
     private bool isBarrageActive;
     private readonly List<GameObject> barragePulseVfx = new List<GameObject>();
     private Coroutine tonicEffectRoutine;
     private GameObject tonicGasVfx;
+    private GameObject activeHookChain;
     private readonly Dictionary<UnitHealth, float> tonicGasPendingDamage = new Dictionary<UnitHealth, float>();
     private readonly Dictionary<DestructiblePropHealth, float> tonicGasPendingPropDamage = new Dictionary<DestructiblePropHealth, float>();
 
@@ -113,6 +134,11 @@ public class PredatorClassManager : MonoBehaviour
         monsterMovement = GetComponent<MonsterPlayerMovement>();
         gameManager = ManiaGameManager.Instance;
         cachedHealthForReduction = unitHealth != null ? unitHealth.currentHealth : 0;
+
+        if (abilityAudioSource == null)
+        {
+            abilityAudioSource = GetComponent<AudioSource>();
+        }
     }
 
     private void Update()
@@ -917,6 +943,8 @@ public class PredatorClassManager : MonoBehaviour
         Vector3 origin = GetChestCastOrigin();
         Vector3 forward = GetFlatForward(logAim: true);
 
+        PlayRelentlessSfx(spraySound, AbilityPlaceholderSound.Spray, Random.Range(0.94f, 1.06f));
+
         LogPredatorAbility("Spray direction=" + forward);
         LogPredatorAbility("Spray cast origin=" + origin + " forward=" + forward
             + " range=" + range.ToString("0.0") + " angle=" + halfAngle.ToString("0.0"));
@@ -991,11 +1019,17 @@ public class PredatorClassManager : MonoBehaviour
             Debug.DrawRay(origin, Quaternion.Euler(0f, -halfAngle, 0f) * forward * range, Color.red, 1.2f);
         }
 
-        SpawnSprayConeVfx(origin, forward, range, halfAngle, 0.32f);
+        SpawnSprayConeVfx(origin, forward, range, halfAngle, 0.45f);
+        SpawnForwardBurstVfx(origin, forward, range * 0.65f, 0.28f, new Color(1f, 0.5f, 0.1f, 0.65f));
+        if (enableAbilityFeel)
+        {
+            PredatorAbilityFeelVfx.SpawnSprayPellets(origin, forward, range, halfAngle, 7, 0.22f);
+        }
+
         TemporaryGroundEffect.Spawn(
-            transform.position,
+            origin + forward * 1.4f,
             new Color(0.65f, 0.55f, 0.4f, 0.55f),
-            0.6f,
+            0.85f,
             2.2f,
             null,
             showDebugLogs);
@@ -1105,18 +1139,28 @@ public class PredatorClassManager : MonoBehaviour
         string blockReason;
         UnitHealth target = ResolveHookTarget(origin, dir, range, out blockReason);
 
+        PlayRelentlessSfx(hookFireSound, AbilityPlaceholderSound.HookFire);
+
         if (hookProjectilePrefab != null)
         {
             GameObject hook = Instantiate(hookProjectilePrefab, origin, Quaternion.LookRotation(dir));
             Destroy(hook, 0.6f);
         }
-        else
-        {
-            SpawnHookLineVfx(origin, dir, range, target != null, 0.45f);
-        }
+
+        Vector3 chainEnd = target != null
+            ? target.transform.position + Vector3.up * 1f
+            : origin + dir * range;
+        ClearActiveHookChain();
+        activeHookChain = PredatorAbilityFeelVfx.SpawnHookChainLine(
+            origin,
+            chainEnd,
+            target != null ? new Color(0.95f, 0.75f, 0.2f, 0.95f) : new Color(0.75f, 0.75f, 0.75f, 0.65f),
+            0.1f);
 
         if (target == null)
         {
+            yield return new WaitForSeconds(0.45f);
+            ClearActiveHookChain();
             yield break;
         }
 
@@ -1129,12 +1173,17 @@ public class PredatorClassManager : MonoBehaviour
                 + " " + oldHp + " -> " + target.currentHealth);
         }
 
+        PlayRelentlessSfx(hookHitSound, AbilityPlaceholderSound.HookHit);
+        SpawnHitMarkerVfx(target.transform.position + Vector3.up * 1.2f, 0.4f);
+
         Vector3 start = target.transform.position;
         Vector3 end = GetHookPullDestination(start, pullForwardDistance);
         Debug.Log("[PredatorAbility] Hook pull start: " + start);
         Debug.Log("[PredatorAbility] Hook pull destination: " + end);
 
-        yield return PullSurvivorWithControlSuspend(target, end, pullDuration);
+        LineRenderer hookLine = activeHookChain != null ? activeHookChain.GetComponent<LineRenderer>() : null;
+        yield return PullSurvivorWithControlSuspend(target, end, pullDuration, hookLine);
+        ClearActiveHookChain();
 
         if (target != null && !target.IsDead)
         {
@@ -1149,6 +1198,8 @@ public class PredatorClassManager : MonoBehaviour
             yield break;
         }
 
+        PlayRelentlessSfx(tonicSound, AbilityPlaceholderSound.Tonic);
+
         int before = unitHealth.currentHealth;
         if (before < unitHealth.maxHealth)
         {
@@ -1160,6 +1211,11 @@ public class PredatorClassManager : MonoBehaviour
 
         ApplyTonicEffects();
         SpawnSelfBurstVfx(new Color(0.35f, 0.95f, 0.45f, 0.75f), 0.55f);
+        if (enableAbilityFeel)
+        {
+            PredatorAbilityFeelVfx.SpawnTonicChannelRing(transform, tonicGasRadius, tonicDuration);
+        }
+
         yield break;
     }
 
@@ -1417,7 +1473,7 @@ public class PredatorClassManager : MonoBehaviour
         vfx.transform.SetParent(transform, false);
         vfx.transform.localPosition = new Vector3(0f, 0.15f, 0f);
         vfx.transform.localScale = new Vector3(radius * 2f, 0.12f, radius * 2f);
-        ApplySimpleVfxColor(vfx, new Color(0.12f, 0.55f, 0.18f, 0.38f));
+        ApplySimpleVfxColor(vfx, new Color(0.18f, 0.82f, 0.28f, 0.48f));
         tonicGasVfx = vfx;
     }
 
@@ -1425,6 +1481,16 @@ public class PredatorClassManager : MonoBehaviour
     {
         isBarrageActive = true;
         LogPredatorAbility("Barrage started");
+
+        Vector3 origin = GetChestCastOrigin();
+        Vector3 forward = GetFlatForward(logAim: true);
+        PlayRelentlessSfx(barrageStartSound, AbilityPlaceholderSound.BarrageStart);
+
+        if (enableAbilityFeel)
+        {
+            PredatorAbilityFeelVfx.SpawnBarrageWarningStrip(origin, forward, barrageRange, barrageHalfAngle, barrageWarningDuration);
+            yield return new WaitForSeconds(barrageWarningDuration);
+        }
 
         float duration = Mathf.Max(0.1f, barrageDuration);
         float pulseInterval = Mathf.Max(0.05f, barragePulseInterval);
@@ -1453,6 +1519,7 @@ public class PredatorClassManager : MonoBehaviour
         isBarrageActive = false;
         relentlessBarrageRoutine = null;
         ClearBarragePulseVfx();
+        PlayRelentlessSfx(barrageEndSound, AbilityPlaceholderSound.BarrageEnd);
         LogPredatorAbility("Barrage ended");
     }
 
@@ -1463,14 +1530,30 @@ public class PredatorClassManager : MonoBehaviour
         UnitHealth[] hits = GetSurvivorsInCone(origin, forward, barrageRange, barrageHalfAngle);
         int hitCount = 0;
 
-        SpawnBarragePulseVfx(origin, forward, barrageRange, 0.28f);
-        TemporaryGroundEffect.Spawn(
-            origin + forward * (barrageRange * 0.35f),
-            new Color(0.15f, 0.1f, 0.08f, 0.7f),
-            2f,
-            2.5f,
-            null,
-            showDebugLogs);
+        int expectedPulses = Mathf.Max(1, Mathf.CeilToInt(barrageDuration / Mathf.Max(0.05f, barragePulseInterval)));
+        float spacing = barrageRange / expectedPulses;
+        Vector3 bombPos = origin + forward * Mathf.Clamp(spacing * pulseNumber, 2f, barrageRange);
+        bombPos.y = origin.y;
+
+        if (enableAbilityFeel)
+        {
+            PredatorAbilityFeelVfx.SpawnBombExplosion(bombPos, 1.9f, 0.35f);
+            TemporaryGroundEffect.SpawnScorch(
+                bombPos,
+                new Color(0.12f, 0.08f, 0.06f, 0.82f),
+                barrageCraterDuration,
+                2.4f,
+                logBarrageVfx,
+                "BarrageVFX");
+            PredatorAbilityFeelVfx.DamageDestructiblePropsInRadius(bombPos, barrageBombPropRadius, barragePropDamage, gameObject);
+
+            if (logBarrageVfx)
+            {
+                Debug.Log("[BarrageVFX] Bomb impact " + pulseNumber + " at " + bombPos);
+            }
+        }
+
+        PlayRelentlessSfx(barrageBombSound, AbilityPlaceholderSound.BarrageBomb, Random.Range(0.92f, 1.08f));
 
         for (int i = 0; i < hits.Length; i++)
         {
@@ -1544,6 +1627,50 @@ public class PredatorClassManager : MonoBehaviour
         }
 
         Debug.Log("[PredatorAbility] " + message);
+    }
+
+    private void PlayRelentlessSfx(AudioClip clip, AbilityPlaceholderSound fallback, float pitch = 1f)
+    {
+        if (!enableAbilityFeel)
+        {
+            return;
+        }
+
+        if (abilityAudioSource == null)
+        {
+            abilityAudioSource = GetComponent<AudioSource>();
+        }
+
+        AbilityPlaceholderAudio.Play(
+            abilityAudioSource,
+            clip,
+            fallback,
+            abilitySfxVolume,
+            usePlaceholderAbilityAudio,
+            pitch);
+    }
+
+    private void ClearActiveHookChain()
+    {
+        if (activeHookChain != null)
+        {
+            Destroy(activeHookChain);
+            activeHookChain = null;
+        }
+    }
+
+    private void UpdateHookChain(LineRenderer hookChain, UnitHealth target)
+    {
+        if (hookChain == null)
+        {
+            return;
+        }
+
+        hookChain.SetPosition(0, GetChestCastOrigin());
+        Vector3 end = target != null
+            ? target.transform.position + Vector3.up * 1f
+            : hookChain.GetPosition(1);
+        hookChain.SetPosition(1, end);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -1852,7 +1979,7 @@ public class PredatorClassManager : MonoBehaviour
         return candidate == gameObject || candidate.transform.IsChildOf(transform);
     }
 
-    private IEnumerator PullSurvivorWithControlSuspend(UnitHealth target, Vector3 end, float duration)
+    private IEnumerator PullSurvivorWithControlSuspend(UnitHealth target, Vector3 end, float duration, LineRenderer hookChain = null)
     {
         if (target == null || target.IsDead)
         {
@@ -1897,8 +2024,11 @@ public class PredatorClassManager : MonoBehaviour
             }
 
             target.transform.position = pullPoint;
+            UpdateHookChain(hookChain, target);
             yield return null;
         }
+
+        UpdateHookChain(hookChain, target);
 
         if (targetController != null && controllerWasEnabled && target.gameObject.activeInHierarchy)
         {

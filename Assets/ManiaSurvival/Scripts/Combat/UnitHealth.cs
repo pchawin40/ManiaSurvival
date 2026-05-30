@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -23,10 +24,27 @@ public class UnitHealth : MonoBehaviour
     [Tooltip("Logs generic ability damage/heal lines for stability debugging.")]
     public bool logAbilityEffects = true;
 
+    [Header("Combat Feedback")]
+    public bool showFloatingCombatText = true;
+    public bool showHitFlash = true;
+    public Color damageTextColor = new Color(1f, 0.42f, 0.12f, 1f);
+    public Color healTextColor = new Color(0.25f, 0.95f, 0.35f, 1f);
+
+    private UnitHealthVisualFeedback visualFeedback;
+
     void Awake()
     {
         currentHealth = maxHealth;
         IsDead = false;
+
+        if (showHitFlash)
+        {
+            visualFeedback = GetComponent<UnitHealthVisualFeedback>();
+            if (visualFeedback == null)
+            {
+                visualFeedback = gameObject.AddComponent<UnitHealthVisualFeedback>();
+            }
+        }
     }
 
     public void TakeDamage(int amount, GameObject damageSource = null)
@@ -39,6 +57,16 @@ public class UnitHealth : MonoBehaviour
         currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
 
         onDamaged?.Invoke();
+
+        if (showFloatingCombatText)
+        {
+            FloatingCombatText.Spawn(transform.position, "-" + amount, damageTextColor);
+        }
+
+        if (showHitFlash && visualFeedback != null)
+        {
+            visualFeedback.FlashDamage();
+        }
 
         if (logAbilityEffects)
         {
@@ -66,6 +94,16 @@ public class UnitHealth : MonoBehaviour
 
         currentHealth += amount;
         currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+
+        if (showFloatingCombatText)
+        {
+            FloatingCombatText.Spawn(transform.position, "+" + amount, healTextColor);
+        }
+
+        if (showHitFlash && visualFeedback != null)
+        {
+            visualFeedback.FlashHeal();
+        }
 
         if (logAbilityEffects)
         {
@@ -106,6 +144,166 @@ public class UnitHealth : MonoBehaviour
         }
 
         if (destroyOnDeath)
+        {
+            Destroy(gameObject);
+        }
+    }
+}
+
+[DisallowMultipleComponent]
+public class UnitHealthVisualFeedback : MonoBehaviour
+{
+    [Header("Flash")]
+    public Color damageFlashColor = new Color(1f, 0.35f, 0.15f, 1f);
+    public Color healFlashColor = new Color(0.25f, 0.95f, 0.55f, 1f);
+    public float flashDuration = 0.1f;
+
+    private readonly System.Collections.Generic.List<RendererState> rendererStates
+        = new System.Collections.Generic.List<RendererState>();
+    private Coroutine flashRoutine;
+
+    private struct RendererState
+    {
+        public Renderer renderer;
+        public Color originalColor;
+    }
+
+    public void FlashDamage()
+    {
+        StartFlash(damageFlashColor);
+    }
+
+    public void FlashHeal()
+    {
+        StartFlash(healFlashColor);
+    }
+
+    private void CacheRenderers()
+    {
+        rendererStates.Clear();
+        Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null || renderer is ParticleSystemRenderer)
+            {
+                continue;
+            }
+
+            Material mat = renderer.material;
+            if (mat == null || !mat.HasProperty("_Color"))
+            {
+                continue;
+            }
+
+            rendererStates.Add(new RendererState
+            {
+                renderer = renderer,
+                originalColor = mat.color
+            });
+        }
+    }
+
+    private void StartFlash(Color flashColor)
+    {
+        if (rendererStates.Count == 0)
+        {
+            CacheRenderers();
+        }
+
+        if (rendererStates.Count == 0)
+        {
+            return;
+        }
+
+        if (flashRoutine != null)
+        {
+            StopCoroutine(flashRoutine);
+        }
+
+        flashRoutine = StartCoroutine(FlashRoutine(flashColor));
+    }
+
+    private System.Collections.IEnumerator FlashRoutine(Color flashColor)
+    {
+        for (int i = 0; i < rendererStates.Count; i++)
+        {
+            Renderer renderer = rendererStates[i].renderer;
+            if (renderer != null && renderer.material != null)
+            {
+                renderer.material.color = flashColor;
+            }
+        }
+
+        yield return new WaitForSeconds(flashDuration);
+
+        for (int i = 0; i < rendererStates.Count; i++)
+        {
+            RendererState state = rendererStates[i];
+            if (state.renderer != null && state.renderer.material != null)
+            {
+                state.renderer.material.color = state.originalColor;
+            }
+        }
+
+        flashRoutine = null;
+    }
+}
+
+public class FloatingCombatText : MonoBehaviour
+{
+    public float riseSpeed = 1.4f;
+    public float lifetime = 1f;
+
+    private TextMeshPro textMesh;
+    private Color startColor;
+    private float spawnTime;
+
+    public static void Spawn(Vector3 worldPosition, string text, Color color)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        GameObject host = new GameObject("FloatingCombatText");
+        host.transform.position = worldPosition + Vector3.up * 1.6f;
+        FloatingCombatText floater = host.AddComponent<FloatingCombatText>();
+        floater.Initialize(text, color);
+    }
+
+    private void Initialize(string text, Color color)
+    {
+        spawnTime = Time.time;
+        startColor = color;
+        textMesh = gameObject.AddComponent<TextMeshPro>();
+        textMesh.text = text;
+        textMesh.fontSize = 4.5f;
+        textMesh.alignment = TextAlignmentOptions.Center;
+        textMesh.color = color;
+        textMesh.rectTransform.sizeDelta = new Vector2(4f, 2f);
+    }
+
+    private void LateUpdate()
+    {
+        Camera cam = Camera.main;
+        if (cam != null)
+        {
+            transform.rotation = Quaternion.LookRotation(transform.position - cam.transform.position);
+        }
+
+        transform.position += Vector3.up * riseSpeed * Time.deltaTime;
+
+        float elapsed = Time.time - spawnTime;
+        float t = lifetime <= 0f ? 1f : Mathf.Clamp01(elapsed / lifetime);
+        if (textMesh != null)
+        {
+            Color color = startColor;
+            color.a = Mathf.Lerp(startColor.a, 0f, t);
+            textMesh.color = color;
+        }
+
+        if (elapsed >= lifetime)
         {
             Destroy(gameObject);
         }

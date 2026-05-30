@@ -15,6 +15,7 @@ public class AbilityController : MonoBehaviour
     public bool controlsPredator;
     public bool enforceTestLoadouts = true;
     public bool logAbilityFlow = true;
+    public bool logAbilityMana = false;
     public bool disableLegacyAbilityComponents = true;
     public bool pipelineTestMode = true;
     public bool abilityControllerOwnsCooldowns = true;
@@ -40,10 +41,10 @@ public class AbilityController : MonoBehaviour
     public float predatorSlot4ManaCost = 60f;
 
     [Header("Survivor Slot Cooldowns")]
-    public float survivorSlot1Cooldown = 2.5f;
-    public float survivorSlot2Cooldown = 6f;
-    public float survivorSlot3Cooldown = 10f;
-    public float survivorSlot4Cooldown = 16f;
+    public float survivorSlot1Cooldown = 3f;
+    public float survivorSlot2Cooldown = 8f;
+    public float survivorSlot3Cooldown = 6f;
+    public float survivorSlot4Cooldown = 18f;
 
     [Header("Predator Slot Cooldowns")]
     public float predatorSlot1Cooldown = 2f;
@@ -62,6 +63,10 @@ public class AbilityController : MonoBehaviour
     public AudioClip slot3Sound;
     public AudioClip slot4Sound;
     public AudioClip failedCastSound;
+    public AudioClip noManaSound;
+    public AudioClip cooldownFailSound;
+    public bool usePlaceholderAbilityAudio = true;
+    [Range(0f, 1f)] public float abilitySfxVolume = 0.85f;
     public bool logAbilityAudio;
 
     [Header("Ground Effects")]
@@ -195,6 +200,7 @@ public class AbilityController : MonoBehaviour
         float cooldownRemaining = GetCooldownRemaining(clampedSlot);
         if (cooldownRemaining > 0f)
         {
+            LogAbilityManaBlocked(clampedSlot, cooldownRemaining, "cooldown");
             LogFlow($"[AbilityController] Current class/loadout: {GetCurrentLoadoutLabel()}");
             LogFlow($"[AbilityController] Ability resolved: {GetResolvedAbilityName(clampedSlot)}");
             LogFlow($"[AbilityController] Cooldown blocked slot {clampedSlot}: {cooldownRemaining:0.00}s remaining");
@@ -215,9 +221,10 @@ public class AbilityController : MonoBehaviour
 
         if (unitMana != null && !unitMana.HasMana(manaCost))
         {
+            LogAbilityManaBlocked(clampedSlot, unitMana.currentMana, manaCost, "insufficient mana");
             LogFlow($"[AbilityController] Insufficient mana for slot {clampedSlot}: need {manaCost:0.0}, have {unitMana.currentMana:0.0}");
             LogFlow("[AbilityController] Ability succeeded/failed: failed (insufficient mana)");
-            PlayFailedCastSound();
+            PlayNoManaSound();
             return;
         }
 
@@ -237,6 +244,7 @@ public class AbilityController : MonoBehaviour
         bool succeeded = ExecuteSlot(clampedSlot);
         if (succeeded)
         {
+            float manaBefore = unitMana != null ? unitMana.currentMana : 0f;
             if (unitMana != null && manaCost > 0f)
             {
                 if (!unitMana.SpendMana(manaCost))
@@ -247,6 +255,7 @@ public class AbilityController : MonoBehaviour
                 }
 
                 LogFlow($"[AbilityController] Spent {manaCost:0.0} mana on slot {clampedSlot}");
+                LogAbilityManaSpend(clampedSlot, manaCost, manaBefore, unitMana.currentMana);
             }
 
             float cooldownDuration = GetSlotCooldown(clampedSlot);
@@ -631,56 +640,45 @@ public class AbilityController : MonoBehaviour
 
     private void PlaySlotSound(int slotNumber)
     {
-        AudioClip clip = GetSlotSound(slotNumber);
-        if (clip == null)
+        if (controlsPredator)
         {
             return;
         }
 
-        if (abilityAudioSource == null)
-        {
-            abilityAudioSource = GetComponent<AudioSource>();
-        }
-
-        if (abilityAudioSource != null)
-        {
-            abilityAudioSource.PlayOneShot(clip);
-        }
-        else
-        {
-            AudioSource.PlayClipAtPoint(clip, transform.position);
-        }
-
-        if (logAbilityAudio && logAbilityFlow)
-        {
-            Debug.Log("[AbilityAudio] Played sound for slot " + slotNumber);
-        }
+        AudioClip clip = GetSlotSound(slotNumber);
+        AbilityPlaceholderSound fallback = slotNumber <= 2
+            ? AbilityPlaceholderSound.Heal
+            : AbilityPlaceholderSound.Generic;
+        PlayAbilityClip(clip, fallback, clip == null);
     }
 
     private void PlayFailedCastSound()
     {
-        if (failedCastSound == null)
-        {
-            return;
-        }
+        PlayAbilityClip(cooldownFailSound != null ? cooldownFailSound : failedCastSound, AbilityPlaceholderSound.CooldownFail, true);
+    }
 
+    private void PlayNoManaSound()
+    {
+        PlayAbilityClip(noManaSound, AbilityPlaceholderSound.NoMana, true);
+    }
+
+    private void PlayAbilityClip(AudioClip clip, AbilityPlaceholderSound fallback, bool allowPlaceholder)
+    {
         if (abilityAudioSource == null)
         {
             abilityAudioSource = GetComponent<AudioSource>();
         }
 
-        if (abilityAudioSource != null)
-        {
-            abilityAudioSource.PlayOneShot(failedCastSound);
-        }
-        else
-        {
-            AudioSource.PlayClipAtPoint(failedCastSound, transform.position);
-        }
+        AbilityPlaceholderAudio.Play(
+            abilityAudioSource,
+            clip,
+            fallback,
+            abilitySfxVolume,
+            allowPlaceholder && usePlaceholderAbilityAudio);
 
-        if (logAbilityAudio && logAbilityFlow)
+        if (logAbilityAudio && logAbilityFlow && clip != null)
         {
-            Debug.Log("[AbilityAudio] Played failed cast sound");
+            Debug.Log("[AbilityAudio] Played sound " + clip.name);
         }
     }
 
@@ -748,6 +746,39 @@ public class AbilityController : MonoBehaviour
         }
 
         Debug.Log(message);
+    }
+
+    private void LogAbilityManaBlocked(int slotNumber, float value, string reason)
+    {
+        if (!logAbilityMana || controlsPredator)
+        {
+            return;
+        }
+
+        Debug.Log("[AbilityMana] Survivor slot " + slotNumber + " " + GetResolvedAbilityName(slotNumber)
+            + " blocked: " + reason + " " + value.ToString("0.0") + "s");
+    }
+
+    private void LogAbilityManaBlocked(int slotNumber, float currentMana, float cost, string reason)
+    {
+        if (!logAbilityMana || controlsPredator)
+        {
+            return;
+        }
+
+        Debug.Log("[AbilityMana] Survivor slot " + slotNumber + " " + GetResolvedAbilityName(slotNumber)
+            + " blocked: " + reason + " current=" + currentMana.ToString("0") + " cost=" + cost.ToString("0"));
+    }
+
+    private void LogAbilityManaSpend(int slotNumber, float cost, float before, float after)
+    {
+        if (!logAbilityMana || controlsPredator)
+        {
+            return;
+        }
+
+        Debug.Log("[AbilityMana] Survivor slot " + slotNumber + " " + GetResolvedAbilityName(slotNumber)
+            + " cost=" + cost.ToString("0") + " before=" + before.ToString("0") + " after=" + after.ToString("0"));
     }
 
     private void DisableLegacyComponentsOnHost()

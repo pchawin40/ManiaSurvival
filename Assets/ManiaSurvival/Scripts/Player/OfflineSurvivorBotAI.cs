@@ -21,9 +21,13 @@ public class OfflineSurvivorBotAI : MonoBehaviour
     public float hellfireAvoidRadius = 4f;
 
     [Header("Combat")]
-    public float minAbilityInterval = 4f;
-    public float maxAbilityInterval = 7f;
-    public float medicHealTargetPercent = 0.7f;
+    public float medicThinkInterval = 0.75f;
+    public float healDartTargetPercent = 0.85f;
+    public float healPulseWoundedPercent = 0.7f;
+    public float healPulseCriticalPercent = 0.4f;
+    public float sanctuaryInjuredPercent = 0.5f;
+    public float sanctuaryPredatorThreatRadius = 12f;
+    public bool logMedicAiDecisions = false;
 
     [Header("Rotation")]
     [Tooltip("Keep the unit's play-start rotation. Useful for test anchors/dummies that should wander without turning.")]
@@ -279,83 +283,126 @@ public class OfflineSurvivorBotAI : MonoBehaviour
 
     private IEnumerator CombatRoutine()
     {
+        float thinkInterval = Mathf.Clamp(medicThinkInterval, 0.5f, 1f);
+
         while (isActiveAndEnabled)
         {
-            float delay = Random.Range(Mathf.Max(0.1f, minAbilityInterval), Mathf.Max(minAbilityInterval + 0.1f, maxAbilityInterval));
-            yield return new WaitForSeconds(delay);
+            yield return new WaitForSeconds(thinkInterval);
 
             if (!CanMoveAsAi())
             {
                 continue;
             }
 
-            if (TryMedicSupport())
+            if (survivorClassManager == null || survivorClassManager.activeClass != SurvivorClass.Medic)
             {
                 continue;
             }
 
-            int roll = Random.Range(0, 4);
-            int slot = roll + 1;
-            if (abilityController != null)
+            if (abilityController == null)
             {
-                if (CanUseAbilitySlot(slot))
-                {
-                    abilityController.UseAbilitySlot(slot);
-                }
+                abilityController = GetComponent<AbilityController>();
+            }
 
+            if (abilityController == null)
+            {
+                LogMedicDecision("Medic skipped abilities: missing AbilityController");
                 continue;
             }
 
-            if (survivorClassManager == null)
-            {
-                continue;
-            }
-
-            switch (roll)
-            {
-                case 0: survivorClassManager.ExecutePrimary(); break;
-                case 1: survivorClassManager.ExecuteAbility2(); break;
-                case 2: survivorClassManager.ExecuteAbility3(); break;
-                default: survivorClassManager.ExecuteUltimate(); break;
-            }
+            TryMedicSupport();
         }
     }
 
     private bool TryMedicSupport()
     {
-        if (survivorClassManager == null || survivorClassManager.activeClass != SurvivorClass.Medic)
+        if (ShouldCastSanctuary() && TryCastMedicSlot(4, "Sanctuary"))
         {
-            return false;
+            return true;
         }
 
-        if (abilityController == null)
+        if (ShouldCastHealPulse() && TryCastMedicSlot(2, "Heal Pulse"))
         {
-            return false;
+            return true;
         }
 
-        if (abilityController.GetCooldownRemaining(2) <= 0f && CanUseAbilitySlot(2))
+        if (ShouldCastHealDart() && TryCastMedicSlot(1, "Heal Dart"))
         {
-            int alliesNeedingHeal = CountAlliesBelowHealthPercent(survivorClassManager.healPulseRadius, medicHealTargetPercent);
-            if (alliesNeedingHeal > 0)
-            {
-                abilityController.UseAbilitySlot(2);
-                Debug.Log("[SurvivorAI] Medic used Heal Pulse on " + alliesNeedingHeal + " allies");
-                return true;
-            }
-        }
-
-        if (abilityController.GetCooldownRemaining(1) <= 0f && CanUseAbilitySlot(1))
-        {
-            UnitHealth woundedAlly = FindNearestWoundedAlly(survivorClassManager.bioticDartRange, medicHealTargetPercent);
-            if (woundedAlly != null)
-            {
-                abilityController.UseAbilitySlot(1);
-                Debug.Log("[SurvivorAI] Medic used Heal Dart on " + woundedAlly.name);
-                return true;
-            }
+            return true;
         }
 
         return false;
+    }
+
+    private bool TryCastMedicSlot(int slotNumber, string abilityLabel)
+    {
+        if (!CanUseAbilitySlot(slotNumber))
+        {
+            LogMedicDecision("Medic skipped " + abilityLabel + ": cooldown/mana");
+            return false;
+        }
+
+        abilityController.UseAbilitySlot(slotNumber);
+        LogMedicDecision("Medic cast " + abilityLabel + " via AbilityController slot " + slotNumber);
+        return true;
+    }
+
+    private bool ShouldCastSanctuary()
+    {
+        float radius = survivorClassManager.sanctuaryRadius;
+        int injuredNearby = CountAlliesBelowHealthPercent(radius, sanctuaryInjuredPercent);
+        if (injuredNearby >= 2)
+        {
+            return true;
+        }
+
+        Transform predator = FindPredatorTransform();
+        if (predator == null)
+        {
+            return false;
+        }
+
+        Vector3 toPredator = predator.position - transform.position;
+        toPredator.y = 0f;
+        if (toPredator.magnitude > sanctuaryPredatorThreatRadius)
+        {
+            return false;
+        }
+
+        return CountAlliesBelowHealthPercent(survivorClassManager.healPulseRadius, sanctuaryInjuredPercent) >= 1;
+    }
+
+    private bool ShouldCastHealPulse()
+    {
+        float radius = survivorClassManager.healPulseRadius;
+        if (CountAlliesBelowHealthPercent(radius, healPulseWoundedPercent) >= 2)
+        {
+            return true;
+        }
+
+        return CountAlliesBelowHealthPercent(radius, healPulseCriticalPercent) >= 1;
+    }
+
+    private bool ShouldCastHealDart()
+    {
+        if (unitHealth != null && unitHealth.maxHealth > 0 && !unitHealth.IsDead)
+        {
+            float selfPercent = (float)unitHealth.currentHealth / unitHealth.maxHealth;
+            if (selfPercent < healDartTargetPercent && selfPercent < 0.95f)
+            {
+                return true;
+            }
+        }
+
+        return FindNearestWoundedAlly(survivorClassManager.bioticDartRange, healDartTargetPercent) != null;
+    }
+
+    private void LogMedicDecision(string message)
+    {
+        if (logMedicAiDecisions)
+        {
+            Debug.Log("[SurvivorAI] " + message);
+        }
     }
 
     private bool CanUseAbilitySlot(int slotNumber)
@@ -385,7 +432,8 @@ public class OfflineSurvivorBotAI : MonoBehaviour
                 continue;
             }
 
-            if ((float)ally.currentHealth / ally.maxHealth < healthPercent)
+            float allyPercent = (float)ally.currentHealth / ally.maxHealth;
+            if (allyPercent < healthPercent && allyPercent < 0.95f)
             {
                 count++;
             }
@@ -408,7 +456,8 @@ public class OfflineSurvivorBotAI : MonoBehaviour
                 continue;
             }
 
-            if ((float)ally.currentHealth / ally.maxHealth >= healthPercent)
+            float allyPercent = (float)ally.currentHealth / ally.maxHealth;
+            if (allyPercent >= healthPercent || allyPercent >= 0.95f)
             {
                 continue;
             }

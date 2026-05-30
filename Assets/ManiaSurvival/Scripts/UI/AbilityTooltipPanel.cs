@@ -287,7 +287,7 @@ public class AbilityTooltipPanel : MonoBehaviour
                         abilityName = "Spray",
                         description = "Short-range forward shotgun blast.",
                         cooldown = 2f,
-                        effect = "12 damage shotgun blast + knockback 2.6",
+                        effect = "Shotgun blast + knockback 2.6",
                         cost = "8 mana",
                         rangeTarget = "8 unit cone in front",
                         tip = "Fight up close and scare survivors."
@@ -299,7 +299,7 @@ public class AbilityTooltipPanel : MonoBehaviour
                         abilityName = "Hook",
                         description = "Pulls one Survivor from long range.",
                         cooldown = 9f,
-                        effect = "Long-range pull. Deals 10 damage on hit",
+                        effect = "Long-range chain pull + 10 damage on hit",
                         cost = "25 mana",
                         rangeTarget = "24 unit line skillshot",
                         tip = "Catch fleeing prey."
@@ -323,7 +323,7 @@ public class AbilityTooltipPanel : MonoBehaviour
                         abilityName = "Barrage",
                         description = "Rapid long-range knockback blasts.",
                         cooldown = 16f,
-                        effect = "Ultimate cone barrage. 35 damage per pulse + heavy knockback 2.8–4.0",
+                        effect = "Ultimate bomb line: repeated damage/knockback, leaves temporary craters",
                         cost = "60 mana",
                         rangeTarget = "20 unit cone in front",
                         tip = "Scatter survivors — RUN NOW."

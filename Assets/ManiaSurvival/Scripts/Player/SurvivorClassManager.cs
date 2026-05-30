@@ -28,7 +28,7 @@ public class SurvivorClassManager : MonoBehaviour
     public string[] predatorTags = { "Monster", "Predator" };
     public LayerMask targetLayers = ~0;
     public bool showDebugLogs = true;
-    public bool useExternalCooldownAuthority = false;
+    public bool useExternalCooldownAuthority = true;
 
     [Header("Global Cooldowns (30% Nerf Applied)")]
     [Tooltip("All base cooldowns are multiplied by this value.")]
@@ -130,7 +130,10 @@ public class SurvivorClassManager : MonoBehaviour
 
     public bool ExecutePrimary()
     {
-        Debug.Log($"[SurvivorClassManager] Executing ability: {activeClass}/Primary");
+        if (showDebugLogs)
+        {
+            Debug.Log($"[SurvivorClassManager] Executing ability: {activeClass}/Primary");
+        }
 
         if (!CanExecute())
         {
@@ -161,7 +164,10 @@ public class SurvivorClassManager : MonoBehaviour
 
     public bool ExecuteAbility2()
     {
-        Debug.Log($"[SurvivorClassManager] Executing ability: {activeClass}/Ability2");
+        if (showDebugLogs)
+        {
+            Debug.Log($"[SurvivorClassManager] Executing ability: {activeClass}/Ability2");
+        }
 
         if (!CanExecute())
         {
@@ -192,7 +198,10 @@ public class SurvivorClassManager : MonoBehaviour
 
     public bool ExecuteAbility3()
     {
-        Debug.Log($"[SurvivorClassManager] Executing ability: {activeClass}/Ability3");
+        if (showDebugLogs)
+        {
+            Debug.Log($"[SurvivorClassManager] Executing ability: {activeClass}/Ability3");
+        }
 
         if (!CanExecute())
         {
@@ -225,7 +234,10 @@ public class SurvivorClassManager : MonoBehaviour
 
     public bool ExecuteUltimate()
     {
-        Debug.Log($"[SurvivorClassManager] Executing ability: {activeClass}/Ultimate");
+        if (showDebugLogs)
+        {
+            Debug.Log($"[SurvivorClassManager] Executing ability: {activeClass}/Ultimate");
+        }
 
         if (!CanExecute())
         {
@@ -361,12 +373,7 @@ public class SurvivorClassManager : MonoBehaviour
         for (int i = 0; i < allies.Length; i++)
         {
             UnitHealth ally = allies[i];
-            if (ally == null || ally.IsDead)
-            {
-                continue;
-            }
-
-            if (ally == unitHealth && ally.currentHealth >= ally.maxHealth)
+            if (ally == null || ally.IsDead || ally.currentHealth >= ally.maxHealth)
             {
                 continue;
             }
@@ -377,10 +384,17 @@ public class SurvivorClassManager : MonoBehaviour
 
         if (showDebugLogs)
         {
-            Debug.Log("[SurvivorAbility] Heal Pulse healed " + healedCount + " allies");
+            if (healedCount > 0)
+            {
+                Debug.Log("[SurvivorAbility] Heal Pulse healed " + healedCount + " wounded allies");
+            }
+            else
+            {
+                Debug.Log("[SurvivorAbility] Heal Pulse found no wounded allies.");
+            }
         }
 
-        return true;
+        return healedCount > 0;
     }
 
     private bool TryStartMedicTether()
