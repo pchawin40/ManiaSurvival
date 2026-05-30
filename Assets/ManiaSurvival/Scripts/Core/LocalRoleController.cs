@@ -88,6 +88,9 @@ public class LocalRoleController : MonoBehaviour
                 && localSurvivorTransform != null
                 && movement.transform == localSurvivorTransform;
 
+            bool enableBot = controlMode == PlayerControlMode.MonsterControlled
+                || (controlMode == PlayerControlMode.SurvivorControlled && !isLocalPlayerSurvivor);
+
             movement.enabled = isLocalPlayerSurvivor;
             if (isLocalPlayerSurvivor)
             {
@@ -95,14 +98,29 @@ public class LocalRoleController : MonoBehaviour
                 movement.SetSprintHeld(false);
             }
 
-            OfflineSurvivorBotAI bot = movement.GetComponent<OfflineSurvivorBotAI>();
-            if (bot != null)
+            OfflineSurvivorBotAI bot = EnsureSurvivorBotAI(movement);
+            bot.enabled = enableBot;
+
+            if (enableBot && controlMode == PlayerControlMode.MonsterControlled)
             {
-                bool enableBot = controlMode == PlayerControlMode.MonsterControlled
-                    || (controlMode == PlayerControlMode.SurvivorControlled && !isLocalPlayerSurvivor);
-                bot.enabled = enableBot;
+                Debug.Log("[RoleControl] Monster mode: enabled AI on survivor " + movement.name);
+            }
+            else if (isLocalPlayerSurvivor)
+            {
+                Debug.Log("[RoleControl] Survivor mode: local survivor controlled by player, bot disabled on " + movement.name);
             }
         }
+    }
+
+    private OfflineSurvivorBotAI EnsureSurvivorBotAI(SurvivorMovement movement)
+    {
+        OfflineSurvivorBotAI bot = movement.GetComponent<OfflineSurvivorBotAI>();
+        if (bot == null)
+        {
+            bot = movement.gameObject.AddComponent<OfflineSurvivorBotAI>();
+        }
+
+        return bot;
     }
 
     private void ApplyStandaloneSurvivorBots()

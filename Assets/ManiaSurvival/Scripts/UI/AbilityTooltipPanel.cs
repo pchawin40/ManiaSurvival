@@ -7,8 +7,14 @@ public class AbilityTooltipPanel : MonoBehaviour
     [Header("Panel")]
     public GameObject tooltipRoot;
     public float autoHideAfterSeconds = 6f;
-    public Vector2 panelSize = new Vector2(620f, 240f);
-    public Vector2 panelAnchoredPosition = new Vector2(0f, 300f);
+    public Vector2 panelSize = new Vector2(380f, 200f);
+    public Vector2 panelAnchoredPosition = new Vector2(-24f, 320f);
+
+    [Header("Mobile Layout")]
+    public RectTransform abilityPanelAnchor;
+    public float mobileMarginRight = 24f;
+    public float mobileMarginBottom = 24f;
+    public float mobileGapAboveAbilities = 12f;
 
     [Header("Text")]
     public TMP_Text tooltipAbilityNameText;
@@ -84,8 +90,65 @@ public class AbilityTooltipPanel : MonoBehaviour
         SetText(tooltipBodyText, BuildCompactBody(data));
 
         tooltipRoot.SetActive(true);
+        ApplyMobilePosition();
         ClampTooltipInsideCanvas();
         hideAtUnscaledTime = Time.unscaledTime + Mathf.Max(1f, autoHideAfterSeconds);
+    }
+
+    public void ConfigureMobileLayout(
+        RectTransform abilityPanel,
+        Vector2 size,
+        float marginRight,
+        float marginBottom,
+        float gapAboveAbilities)
+    {
+        abilityPanelAnchor = abilityPanel;
+        panelSize = size;
+        mobileMarginRight = marginRight;
+        mobileMarginBottom = marginBottom;
+        mobileGapAboveAbilities = gapAboveAbilities;
+
+        if (tooltipRoot != null)
+        {
+            ApplyMobilePosition();
+        }
+    }
+
+    private void ApplyMobilePosition()
+    {
+        if (tooltipRootRect == null)
+        {
+            CacheRootRect();
+        }
+
+        if (tooltipRootRect == null)
+        {
+            return;
+        }
+
+        tooltipRootRect.sizeDelta = panelSize;
+
+        if (abilityPanelAnchor == null)
+        {
+            tooltipRootRect.anchorMin = new Vector2(0.5f, 0f);
+            tooltipRootRect.anchorMax = new Vector2(0.5f, 0f);
+            tooltipRootRect.pivot = new Vector2(0.5f, 0f);
+            tooltipRootRect.anchoredPosition = panelAnchoredPosition;
+            return;
+        }
+
+        float gridHeight = abilityPanelAnchor.rect.height;
+        if (gridHeight <= 0f)
+        {
+            gridHeight = abilityPanelAnchor.sizeDelta.y;
+        }
+
+        tooltipRootRect.anchorMin = new Vector2(1f, 0f);
+        tooltipRootRect.anchorMax = new Vector2(1f, 0f);
+        tooltipRootRect.pivot = new Vector2(1f, 0f);
+        tooltipRootRect.anchoredPosition = new Vector2(
+            -mobileMarginRight,
+            mobileMarginBottom + gridHeight + mobileGapAboveAbilities);
     }
 
     public void Hide()
@@ -221,33 +284,33 @@ public class AbilityTooltipPanel : MonoBehaviour
                     {
                         className = "Relentless Hook",
                         abilityName = "Spray",
-                        description = "Short-range cone burst.",
-                        cooldown = 1.4f,
-                        effect = "Cone damage",
+                        description = "Short-range forward shotgun blast.",
+                        cooldown = 1.8f,
+                        effect = "10 damage close-range blast",
                         cost = "None",
-                        rangeTarget = "Short cone in front",
-                        tip = "Fight up close."
+                        rangeTarget = "8 unit cone in front",
+                        tip = "Fight up close and scare survivors."
                     };
                 case 2:
                     return new AbilityTooltipData
                     {
                         className = "Relentless Hook",
                         abilityName = "Hook",
-                        description = "Pulls one Survivor toward you.",
-                        cooldown = 8f,
-                        effect = "Pull target",
+                        description = "Pulls one Survivor from long range.",
+                        cooldown = 7f,
+                        effect = "Long pull",
                         cost = "None",
-                        rangeTarget = "Line skillshot",
-                        tip = "Catch isolated prey."
+                        rangeTarget = "18 unit line skillshot",
+                        tip = "Catch fleeing prey."
                     };
                 case 3:
                     return new AbilityTooltipData
                     {
                         className = "Relentless Hook",
                         abilityName = "Tonic",
-                        description = "Recover and reduce damage briefly.",
+                        description = "Recover and surge forward briefly.",
                         cooldown = 10f,
-                        effect = "Self sustain",
+                        effect = "Heal and brief speed boost",
                         cost = "None",
                         rangeTarget = "Self",
                         tip = "Use before diving."
@@ -257,12 +320,12 @@ public class AbilityTooltipPanel : MonoBehaviour
                     {
                         className = "Relentless Hook",
                         abilityName = "Barrage",
-                        description = "Rapid cone knockback blasts for 2.4 seconds.",
+                        description = "Rapid long-range knockback blasts.",
                         cooldown = 14f,
-                        effect = "2 damage + knockback every 0.3s",
+                        effect = "Long-range ultimate cone barrage",
                         cost = "None",
-                        rangeTarget = "8 unit cone in front",
-                        tip = "Scatter survivors."
+                        rangeTarget = "15 unit cone in front",
+                        tip = "Scatter and finish survivors."
                     };
             }
         }
@@ -351,9 +414,9 @@ public class AbilityTooltipPanel : MonoBehaviour
         root.transform.SetParent(parent, false);
 
         RectTransform rootRect = root.AddComponent<RectTransform>();
-        rootRect.anchorMin = new Vector2(0.5f, 0f);
-        rootRect.anchorMax = new Vector2(0.5f, 0f);
-        rootRect.pivot = new Vector2(0.5f, 0f);
+        rootRect.anchorMin = new Vector2(1f, 0f);
+        rootRect.anchorMax = new Vector2(1f, 0f);
+        rootRect.pivot = new Vector2(1f, 0f);
         rootRect.anchoredPosition = panelAnchoredPosition;
         rootRect.sizeDelta = panelSize;
 

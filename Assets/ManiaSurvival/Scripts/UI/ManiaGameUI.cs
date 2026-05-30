@@ -68,6 +68,31 @@ public class ManiaGameUI : MonoBehaviour
     public RectTransform joystickKnob;
     public Camera uiCamera;
     public float joystickRadius = 80f;
+    public float joystickMarginLeft = 24f;
+    public float joystickMarginBottom = 24f;
+    public Vector2 joystickAreaSize = new Vector2(200f, 200f);
+
+    [Header("Mobile Ability Layout")]
+    [Tooltip("Distance from the right screen edge to the ability grid.")]
+    public float abilityMarginRight = 24f;
+    [Tooltip("Distance from the bottom screen edge to the ability grid.")]
+    public float abilityMarginBottom = 24f;
+    [Tooltip("Width and height of each ability button cell.")]
+    public Vector2 abilityButtonSize = new Vector2(132f, 88f);
+    [Tooltip("Gap between ability buttons in the 2x2 grid.")]
+    public float abilityButtonSpacing = 12f;
+    [Tooltip("Extra safe-area padding applied on top of layout margins.")]
+    public float safeAreaPadding = 8f;
+    [Tooltip("Gap between the ability grid and the tooltip panel.")]
+    public float tooltipGapAboveAbilities = 12f;
+    [Tooltip("Tooltip panel size for hold-to-read ability info.")]
+    public Vector2 tooltipPanelSize = new Vector2(380f, 200f);
+    [Tooltip("Utility button size for Sprint / Pick Up / Drop (Survivor only).")]
+    public Vector2 survivorUtilityButtonSize = new Vector2(120f, 64f);
+    [Tooltip("Vertical gap between survivor utility buttons.")]
+    public float survivorUtilitySpacing = 8f;
+    [Tooltip("Gap above the joystick reserved for survivor utility buttons.")]
+    public float survivorUtilityGapAboveJoystick = 12f;
 
     [Header("Labels")]
     public string playingRoleText = "Survive until the timer ends";
@@ -85,6 +110,8 @@ public class ManiaGameUI : MonoBehaviour
     private int activeTouchId = -1;
     private bool mouseJoystickActive;
     private PlayerControlMode lastAbilityLabelMode = (PlayerControlMode)(-1);
+    private PlayerControlMode lastAppliedLayoutMode = (PlayerControlMode)(-1);
+    private bool lastAppliedLayoutPlaying;
     private bool loggedMissingAbilityInfoText;
     private bool loggedMissingAbilityLabels;
 
@@ -144,6 +171,8 @@ public class ManiaGameUI : MonoBehaviour
         }
 
         SetupAbilityHoldButtons();
+        ConfigureMobileAbilityLayout();
+        RefreshPredatorAbilityButtonBindings();
 
         RefreshAbilityLabels(force: true);
         RefreshAbilityInfo(force: true);
@@ -192,6 +221,431 @@ public class ManiaGameUI : MonoBehaviour
         SetupAbilityHoldButton(predatorAbility2Button, 2, true);
         SetupAbilityHoldButton(predatorAbility3Button, 3, true);
         SetupAbilityHoldButton(predatorUltimateButton, 4, true);
+    }
+
+    private void ConfigureMobileAbilityLayout()
+    {
+        GetLayoutInsets(out float insetLeft, out float insetRight, out float insetBottom, out float insetTop);
+
+        ConfigureJoystickLayout(insetLeft, insetBottom);
+        ConfigureRoleHudPanels(insetRight, insetBottom);
+        ConfigureSurvivorAbilityLayout(insetRight, insetBottom);
+        ConfigurePredatorAbilityLayout(insetRight, insetBottom);
+        ConfigureTooltipLayout(insetRight, insetBottom);
+    }
+
+    private void ConfigurePredatorAbilityLayout(float insetRight, float insetBottom)
+    {
+        HideDuplicatePredatorSprayButton();
+
+        SetSiblingOrder(
+            predatorMeleeButton,
+            predatorAbility2Button,
+            predatorAbility3Button,
+            predatorUltimateButton);
+
+        if (predatorAbility1Button != null)
+        {
+            predatorAbility1Button.transform.SetAsLastSibling();
+        }
+
+        RectTransform gridRect = GetAbilityGridRoot(predatorMeleeButton, predatorUltimateButton);
+        ApplyAbilityGridLayout(gridRect, insetRight, insetBottom);
+    }
+
+    private void ConfigureSurvivorAbilityLayout(float insetRight, float insetBottom)
+    {
+        HideSurvivorAbilityGridExtras();
+
+        SetSiblingOrder(
+            survivorPrimaryButton,
+            survivorAbility2Button,
+            survivorAbility3Button,
+            survivorUltimateButton);
+
+        RectTransform gridRect = GetAbilityGridRoot(survivorPrimaryButton, survivorUltimateButton);
+        ApplyAbilityGridLayout(gridRect, insetRight, insetBottom);
+        RelocateSurvivorUtilityButtons(insetLeft: GetLayoutInsetsLeft(), insetBottom);
+        ConfigureSurvivorUtilityPanel(insetLeft: GetLayoutInsetsLeft(), insetBottom);
+    }
+
+    private void ConfigureSurvivorUtilityPanel(float insetLeft, float insetBottom)
+    {
+        if (survivorPanel == null)
+        {
+            return;
+        }
+
+        Transform utilityRoot = survivorPanel.transform.Find("SurvivorUtilityControls");
+        if (utilityRoot is not RectTransform utilityRect)
+        {
+            return;
+        }
+
+        float yOffset = insetBottom
+            + joystickMarginBottom
+            + joystickAreaSize.y
+            + survivorUtilityGapAboveJoystick
+            + (survivorUtilityButtonSize.y + survivorUtilitySpacing) * 3f
+            + 8f;
+
+        ApplyBottomLeftAnchor(
+            utilityRect,
+            survivorUtilityButtonSize,
+            insetLeft + joystickMarginLeft,
+            yOffset);
+    }
+
+    private void ConfigureRoleHudPanels(float insetRight, float insetBottom)
+    {
+        ApplyBottomRightContainer(survivorPanel != null ? survivorPanel.transform as RectTransform : null, insetRight, insetBottom);
+        ApplyBottomRightContainer(monsterPanel != null ? monsterPanel.transform as RectTransform : null, insetRight, insetBottom);
+    }
+
+    private void ConfigureJoystickLayout(float insetLeft, float insetBottom)
+    {
+        if (joystickArea == null)
+        {
+            return;
+        }
+
+        ApplyBottomLeftAnchor(joystickArea, joystickAreaSize, insetLeft, insetBottom);
+    }
+
+    private void ConfigureTooltipLayout(float insetRight, float insetBottom)
+    {
+        EnsureAbilityTooltipPanel();
+
+        if (abilityTooltipPanel == null)
+        {
+            return;
+        }
+
+        RectTransform activeGrid = GetActiveAbilityGridRect();
+        abilityTooltipPanel.ConfigureMobileLayout(
+            activeGrid,
+            tooltipPanelSize,
+            abilityMarginRight + insetRight,
+            abilityMarginBottom + insetBottom,
+            tooltipGapAboveAbilities);
+    }
+
+    private RectTransform GetActiveAbilityGridRect()
+    {
+        bool isMonsterControlled = localRoleController != null
+            && localRoleController.controlMode == PlayerControlMode.MonsterControlled;
+
+        if (isMonsterControlled)
+        {
+            return GetAbilityGridRoot(predatorMeleeButton, predatorUltimateButton);
+        }
+
+        return GetAbilityGridRoot(survivorPrimaryButton, survivorUltimateButton);
+    }
+
+    private void ApplyAbilityGridLayout(RectTransform gridRect, float insetRight, float insetBottom)
+    {
+        if (gridRect == null)
+        {
+            return;
+        }
+
+        GridLayoutGroup gridLayout = gridRect.GetComponent<GridLayoutGroup>();
+        if (gridLayout != null)
+        {
+            gridLayout.startCorner = GridLayoutGroup.Corner.UpperLeft;
+            gridLayout.startAxis = GridLayoutGroup.Axis.Horizontal;
+            gridLayout.childAlignment = TextAnchor.LowerRight;
+            gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            gridLayout.constraintCount = 2;
+            gridLayout.cellSize = abilityButtonSize;
+            gridLayout.spacing = new Vector2(abilityButtonSpacing, abilityButtonSpacing);
+            gridLayout.padding = new RectOffset(0, 0, 0, 0);
+        }
+
+        Vector2 gridSize = ComputeGridSize(2, 2, abilityButtonSize, abilityButtonSpacing);
+        if (IsRoleHudChild(gridRect))
+        {
+            StretchRectToParent(gridRect);
+        }
+        else
+        {
+            ApplyBottomRightAnchor(
+                gridRect,
+                gridSize,
+                abilityMarginRight + insetRight,
+                abilityMarginBottom + insetBottom);
+        }
+    }
+
+    private bool IsRoleHudChild(RectTransform gridRect)
+    {
+        if (gridRect == null || gridRect.parent == null)
+        {
+            return false;
+        }
+
+        GameObject parentObject = gridRect.parent.gameObject;
+        return parentObject == survivorPanel || parentObject == monsterPanel;
+    }
+
+    private static void StretchRectToParent(RectTransform rect)
+    {
+        if (rect == null)
+        {
+            return;
+        }
+
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+    }
+
+    private void HideSurvivorAbilityGridExtras()
+    {
+        RectTransform gridRect = GetAbilityGridRoot(survivorPrimaryButton, survivorUltimateButton);
+        if (gridRect == null)
+        {
+            return;
+        }
+
+        Button[] buttons = gridRect.GetComponentsInChildren<Button>(true);
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            Button button = buttons[i];
+            if (button == null)
+            {
+                continue;
+            }
+
+            if (IsSurvivorAbilityButton(button))
+            {
+                continue;
+            }
+
+            SetIgnoreLayout(button.gameObject, true);
+        }
+    }
+
+    private bool IsSurvivorAbilityButton(Button button)
+    {
+        return button == survivorPrimaryButton
+            || button == survivorAbility2Button
+            || button == survivorAbility3Button
+            || button == survivorUltimateButton;
+    }
+
+    private void RelocateSurvivorUtilityButtons(float insetLeft, float insetBottom)
+    {
+        RectTransform gridRect = GetAbilityGridRoot(survivorPrimaryButton, survivorUltimateButton);
+        if (gridRect == null)
+        {
+            return;
+        }
+
+        Button[] buttons = gridRect.GetComponentsInChildren<Button>(true);
+        int utilityIndex = 0;
+
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            Button button = buttons[i];
+            if (button == null || IsSurvivorAbilityButton(button))
+            {
+                continue;
+            }
+
+            if (!button.gameObject.activeInHierarchy)
+            {
+                continue;
+            }
+
+            RectTransform utilityRect = button.transform as RectTransform;
+            if (utilityRect == null)
+            {
+                continue;
+            }
+
+            utilityRect.SetParent(gridRect.parent, false);
+            float yOffset = insetBottom
+                + joystickMarginBottom
+                + joystickAreaSize.y
+                + survivorUtilityGapAboveJoystick
+                + (survivorUtilityButtonSize.y + survivorUtilitySpacing) * utilityIndex;
+
+            ApplyBottomLeftAnchor(
+                utilityRect,
+                survivorUtilityButtonSize,
+                insetLeft + joystickMarginLeft,
+                yOffset);
+
+            utilityIndex++;
+        }
+    }
+
+    private void ApplyBottomRightContainer(RectTransform container, float insetRight, float insetBottom)
+    {
+        if (container == null)
+        {
+            return;
+        }
+
+        container.anchorMin = new Vector2(1f, 0f);
+        container.anchorMax = new Vector2(1f, 0f);
+        container.pivot = new Vector2(1f, 0f);
+        container.anchoredPosition = new Vector2(-(insetRight + safeAreaPadding), insetBottom + safeAreaPadding);
+        container.sizeDelta = ComputeGridSize(2, 2, abilityButtonSize, abilityButtonSpacing);
+    }
+
+    private void ApplyBottomRightAnchor(RectTransform rect, Vector2 size, float marginRight, float marginBottom)
+    {
+        if (rect == null)
+        {
+            return;
+        }
+
+        rect.anchorMin = new Vector2(1f, 0f);
+        rect.anchorMax = new Vector2(1f, 0f);
+        rect.pivot = new Vector2(1f, 0f);
+        rect.sizeDelta = size;
+        rect.anchoredPosition = new Vector2(-marginRight, marginBottom);
+    }
+
+    private void ApplyBottomLeftAnchor(RectTransform rect, Vector2 size, float marginLeft, float marginBottom)
+    {
+        if (rect == null)
+        {
+            return;
+        }
+
+        rect.anchorMin = new Vector2(0f, 0f);
+        rect.anchorMax = new Vector2(0f, 0f);
+        rect.pivot = new Vector2(0f, 0f);
+        rect.sizeDelta = size;
+        rect.anchoredPosition = new Vector2(marginLeft, marginBottom);
+    }
+
+    private static Vector2 ComputeGridSize(int columns, int rows, Vector2 cellSize, float spacing)
+    {
+        float width = columns * cellSize.x + (columns - 1) * spacing;
+        float height = rows * cellSize.y + (rows - 1) * spacing;
+        return new Vector2(width, height);
+    }
+
+    private static RectTransform GetAbilityGridRoot(Button firstButton, Button lastButton)
+    {
+        Transform gridRoot = firstButton != null
+            ? firstButton.transform.parent
+            : lastButton != null ? lastButton.transform.parent : null;
+
+        return gridRoot as RectTransform;
+    }
+
+    private static void SetSiblingOrder(params Button[] buttons)
+    {
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            if (buttons[i] != null)
+            {
+                buttons[i].transform.SetSiblingIndex(i);
+            }
+        }
+    }
+
+    private static void SetIgnoreLayout(GameObject target, bool ignoreLayout)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        LayoutElement layoutElement = target.GetComponent<LayoutElement>();
+        if (layoutElement == null)
+        {
+            layoutElement = target.AddComponent<LayoutElement>();
+        }
+
+        layoutElement.ignoreLayout = ignoreLayout;
+    }
+
+    private void GetLayoutInsets(out float insetLeft, out float insetRight, out float insetBottom, out float insetTop)
+    {
+        insetLeft = safeAreaPadding;
+        insetRight = safeAreaPadding;
+        insetBottom = safeAreaPadding;
+        insetTop = safeAreaPadding;
+
+        Rect safeArea = Screen.safeArea;
+        if (safeArea.width <= 0f || safeArea.height <= 0f)
+        {
+            return;
+        }
+
+        Canvas rootCanvas = GetComponentInParent<Canvas>();
+        if (rootCanvas == null)
+        {
+            return;
+        }
+
+        float scale = rootCanvas.scaleFactor <= 0f ? 1f : rootCanvas.scaleFactor;
+        insetLeft += safeArea.x / scale;
+        insetRight += (Screen.width - safeArea.xMax) / scale;
+        insetBottom += safeArea.y / scale;
+        insetTop += (Screen.height - safeArea.yMax) / scale;
+    }
+
+    private float GetLayoutInsetsLeft()
+    {
+        GetLayoutInsets(out float insetLeft, out _, out _, out _);
+        return insetLeft;
+    }
+
+    private void HideDuplicatePredatorSprayButton()
+    {
+        if (predatorAbility1Button == null)
+        {
+            return;
+        }
+
+        predatorAbility1Button.gameObject.SetActive(false);
+        LayoutElement hiddenLayout = predatorAbility1Button.GetComponent<LayoutElement>();
+        if (hiddenLayout == null)
+        {
+            hiddenLayout = predatorAbility1Button.gameObject.AddComponent<LayoutElement>();
+        }
+
+        hiddenLayout.ignoreLayout = true;
+    }
+
+    private void RefreshPredatorAbilityButtonBindings()
+    {
+        BindPredatorAbilityButton(predatorMeleeButton, 1, "Spray");
+        BindPredatorAbilityButton(predatorAbility2Button, 2, "Hook");
+        BindPredatorAbilityButton(predatorAbility3Button, 3, "Tonic");
+        BindPredatorAbilityButton(predatorUltimateButton, 4, "Barrage");
+    }
+
+    private void BindPredatorAbilityButton(Button button, int slotNumber, string label)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        AbilityButtonHoldTooltip holdTooltip = button.GetComponent<AbilityButtonHoldTooltip>();
+        if (holdTooltip != null)
+        {
+            holdTooltip.Configure(this, abilityTooltipPanel, slotNumber, true, logTooltipEvents);
+        }
+
+        AbilityCooldownButton cooldownButton = button.GetComponent<AbilityCooldownButton>();
+        if (cooldownButton != null)
+        {
+            cooldownButton.BindCooldownVisual(this, slotNumber, true);
+        }
+
+        SetButtonLabel(button, null, label);
     }
 
     private void EnsureAbilityTooltipPanel()
@@ -352,14 +806,7 @@ public class ManiaGameUI : MonoBehaviour
 
         if (predatorAbility1Button != null)
         {
-            predatorAbility1Button.gameObject.SetActive(false);
-            LayoutElement hiddenLayout = predatorAbility1Button.GetComponent<LayoutElement>();
-            if (hiddenLayout == null)
-            {
-                hiddenLayout = predatorAbility1Button.gameObject.AddComponent<LayoutElement>();
-            }
-
-            hiddenLayout.ignoreLayout = true;
+            HideDuplicatePredatorSprayButton();
         }
 
         if (predatorAbility2Button != null)
@@ -382,6 +829,30 @@ public class ManiaGameUI : MonoBehaviour
 
         SetGameObjectsActive(survivorOnlyObjects, showSurvivorOnly);
         SetGameObjectsActive(monsterOnlyObjects, showMonsterOnly);
+
+        RefreshMobileLayoutIfNeeded(isPlaying);
+    }
+
+    private void RefreshMobileLayoutIfNeeded(bool isPlaying)
+    {
+        PlayerControlMode currentMode = localRoleController != null
+            ? localRoleController.controlMode
+            : PlayerControlMode.SurvivorControlled;
+
+        if (!isPlaying)
+        {
+            lastAppliedLayoutPlaying = false;
+            return;
+        }
+
+        if (lastAppliedLayoutPlaying && currentMode == lastAppliedLayoutMode)
+        {
+            return;
+        }
+
+        lastAppliedLayoutPlaying = true;
+        lastAppliedLayoutMode = currentMode;
+        ConfigureMobileAbilityLayout();
     }
 
     private void SetGameObjectsActive(GameObject[] objects, bool active)
@@ -437,6 +908,9 @@ public class ManiaGameUI : MonoBehaviour
         {
             avatarPanel.SetActive(false);
         }
+
+        ConfigureMobileAbilityLayout();
+        RefreshAbilityLabels(force: true);
     }
 
     public void ShowMonsterPanel()
@@ -456,6 +930,10 @@ public class ManiaGameUI : MonoBehaviour
         {
             avatarPanel.SetActive(false);
         }
+
+        ConfigureMobileAbilityLayout();
+        RefreshPredatorAbilityButtonBindings();
+        RefreshAbilityLabels(force: true);
 
         HideEnterSoulwoodButton();
     }
@@ -880,9 +1358,9 @@ public class ManiaGameUI : MonoBehaviour
             abilityInfoText.text =
                 "Relentless Hook\n"
                 + "1. Spray — Short-range cone burst.\n"
-                + "2. Hook — Pulls one Survivor toward you.\n"
-                + "3. Tonic — Recover and reduce damage briefly.\n"
-                + "4. Barrage — Rapid knockback blasts for a short time.";
+                + "2. Hook — Pulls one Survivor from long range (18 units).\n"
+                + "3. Tonic — Heal and brief speed boost.\n"
+                + "4. Barrage — Long-range ultimate cone barrage for 2.7 seconds.";
             return;
         }
 

@@ -65,18 +65,37 @@ public class PredatorClassManager : MonoBehaviour
     // CyberNinja: cooldown reset on kill.
     public float cyberSwiftStrikeCooldown = 8f;
     private float nextCyberSwiftStrikeTime;
+    [Header("Relentless Hook - Spray")]
+    public float sprayRange = 8f;
+    public float sprayHalfAngle = 45f;
+    public int sprayDamage = 10;
+    public float sprayKnockback = 0.9f;
+    public float sprayCloseRangeForgiveness = 2f;
+    public float sprayCloseRangeMaxAngle = 140f;
+
+    [Header("Relentless Hook - Hook")]
+    public float hookRange = 18f;
+    public float hookPullForwardDistance = 1.75f;
+    public float hookPullDuration = 0.25f;
+
+    [Header("Relentless Hook - Tonic")]
+    public int tonicHealAmount = 20;
+    public float tonicSpeedMultiplier = 1.25f;
+    public float tonicSpeedDuration = 3f;
+
     [Header("Relentless Hook - Barrage")]
-    public float barrageDuration = 2.4f;
+    public float barrageDuration = 2.7f;
     public float barragePulseInterval = 0.3f;
-    public float barrageRange = 8f;
-    public float barrageHalfAngle = 45f;
-    public int barrageDamagePerPulse = 2;
-    public float barrageKnockbackMin = 0.9f;
-    public float barrageKnockbackMax = 1.2f;
+    public float barrageRange = 15f;
+    public float barrageHalfAngle = 60f;
+    public int barrageDamagePerPulse = 5;
+    public float barrageKnockbackMin = 1.5f;
+    public float barrageKnockbackMax = 2.2f;
 
     private Coroutine relentlessBarrageRoutine;
     private bool isBarrageActive;
     private readonly List<GameObject> barragePulseVfx = new List<GameObject>();
+    private Coroutine tonicSpeedRoutine;
 
     private void Awake()
     {
@@ -104,6 +123,7 @@ public class PredatorClassManager : MonoBehaviour
     private void OnDisable()
     {
         StopRelentlessBarrage("disabled");
+        StopTonicSpeedBoost("disabled");
     }
 
     // Slot 0: melee / primary.
@@ -883,34 +903,49 @@ public class PredatorClassManager : MonoBehaviour
 
     private void CastRelentlessHookScrapGun()
     {
-        const float range = 7f;
-        const float halfAngle = 35f;
-        const int damage = 2;
-
+        float range = Mathf.Max(0.5f, sprayRange);
+        float halfAngle = Mathf.Max(1f, sprayHalfAngle);
+        int damage = Mathf.Max(1, sprayDamage);
         Vector3 origin = GetChestCastOrigin();
-        Vector3 forward = GetFlatForward();
-        UnitHealth[] candidates = GetSurvivorsInRange(origin + forward * (range * 0.5f), range + 1f);
+        Vector3 forward = GetFlatForward(logAim: true);
+
+        LogPredatorAbility("Spray direction=" + forward);
+        LogPredatorAbility("Spray cast origin=" + origin + " forward=" + forward
+            + " range=" + range.ToString("0.0") + " angle=" + halfAngle.ToString("0.0"));
+
+        UnitHealth[] candidates = GetSurvivorsInRange(transform.position, range + 1f);
         List<UnitHealth> hits = new List<UnitHealth>();
 
         for (int i = 0; i < candidates.Length; i++)
         {
             UnitHealth candidate = candidates[i];
-            if (candidate == null || candidate.IsDead || candidate.gameObject == gameObject)
-            {
-                continue;
-            }
-
-            Vector3 toTarget = candidate.transform.position - origin;
-            toTarget.y = 0f;
-            float distance = toTarget.magnitude;
-            float angle = distance <= 0.05f ? 0f : Vector3.Angle(forward, toTarget.normalized);
-            bool valid = distance > 0.05f && distance <= range && angle <= halfAngle;
+            float distance;
+            float angleToTarget;
+            string reason;
+            bool valid = TryEvaluateSprayTarget(
+                candidate,
+                origin,
+                forward,
+                range,
+                halfAngle,
+                out distance,
+                out angleToTarget,
+                out reason);
 
             if (showDebugLogs)
             {
-                Debug.Log("[PredatorAbility] Spray candidate " + candidate.name + ": distance "
-                    + distance.ToString("0.0") + " angle " + angle.ToString("0.0") + " valid "
-                    + (valid ? "yes" : "no"));
+                string tag = candidate != null ? candidate.tag : "none";
+                bool hasHealth = candidate != null;
+                bool alive = candidate != null && !candidate.IsDead;
+                Debug.Log("[PredatorAbility] Spray found candidate "
+                    + (candidate != null ? candidate.name : "null")
+                    + " dist=" + distance.ToString("0.00")
+                    + " angle=" + angleToTarget.ToString("0.0")
+                    + " hasUnitHealth=" + (hasHealth ? "yes" : "no")
+                    + " tag=" + tag
+                    + " alive=" + (alive ? "yes" : "no")
+                    + " valid=" + (valid ? "yes" : "no")
+                    + " reason=" + reason);
             }
 
             if (valid)
@@ -921,29 +956,136 @@ public class PredatorClassManager : MonoBehaviour
 
         for (int i = 0; i < hits.Count; i++)
         {
-            hits[i].TakeDamage(damage, gameObject);
-            SpawnHitMarkerVfx(hits[i].transform.position + Vector3.up * 1f, 0.35f);
+            UnitHealth target = hits[i];
+            int oldHp = target.currentHealth;
+            target.TakeDamage(damage, gameObject);
+            int newHp = target.currentHealth;
+
+            Vector3 knockDir = target.transform.position - transform.position;
+            knockDir.y = 0f;
+            if (knockDir.sqrMagnitude <= 0.001f)
+            {
+                knockDir = forward;
+            }
+
+            ApplyKnockback(target, knockDir.normalized, sprayKnockback);
+            SpawnHitMarkerVfx(target.transform.position + Vector3.up * 1f, 0.35f);
+
+            LogPredatorAbility("Spray damaged " + target.name + " for " + damage
+                + " " + oldHp + " -> " + newHp);
         }
 
         if (showDebugLogs)
         {
-            Debug.DrawRay(origin, forward * range, Color.magenta, 1f);
-            Debug.DrawRay(origin, Quaternion.Euler(0f, halfAngle, 0f) * forward * range, Color.magenta, 1f);
-            Debug.DrawRay(origin, Quaternion.Euler(0f, -halfAngle, 0f) * forward * range, Color.magenta, 1f);
+            Debug.DrawRay(origin, forward * range, Color.red, 1.2f);
+            Debug.DrawRay(origin, Quaternion.Euler(0f, halfAngle, 0f) * forward * range, Color.red, 1.2f);
+            Debug.DrawRay(origin, Quaternion.Euler(0f, -halfAngle, 0f) * forward * range, Color.red, 1.2f);
         }
 
-        SpawnForwardBurstVfx(origin, forward, range, 0.35f, new Color(0.85f, 0.35f, 0.95f, 0.55f));
-        Debug.Log("[PredatorAbility] Spray hit " + hits.Count + " survivors");
+        SpawnSprayConeVfx(origin, forward, range, halfAngle, 0.32f);
+        LogPredatorAbility("Spray hit " + hits.Count + " survivors");
+    }
+
+    private bool TryEvaluateSprayTarget(
+        UnitHealth candidate,
+        Vector3 origin,
+        Vector3 forward,
+        float range,
+        float halfAngle,
+        out float distance,
+        out float angleToTarget,
+        out string reason)
+    {
+        distance = 0f;
+        angleToTarget = 0f;
+        reason = "none";
+
+        if (candidate == null)
+        {
+            reason = "null-target";
+            return false;
+        }
+
+        if (candidate.IsDead)
+        {
+            reason = "dead";
+            return false;
+        }
+
+        if (candidate.gameObject == gameObject || IsPredatorOwned(candidate.gameObject))
+        {
+            reason = "predator-self";
+            return false;
+        }
+
+        if (!candidate.CompareTag(survivorTag))
+        {
+            reason = "wrong-tag";
+            return false;
+        }
+
+        Vector3 toTarget = candidate.transform.position - origin;
+        toTarget.y = 0f;
+        distance = toTarget.magnitude;
+
+        if (distance <= 0.05f)
+        {
+            reason = "valid-point-blank";
+            return true;
+        }
+
+        if (distance > range)
+        {
+            reason = "out-of-range";
+            return false;
+        }
+
+        angleToTarget = Vector3.Angle(forward, toTarget.normalized);
+
+        if (distance <= sprayCloseRangeForgiveness && angleToTarget <= sprayCloseRangeMaxAngle)
+        {
+            reason = "valid-close-forgiveness";
+            return true;
+        }
+
+        if (angleToTarget <= halfAngle)
+        {
+            reason = "valid-cone";
+            return true;
+        }
+
+        reason = "outside-cone";
+        return false;
+    }
+
+    private void SpawnSprayConeVfx(Vector3 origin, Vector3 forward, float range, float halfAngle, float lifetime)
+    {
+        GameObject vfx = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        vfx.name = "SprayConeVFX";
+        Collider col = vfx.GetComponent<Collider>();
+        if (col != null)
+        {
+            Destroy(col);
+        }
+
+        forward.y = 0f;
+        forward.Normalize();
+        float coneWidth = Mathf.Tan(halfAngle * Mathf.Deg2Rad) * range * 2f;
+        vfx.transform.position = origin + forward * (range * 0.45f) + Vector3.up * 0.35f;
+        vfx.transform.rotation = Quaternion.LookRotation(forward);
+        vfx.transform.localScale = new Vector3(Mathf.Max(1.2f, coneWidth), 0.55f, range * 0.9f);
+        ApplySimpleVfxColor(vfx, new Color(0.95f, 0.28f, 0.08f, 0.72f));
+        Destroy(vfx, Mathf.Max(0.1f, lifetime));
     }
 
     private IEnumerator CastRelentlessChainHookCoroutine()
     {
-        const float range = 12f;
-        const float pullForwardDistance = 1.75f;
-        const float pullDuration = 0.25f;
+        float range = Mathf.Max(1f, hookRange);
+        float pullForwardDistance = Mathf.Max(1f, hookPullForwardDistance);
+        float pullDuration = Mathf.Max(0.05f, hookPullDuration);
 
         Vector3 origin = GetChestCastOrigin();
-        Vector3 dir = GetFlatForward();
+        Vector3 dir = GetFlatForward(logAim: true);
         string blockReason;
         UnitHealth target = ResolveHookTarget(origin, dir, range, out blockReason);
 
@@ -977,24 +1119,91 @@ public class PredatorClassManager : MonoBehaviour
 
     private IEnumerator CastRelentlessTakeABreatherCoroutine()
     {
-        const int healAmount = 20;
-
         if (unitHealth == null || unitHealth.IsDead)
         {
             yield break;
         }
 
         int before = unitHealth.currentHealth;
-        if (before >= unitHealth.maxHealth)
+        if (before < unitHealth.maxHealth)
         {
-            Debug.Log("[PredatorAbility] Tonic used at full health");
-            yield break;
+            unitHealth.Heal(tonicHealAmount);
         }
 
-        unitHealth.Heal(healAmount);
         int after = unitHealth.currentHealth;
-        Debug.Log("[PredatorAbility] Tonic healed " + (after - before) + " (" + before + " -> " + after + ")");
+        LogPredatorAbility("Tonic healed " + (after - before) + " (" + before + " -> " + after + ")");
+
+        ApplyTonicSpeedBoost();
+        SpawnSelfBurstVfx(new Color(0.35f, 0.95f, 0.45f, 0.75f), 0.55f);
+        SpawnTonicSpeedVfx();
         yield break;
+    }
+
+    private void ApplyTonicSpeedBoost()
+    {
+        StopTonicSpeedBoost("refresh");
+
+        if (monsterMovement != null)
+        {
+            monsterMovement.SetAbilitySpeedMultiplier(tonicSpeedMultiplier);
+        }
+
+        tonicSpeedRoutine = StartCoroutine(TonicSpeedRoutine());
+        LogPredatorAbility("Tonic speed boost started x" + tonicSpeedMultiplier.ToString("0.00")
+            + " for " + tonicSpeedDuration.ToString("0.0") + "s");
+    }
+
+    private IEnumerator TonicSpeedRoutine()
+    {
+        float endTime = Time.time + Mathf.Max(0.1f, tonicSpeedDuration);
+        while (Time.time < endTime)
+        {
+            if (!isActiveAndEnabled || unitHealth == null || unitHealth.IsDead || !IsRoundActive())
+            {
+                StopTonicSpeedBoost("interrupted");
+                yield break;
+            }
+
+            yield return null;
+        }
+
+        StopTonicSpeedBoost("duration-ended");
+    }
+
+    private void StopTonicSpeedBoost(string reason)
+    {
+        if (tonicSpeedRoutine != null)
+        {
+            StopCoroutine(tonicSpeedRoutine);
+            tonicSpeedRoutine = null;
+        }
+
+        if (monsterMovement != null)
+        {
+            monsterMovement.ClearAbilitySpeedMultiplier();
+        }
+
+        if (showDebugLogs && reason != "refresh")
+        {
+            LogPredatorAbility("Tonic speed boost ended (" + reason + ")");
+        }
+    }
+
+    private void SpawnTonicSpeedVfx()
+    {
+        GameObject vfx = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        vfx.name = "TonicSpeedVFX";
+        Collider col = vfx.GetComponent<Collider>();
+        if (col != null)
+        {
+            Destroy(col);
+        }
+
+        vfx.transform.SetParent(transform, false);
+        vfx.transform.localPosition = Vector3.up * 0.2f;
+        vfx.transform.localScale = new Vector3(1.4f, 0.08f, 1.4f);
+        ApplySimpleVfxColor(vfx, new Color(0.2f, 0.85f, 1f, 0.65f));
+        Destroy(vfx, 0.55f);
     }
 
     private IEnumerator CastRelentlessBarrageCoroutine()
@@ -1035,7 +1244,7 @@ public class PredatorClassManager : MonoBehaviour
     private int FireRelentlessBarragePulse(int pulseNumber)
     {
         Vector3 origin = GetChestCastOrigin();
-        Vector3 forward = GetFlatForward();
+        Vector3 forward = GetFlatForward(logAim: true);
         UnitHealth[] hits = GetSurvivorsInCone(origin, forward, barrageRange, barrageHalfAngle);
         int hitCount = 0;
 
@@ -1127,16 +1336,44 @@ public class PredatorClassManager : MonoBehaviour
         return transform.position + Vector3.up * 1.4f;
     }
 
-    private Vector3 GetFlatForward()
+    private Vector3 GetFlatForward(bool logAim = false)
     {
-        Vector3 forward = transform.forward;
-        forward.y = 0f;
-        if (forward.sqrMagnitude <= 0.001f)
+        string source;
+        Vector3 forward;
+
+        if (monsterMovement == null)
         {
-            forward = Vector3.forward;
+            monsterMovement = GetComponent<MonsterPlayerMovement>();
         }
 
-        return forward.normalized;
+        if (monsterMovement != null)
+        {
+            forward = monsterMovement.GetGameplayAimDirection();
+            source = monsterMovement.HasStoredAim
+                ? "MonsterPlayerMovement.lastAimDirection"
+                : "MonsterPlayerMovement.transformFallback";
+        }
+        else
+        {
+            forward = transform.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude <= 0.001f)
+            {
+                forward = Vector3.forward;
+            }
+
+            forward = forward.normalized;
+            source = "transform.forward";
+        }
+
+        if (logAim && showDebugLogs)
+        {
+            Vector3 loggedAim = monsterMovement != null ? monsterMovement.lastAimDirection : forward;
+            Debug.Log("[PredatorAim] source=" + source + " lastAimDirection=" + loggedAim);
+            Debug.Log("[PredatorAim] final ability direction=" + forward);
+        }
+
+        return forward;
     }
 
     private bool IsRoundActive()
@@ -1502,23 +1739,59 @@ public class PredatorClassManager : MonoBehaviour
 
     private UnitHealth[] GetSurvivorsInRange(Vector3 center, float radius)
     {
-        Collider[] hits = Physics.OverlapSphere(center, Mathf.Max(0.1f, radius), targetLayers, QueryTriggerInteraction.Ignore);
-        System.Collections.Generic.List<UnitHealth> result = new System.Collections.Generic.List<UnitHealth>();
-        for (int i = 0; i < hits.Length; i++)
+        float safeRadius = Mathf.Max(0.1f, radius);
+        float radiusSqr = safeRadius * safeRadius;
+        HashSet<UnitHealth> result = new HashSet<UnitHealth>();
+
+        UnitHealth[] allUnits = FindObjectsByType<UnitHealth>(FindObjectsSortMode.None);
+        for (int i = 0; i < allUnits.Length; i++)
         {
-            UnitHealth h = hits[i].GetComponentInParent<UnitHealth>();
-            if (h == null || h.IsDead || !h.CompareTag(survivorTag) || IsPredatorOwned(h.gameObject))
+            UnitHealth health = allUnits[i];
+            if (!IsValidSurvivorTarget(health))
             {
                 continue;
             }
 
-            if (!result.Contains(h))
+            Vector3 sample = health.transform.position + Vector3.up * 0.75f;
+            if ((sample - center).sqrMagnitude <= radiusSqr)
             {
-                result.Add(h);
+                result.Add(health);
             }
         }
 
-        return result.ToArray();
+        Collider[] hits = Physics.OverlapSphere(center, safeRadius, targetLayers, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < hits.Length; i++)
+        {
+            UnitHealth health = hits[i].GetComponentInParent<UnitHealth>();
+            if (IsValidSurvivorTarget(health))
+            {
+                result.Add(health);
+            }
+        }
+
+        UnitHealth[] survivors = new UnitHealth[result.Count];
+        result.CopyTo(survivors);
+        return survivors;
+    }
+
+    private bool IsValidSurvivorTarget(UnitHealth health)
+    {
+        if (health == null || health.IsDead)
+        {
+            return false;
+        }
+
+        if (!health.CompareTag(survivorTag))
+        {
+            return false;
+        }
+
+        if (health.gameObject == gameObject || IsPredatorOwned(health.gameObject))
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private UnitHealth[] GetSurvivorsInCone(Vector3 origin, Vector3 forward, float range, float halfAngleDegrees)

@@ -16,12 +16,43 @@ public class MonsterPlayerMovement : MonoBehaviour
     [Header("Gravity")]
     public float gravity = -20f;
 
+    [Header("Aim")]
+    [Tooltip("Gameplay aim used by predator abilities. Updated from move input, not lagging model rotation.")]
+    public Vector3 lastAimDirection = Vector3.forward;
+    public Vector3 lastMoveDirection = Vector3.forward;
+
     private CharacterController characterController;
     private UnitHealth unitHealth;
     private Vector2 mobileMoveInput;
     private float verticalVelocity;
     private float carriedItemSpeedMultiplier = 1f;
+    private float abilitySpeedMultiplier = 1f;
+    private bool hasStoredAim;
     private bool loggedInactiveController;
+
+    public bool HasStoredAim => hasStoredAim;
+
+    public Vector3 GetGameplayAimDirection()
+    {
+        Vector3 aim = hasStoredAim ? lastAimDirection : transform.forward;
+        aim.y = 0f;
+        if (aim.sqrMagnitude <= 0.001f)
+        {
+            aim = Vector3.forward;
+        }
+
+        return aim.normalized;
+    }
+
+    public void SetAbilitySpeedMultiplier(float multiplier)
+    {
+        abilitySpeedMultiplier = Mathf.Max(0.1f, multiplier);
+    }
+
+    public void ClearAbilitySpeedMultiplier()
+    {
+        abilitySpeedMultiplier = 1f;
+    }
 
     private void Awake()
     {
@@ -42,12 +73,13 @@ public class MonsterPlayerMovement : MonoBehaviour
         }
 
         Vector2 input = GetMoveInput();
+        UpdateAimFromInput(input);
         Vector3 moveDirection = BuildWorldDirection(input);
 
         if (moveDirection.sqrMagnitude > 0.001f)
         {
             ApplyGravity();
-            TryMove((moveDirection * moveSpeed * carriedItemSpeedMultiplier + Vector3.up * verticalVelocity) * Time.deltaTime);
+            TryMove((moveDirection * moveSpeed * carriedItemSpeedMultiplier * abilitySpeedMultiplier + Vector3.up * verticalVelocity) * Time.deltaTime);
             RotateToward(moveDirection);
             return;
         }
@@ -99,6 +131,19 @@ public class MonsterPlayerMovement : MonoBehaviour
         }
 
         return Keyboard.current[key].isPressed;
+    }
+
+    private void UpdateAimFromInput(Vector2 input)
+    {
+        Vector3 direction = BuildWorldDirection(input);
+        if (direction.sqrMagnitude <= 0.001f)
+        {
+            return;
+        }
+
+        lastAimDirection = direction;
+        lastMoveDirection = direction;
+        hasStoredAim = true;
     }
 
     private Vector3 BuildWorldDirection(Vector2 input)
@@ -185,6 +230,10 @@ public class MonsterPlayerMovement : MonoBehaviour
         {
             return;
         }
+
+        lastAimDirection = moveDirection.normalized;
+        lastMoveDirection = lastAimDirection;
+        hasStoredAim = true;
 
         Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
         transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);

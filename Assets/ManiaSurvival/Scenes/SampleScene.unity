@@ -2858,8 +2858,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -350, y: 150}
-  m_SizeDelta: {x: 420, y: 420}
+  m_AnchoredPosition: {x: -32, y: 32}
+  m_SizeDelta: {x: 276, y: 188}
   m_Pivot: {x: 1, y: 0}
 --- !u!222 &394660928
 CanvasRenderer:
@@ -5054,8 +5054,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 180, y: 150}
-  m_SizeDelta: {x: 220, y: 220}
+  m_AnchoredPosition: {x: 32, y: 32}
+  m_SizeDelta: {x: 200, y: 200}
   m_Pivot: {x: 0, y: 0}
 --- !u!114 &545819443
 MonoBehaviour:
@@ -7113,10 +7113,10 @@ MonoBehaviour:
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   gameUi: {fileID: 0}
-  abilitySlot: 1
-  isPredatorSide: 0
+  abilitySlot: 4
+  isPredatorSide: 1
   useAbilityControllerCooldown: 1
-  abilityName: 
+  abilityName: Barrage
   manaCost: 0
   manaCostLabelFormat: '{0}
 
@@ -11263,10 +11263,10 @@ RectTransform:
   - {fileID: 621431532}
   m_Father: {fileID: 1161050126}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 1, y: 0}
-  m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: 100, y: 50}
-  m_SizeDelta: {x: 250, y: 500}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1118882256
 CanvasRenderer:
@@ -11746,8 +11746,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -350, y: 300}
-  m_SizeDelta: {x: 420, y: 420}
+  m_AnchoredPosition: {x: -32, y: 32}
+  m_SizeDelta: {x: 276, y: 188}
   m_Pivot: {x: 1, y: 0}
 --- !u!222 &1161050128
 CanvasRenderer:
@@ -12043,10 +12043,10 @@ RectTransform:
   - {fileID: 665206590}
   m_Father: {fileID: 394660926}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 1, y: 0}
-  m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -50, y: 100}
-  m_SizeDelta: {x: 250, y: 500}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1179632092
 CanvasRenderer:
@@ -12074,7 +12074,7 @@ MonoBehaviour:
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 0
-  m_StartCorner: 3
+  m_StartCorner: 0
   m_StartAxis: 0
   m_CellSize: {x: 200, y: 120}
   m_Spacing: {x: 20, y: 20}

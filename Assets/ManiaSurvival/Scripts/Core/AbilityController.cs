@@ -33,8 +33,8 @@ public class AbilityController : MonoBehaviour
     public float survivorSlot4Cooldown = 16f;
 
     [Header("Predator Slot Cooldowns")]
-    public float predatorSlot1Cooldown = 1.4f;
-    public float predatorSlot2Cooldown = 8f;
+    public float predatorSlot1Cooldown = 1.8f;
+    public float predatorSlot2Cooldown = 7f;
     public float predatorSlot3Cooldown = 10f;
     public float predatorSlot4Cooldown = 14f;
 
