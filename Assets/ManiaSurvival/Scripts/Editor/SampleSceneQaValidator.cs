@@ -395,7 +395,7 @@ public static class SampleSceneQaValidator
         ValidateButtonLabel(gameUi.predatorAbility3Button, predatorLabels[2], pass, fail);
         ValidateButtonLabel(gameUi.predatorUltimateButton, predatorLabels[3], pass, fail);
 
-        ValidatePredatorButtonsAvoidGenericLabels(gameUi, warn, fail);
+        ValidatePredatorButtonsAvoidGenericLabels(gameUi, pass, warn, fail);
     }
 
     private static void ValidateConfiguredAbilityLabels(
@@ -452,6 +452,7 @@ public static class SampleSceneQaValidator
 
     private static void ValidatePredatorButtonsAvoidGenericLabels(
         ManiaGameUI gameUi,
+        System.Action<string> pass,
         System.Action<string> warn,
         System.Action<string> fail)
     {
