@@ -53,6 +53,7 @@ public class LocalRoleController : MonoBehaviour
     {
         AutoFindReferences();
         EnsureMonsterModeSurvivors();
+        EnsureUnitManaOnPlayableUnits();
         ApplyAllSurvivorControl();
         ApplyStandaloneSurvivorBots();
         ApplyMonsterControl();
@@ -79,6 +80,19 @@ public class LocalRoleController : MonoBehaviour
         }
 
         soloMonsterSurvivorSpawner.EnsureMonsterModeSurvivors();
+    }
+
+    private void EnsureUnitManaOnPlayableUnits()
+    {
+        if (survivorMovement != null && survivorMovement.GetComponent<UnitMana>() == null)
+        {
+            UnitMana.EnsureOn(survivorMovement.gameObject, false);
+        }
+
+        if (monsterMovement != null && monsterMovement.GetComponent<UnitMana>() == null)
+        {
+            UnitMana.EnsureOn(monsterMovement.gameObject, true);
+        }
     }
 
     private void RefreshAbilityUiLabels()

@@ -5,8 +5,8 @@ using UnityEngine.UI;
 public class WorldManaBar : MonoBehaviour
 {
     [Header("Target")]
-    [Tooltip("Drag a SurvivorMana here, or leave empty to auto-find one on this object's root (handy when SurvivorMana is auto-added at runtime by Heaven).")]
-    public SurvivorMana unitMana;
+    [Tooltip("Drag a UnitMana here, or leave empty to auto-find one on this object's root.")]
+    public UnitMana unitMana;
 
     [Header("Auto Find")]
     [Tooltip("If unitMana is empty, keep searching the root each frame until one shows up (cheap).")]
@@ -20,7 +20,7 @@ public class WorldManaBar : MonoBehaviour
     public Color manaColor = new Color(0.25f, 0.6f, 1f);
 
     [Header("Visibility")]
-    [Tooltip("Hide the bar visuals when no SurvivorMana exists yet.")]
+    [Tooltip("Hide the bar visuals when no UnitMana exists yet.")]
     public bool hideWhenNoMana = true;
 
     [Header("Rotation")]
@@ -49,7 +49,7 @@ public class WorldManaBar : MonoBehaviour
 
         if (hasMana)
         {
-            float percent = unitMana.ManaPercent;
+            float percent = unitMana.GetManaPercent();
 
             if (fillImage != null)
             {
@@ -59,7 +59,7 @@ public class WorldManaBar : MonoBehaviour
 
             if (manaText != null)
             {
-                manaText.text = $"{unitMana.currentMana} / {unitMana.maxMana}";
+                manaText.text = $"{Mathf.CeilToInt(unitMana.currentMana)} / {Mathf.CeilToInt(unitMana.maxMana)}";
             }
         }
 
@@ -76,7 +76,15 @@ public class WorldManaBar : MonoBehaviour
             return;
         }
 
-        unitMana = GetComponentInParent<SurvivorMana>();
+        unitMana = GetComponentInParent<UnitMana>();
+        if (unitMana == null)
+        {
+            SurvivorMana legacy = GetComponentInParent<SurvivorMana>();
+            if (legacy != null)
+            {
+                unitMana = legacy.GetComponent<UnitMana>();
+            }
+        }
     }
 
     private void SetVisualsActive(bool active)

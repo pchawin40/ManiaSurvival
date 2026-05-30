@@ -23,8 +23,21 @@ public class AbilityController : MonoBehaviour
     public LocalRoleController localRoleController;
     public ManiaGameManager gameManager;
     public UnitHealth unitHealth;
+    public UnitMana unitMana;
     public SurvivorClassManager survivorClassManager;
     public PredatorClassManager predatorClassManager;
+
+    [Header("Survivor Mana Costs")]
+    public float survivorSlot1ManaCost = 10f;
+    public float survivorSlot2ManaCost = 20f;
+    public float survivorSlot3ManaCost = 15f;
+    public float survivorSlot4ManaCost = 45f;
+
+    [Header("Predator Mana Costs")]
+    public float predatorSlot1ManaCost = 8f;
+    public float predatorSlot2ManaCost = 25f;
+    public float predatorSlot3ManaCost = 35f;
+    public float predatorSlot4ManaCost = 60f;
 
     [Header("Survivor Slot Cooldowns")]
     public float survivorSlot1Cooldown = 2.5f;
@@ -36,7 +49,7 @@ public class AbilityController : MonoBehaviour
     public float predatorSlot1Cooldown = 2f;
     public float predatorSlot2Cooldown = 9f;
     public float predatorSlot3Cooldown = 10f;
-    public float predatorSlot4Cooldown = 14f;
+    public float predatorSlot4Cooldown = 16f;
 
     [Header("Debug VFX")]
     public bool spawnPlaceholderVfx = true;
@@ -65,6 +78,11 @@ public class AbilityController : MonoBehaviour
         if (unitHealth == null)
         {
             unitHealth = GetComponent<UnitHealth>();
+        }
+
+        if (unitMana == null)
+        {
+            unitMana = GetComponent<UnitMana>();
         }
 
         if (survivorClassManager == null)
@@ -99,6 +117,11 @@ public class AbilityController : MonoBehaviour
         else if (predatorClassManager != null)
         {
             controlsPredator = true;
+        }
+
+        if (unitMana == null)
+        {
+            unitMana = UnitMana.EnsureOn(gameObject, controlsPredator);
         }
 
         if (disableLegacyAbilityComponents)
@@ -184,6 +207,20 @@ public class AbilityController : MonoBehaviour
             return;
         }
 
+        float manaCost = GetSlotManaCostInternal(clampedSlot);
+        if (unitMana == null)
+        {
+            unitMana = GetComponent<UnitMana>();
+        }
+
+        if (unitMana != null && !unitMana.HasMana(manaCost))
+        {
+            LogFlow($"[AbilityController] Insufficient mana for slot {clampedSlot}: need {manaCost:0.0}, have {unitMana.currentMana:0.0}");
+            LogFlow("[AbilityController] Ability succeeded/failed: failed (insufficient mana)");
+            PlayFailedCastSound();
+            return;
+        }
+
         bool targetFound = HasLikelyTarget(clampedSlot);
         bool assignedVfx = HasAssignedVfx(clampedSlot);
         string abilityName = GetResolvedAbilityName(clampedSlot);
@@ -200,6 +237,18 @@ public class AbilityController : MonoBehaviour
         bool succeeded = ExecuteSlot(clampedSlot);
         if (succeeded)
         {
+            if (unitMana != null && manaCost > 0f)
+            {
+                if (!unitMana.SpendMana(manaCost))
+                {
+                    LogFlow("[AbilityController] Ability succeeded but mana spend failed — cooldown not started.");
+                    LogFlow("[AbilityController] Ability succeeded/failed: failed (mana spend)");
+                    return;
+                }
+
+                LogFlow($"[AbilityController] Spent {manaCost:0.0} mana on slot {clampedSlot}");
+            }
+
             float cooldownDuration = GetSlotCooldown(clampedSlot);
             nextReadyTimeBySlot[clampedSlot - 1] = now + cooldownDuration;
             LogFlow($"[AbilityController] Starting cooldown for slot {clampedSlot}: {cooldownDuration:0.00}s");
@@ -255,7 +304,49 @@ public class AbilityController : MonoBehaviour
 
     public bool IsAbilityReady(int slotNumber)
     {
-        return GetCooldownRemaining(slotNumber) <= 0f;
+        return GetCooldownRemaining(slotNumber) <= 0f && HasSufficientMana(slotNumber);
+    }
+
+    public float GetSlotManaCost(int slotNumber)
+    {
+        return GetSlotManaCostInternal(slotNumber);
+    }
+
+    public bool HasSufficientMana(int slotNumber)
+    {
+        if (unitMana == null)
+        {
+            unitMana = GetComponent<UnitMana>();
+        }
+
+        if (unitMana == null)
+        {
+            return true;
+        }
+
+        return unitMana.HasMana(GetSlotManaCostInternal(slotNumber));
+    }
+
+    private float GetSlotManaCostInternal(int slotNumber)
+    {
+        if (controlsPredator)
+        {
+            switch (slotNumber)
+            {
+                case 1: return Mathf.Max(0f, predatorSlot1ManaCost);
+                case 2: return Mathf.Max(0f, predatorSlot2ManaCost);
+                case 3: return Mathf.Max(0f, predatorSlot3ManaCost);
+                default: return Mathf.Max(0f, predatorSlot4ManaCost);
+            }
+        }
+
+        switch (slotNumber)
+        {
+            case 1: return Mathf.Max(0f, survivorSlot1ManaCost);
+            case 2: return Mathf.Max(0f, survivorSlot2ManaCost);
+            case 3: return Mathf.Max(0f, survivorSlot3ManaCost);
+            default: return Mathf.Max(0f, survivorSlot4ManaCost);
+        }
     }
 
     private float GetSlotCooldown(int slotNumber)

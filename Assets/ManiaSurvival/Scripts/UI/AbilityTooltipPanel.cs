@@ -167,6 +167,7 @@ public class AbilityTooltipPanel : MonoBehaviour
     private string BuildCompactBody(AbilityTooltipData data)
     {
         return data.description + "\n\n"
+            + "Cost: " + data.cost + "\n"
             + "Cooldown: " + data.cooldown.ToString("0.0") + "s\n"
             + "Effect: " + data.effect + "\n"
             + "Tip: " + data.tip;
@@ -286,8 +287,8 @@ public class AbilityTooltipPanel : MonoBehaviour
                         abilityName = "Spray",
                         description = "Short-range forward shotgun blast.",
                         cooldown = 2f,
-                        effect = "12 damage close-range blast",
-                        cost = "None",
+                        effect = "12 damage shotgun blast + knockback 2.6",
+                        cost = "8 mana",
                         rangeTarget = "8 unit cone in front",
                         tip = "Fight up close and scare survivors."
                     };
@@ -299,7 +300,7 @@ public class AbilityTooltipPanel : MonoBehaviour
                         description = "Pulls one Survivor from long range.",
                         cooldown = 9f,
                         effect = "Long-range pull. Deals 10 damage on hit",
-                        cost = "None",
+                        cost = "25 mana",
                         rangeTarget = "24 unit line skillshot",
                         tip = "Catch fleeing prey."
                     };
@@ -310,8 +311,8 @@ public class AbilityTooltipPanel : MonoBehaviour
                         abilityName = "Tonic",
                         description = "Channel toxic gas while recovering.",
                         cooldown = 10f,
-                        effect = "Heals Predator but slows movement while toxic gas damages nearby targets",
-                        cost = "None",
+                        effect = "Heal 35, slow self to 0.55 speed, toxic gas 10 DPS in 4.5 radius for 2.5s",
+                        cost = "35 mana",
                         rangeTarget = "Self + 4.5 unit gas radius",
                         tip = "Use before diving."
                     };
@@ -321,11 +322,11 @@ public class AbilityTooltipPanel : MonoBehaviour
                         className = "Relentless Hook",
                         abilityName = "Barrage",
                         description = "Rapid long-range knockback blasts.",
-                        cooldown = 14f,
-                        effect = "Ultimate cone barrage. Repeated heavy damage and knockback",
-                        cost = "None",
-                        rangeTarget = "18 unit cone in front",
-                        tip = "Scatter and finish survivors."
+                        cooldown = 16f,
+                        effect = "Ultimate cone barrage. 10 damage per pulse + heavy knockback 2.8–4.0",
+                        cost = "60 mana",
+                        rangeTarget = "20 unit cone in front",
+                        tip = "Scatter survivors — RUN NOW."
                     };
             }
         }
@@ -340,7 +341,7 @@ public class AbilityTooltipPanel : MonoBehaviour
                     description = "Restores health to a wounded ally.",
                     cooldown = 2.5f,
                     effect = "Heal 6 HP",
-                    cost = "None",
+                    cost = "10 mana",
                     rangeTarget = "Nearest wounded ally or self if hurt",
                     tip = "Save hurt allies."
                 };
@@ -352,7 +353,7 @@ public class AbilityTooltipPanel : MonoBehaviour
                     description = "Emits a healing wave around you.",
                     cooldown = 6f,
                     effect = "Area heal 4 HP",
-                    cost = "None",
+                    cost = "20 mana",
                     rangeTarget = "Area around caster (5 units)",
                     tip = "Use near allies."
                 };
@@ -363,8 +364,8 @@ public class AbilityTooltipPanel : MonoBehaviour
                     abilityName = "Tether",
                     description = "Dash quickly toward an ally.",
                     cooldown = 10f,
-                    effect = "Mobility",
-                    cost = "None",
+                    effect = "Mobility dash to ally",
+                    cost = "15 mana",
                     rangeTarget = "Nearest ally",
                     tip = "Escape or regroup."
                 };
@@ -376,7 +377,7 @@ public class AbilityTooltipPanel : MonoBehaviour
                     description = "Drops a healing zone at your position.",
                     cooldown = 16f,
                     effect = "Healing zone: 2 HP/s for 4s",
-                    cost = "None",
+                    cost = "45 mana",
                     rangeTarget = "Area at caster",
                     tip = "Use under pressure."
                 };

@@ -16,6 +16,7 @@ public class AbilityCooldownButton : MonoBehaviour
     [Header("Colors")]
     public Color readyColor = Color.white;
     public Color cooldownColor = new Color(0.55f, 0.55f, 0.55f, 1f);
+    public Color insufficientManaColor = new Color(0.25f, 0.35f, 0.55f, 1f);
 
     [Header("Cooldown Authority")]
     public ManiaGameUI gameUi;
@@ -107,6 +108,10 @@ public class AbilityCooldownButton : MonoBehaviour
             {
                 ApplyCooldownVisuals(remaining);
             }
+            else if (!controller.HasSufficientMana(abilitySlot))
+            {
+                ApplyInsufficientManaVisuals();
+            }
             else
             {
                 ApplyReadyVisuals();
@@ -173,6 +178,17 @@ public class AbilityCooldownButton : MonoBehaviour
         if (cooldownText != null)
         {
             cooldownText.text = remainingSeconds.ToString("0.0");
+        }
+    }
+
+    private void ApplyInsufficientManaVisuals()
+    {
+        KeepButtonInteractableForTooltip();
+        SetTintColor(insufficientManaColor);
+
+        if (cooldownText != null)
+        {
+            cooldownText.text = "No Mana";
         }
     }
 

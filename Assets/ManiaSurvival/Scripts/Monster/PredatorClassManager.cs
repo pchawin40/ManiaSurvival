@@ -69,7 +69,7 @@ public class PredatorClassManager : MonoBehaviour
     public float sprayRange = 8f;
     public float sprayHalfAngle = 45f;
     public int sprayDamage = 12;
-    public float sprayKnockback = 1.8f;
+    public float sprayKnockback = 2.6f;
     public float sprayCloseRangeForgiveness = 2f;
     public float sprayCloseRangeMaxAngle = 140f;
 
@@ -91,11 +91,11 @@ public class PredatorClassManager : MonoBehaviour
     [Header("Relentless Hook - Barrage")]
     public float barrageDuration = 3f;
     public float barragePulseInterval = 0.3f;
-    public float barrageRange = 18f;
-    public float barrageHalfAngle = 65f;
-    public int barrageDamagePerPulse = 8;
-    public float barrageKnockbackMin = 2.4f;
-    public float barrageKnockbackMax = 3.2f;
+    public float barrageRange = 20f;
+    public float barrageHalfAngle = 70f;
+    public int barrageDamagePerPulse = 10;
+    public float barrageKnockbackMin = 2.8f;
+    public float barrageKnockbackMax = 4f;
 
     private Coroutine relentlessBarrageRoutine;
     private bool isBarrageActive;
@@ -992,6 +992,13 @@ public class PredatorClassManager : MonoBehaviour
         }
 
         SpawnSprayConeVfx(origin, forward, range, halfAngle, 0.32f);
+        TemporaryGroundEffect.Spawn(
+            transform.position,
+            new Color(0.65f, 0.55f, 0.4f, 0.55f),
+            0.6f,
+            2.2f,
+            null,
+            showDebugLogs);
         LogPredatorAbility("Spray hit " + hits.Count + " survivors");
     }
 
@@ -1457,6 +1464,13 @@ public class PredatorClassManager : MonoBehaviour
         int hitCount = 0;
 
         SpawnBarragePulseVfx(origin, forward, barrageRange, 0.28f);
+        TemporaryGroundEffect.Spawn(
+            origin + forward * (barrageRange * 0.35f),
+            new Color(0.15f, 0.1f, 0.08f, 0.7f),
+            2f,
+            2.5f,
+            null,
+            showDebugLogs);
 
         for (int i = 0; i < hits.Length; i++)
         {

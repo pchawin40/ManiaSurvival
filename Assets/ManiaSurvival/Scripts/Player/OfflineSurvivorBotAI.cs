@@ -295,9 +295,14 @@ public class OfflineSurvivorBotAI : MonoBehaviour
             }
 
             int roll = Random.Range(0, 4);
+            int slot = roll + 1;
             if (abilityController != null)
             {
-                abilityController.UseAbilitySlot(roll + 1);
+                if (CanUseAbilitySlot(slot))
+                {
+                    abilityController.UseAbilitySlot(slot);
+                }
+
                 continue;
             }
 
@@ -328,7 +333,7 @@ public class OfflineSurvivorBotAI : MonoBehaviour
             return false;
         }
 
-        if (abilityController.GetCooldownRemaining(2) <= 0f)
+        if (abilityController.GetCooldownRemaining(2) <= 0f && CanUseAbilitySlot(2))
         {
             int alliesNeedingHeal = CountAlliesBelowHealthPercent(survivorClassManager.healPulseRadius, medicHealTargetPercent);
             if (alliesNeedingHeal > 0)
@@ -339,7 +344,7 @@ public class OfflineSurvivorBotAI : MonoBehaviour
             }
         }
 
-        if (abilityController.GetCooldownRemaining(1) <= 0f)
+        if (abilityController.GetCooldownRemaining(1) <= 0f && CanUseAbilitySlot(1))
         {
             UnitHealth woundedAlly = FindNearestWoundedAlly(survivorClassManager.bioticDartRange, medicHealTargetPercent);
             if (woundedAlly != null)
@@ -351,6 +356,21 @@ public class OfflineSurvivorBotAI : MonoBehaviour
         }
 
         return false;
+    }
+
+    private bool CanUseAbilitySlot(int slotNumber)
+    {
+        if (abilityController == null)
+        {
+            return false;
+        }
+
+        if (abilityController.GetCooldownRemaining(slotNumber) > 0f)
+        {
+            return false;
+        }
+
+        return abilityController.HasSufficientMana(slotNumber);
     }
 
     private int CountAlliesBelowHealthPercent(float radius, float healthPercent)

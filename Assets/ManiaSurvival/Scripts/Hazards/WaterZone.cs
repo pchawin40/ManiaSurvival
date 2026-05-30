@@ -16,7 +16,7 @@ public class WaterZone : MonoBehaviour
     public float tickInterval = 0.5f;
 
     [Header("Mana Setup")]
-    [Tooltip("If a survivor has no SurvivorMana, add one automatically on enter so Water can refill it.")]
+    [Tooltip("If a unit has no UnitMana, add one automatically on enter so Water can refill it.")]
     public bool autoAddManaComponent = true;
     public int defaultMaxMana = 100;
 
@@ -24,7 +24,7 @@ public class WaterZone : MonoBehaviour
     private readonly Dictionary<UnitHealth, float> healProgress = new Dictionary<UnitHealth, float>();
     private readonly Dictionary<UnitHealth, float> manaProgress = new Dictionary<UnitHealth, float>();
     private readonly Dictionary<UnitHealth, float> damageProgress = new Dictionary<UnitHealth, float>();
-    private readonly Dictionary<UnitHealth, SurvivorMana> manaLookup = new Dictionary<UnitHealth, SurvivorMana>();
+    private readonly Dictionary<UnitHealth, UnitMana> manaLookup = new Dictionary<UnitHealth, UnitMana>();
     private Coroutine tickRoutine;
 
     private void OnEnable()
@@ -105,7 +105,7 @@ public class WaterZone : MonoBehaviour
             return;
         }
 
-        if (!manaLookup.TryGetValue(unitHealth, out SurvivorMana mana) || mana == null)
+        if (!manaLookup.TryGetValue(unitHealth, out UnitMana mana) || mana == null)
         {
             return;
         }
@@ -168,7 +168,7 @@ public class WaterZone : MonoBehaviour
         if (unitHealth.CompareTag("Survivor"))
         {
             occupants.Add(unitHealth);
-            CacheSurvivorMana(unitHealth);
+            CacheUnitMana(unitHealth);
             return;
         }
 
@@ -178,17 +178,17 @@ public class WaterZone : MonoBehaviour
         }
     }
 
-    private void CacheSurvivorMana(UnitHealth unitHealth)
+    private void CacheUnitMana(UnitHealth unitHealth)
     {
         if (manaLookup.ContainsKey(unitHealth))
         {
             return;
         }
 
-        SurvivorMana mana = unitHealth.GetComponent<SurvivorMana>();
+        UnitMana mana = unitHealth.GetComponent<UnitMana>();
         if (mana == null && autoAddManaComponent)
         {
-            mana = unitHealth.gameObject.AddComponent<SurvivorMana>();
+            mana = UnitMana.EnsureOn(unitHealth.gameObject, unitHealth.CompareTag("Monster"));
             mana.maxMana = defaultMaxMana;
             mana.currentMana = defaultMaxMana;
         }

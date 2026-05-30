@@ -231,6 +231,11 @@ public class SoloMonsterSurvivorSpawner : MonoBehaviour
         {
             instance.AddComponent<OfflineSurvivorBotAI>();
         }
+
+        if (instance.GetComponent<UnitMana>() == null)
+        {
+            UnitMana.EnsureOn(instance, false);
+        }
     }
 
     private bool TryFindSafeSpawnPosition(out Vector3 result)

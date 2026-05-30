@@ -19,9 +19,8 @@ public class HeavenBlessingZone : MonoBehaviour
     [Header("Mana While Inside")]
     [Tooltip("Mana points restored per second while standing inside the zone. Heaven default is 6 (vs 1 baseline, vs 2 in Water).")]
     public int manaPerSecond = 6;
-    [Tooltip("If a survivor has no SurvivorMana, add one automatically on enter.")]
+    [Tooltip("If a unit has no UnitMana, add one automatically on enter.")]
     public bool autoAddManaComponent = true;
-    [Tooltip("Used when auto-adding a SurvivorMana component.")]
     public int defaultMaxMana = 100;
 
     [Header("Speed Boost While Inside")]
@@ -35,7 +34,7 @@ public class HeavenBlessingZone : MonoBehaviour
     private class BlessedSurvivor
     {
         public UnitHealth health;
-        public SurvivorMana mana;
+        public UnitMana mana;
         public SurvivorMovement movement;
         public float healCarry;
         public float manaCarry;
@@ -63,16 +62,16 @@ public class HeavenBlessingZone : MonoBehaviour
             return;
         }
 
-        SurvivorMana mana = health.GetComponent<SurvivorMana>();
+        UnitMana mana = health.GetComponent<UnitMana>();
         if (restoreMana && mana == null && autoAddManaComponent)
         {
-            mana = health.gameObject.AddComponent<SurvivorMana>();
+            mana = UnitMana.EnsureOn(health.gameObject, false);
             mana.maxMana = defaultMaxMana;
             mana.currentMana = defaultMaxMana;
 
             if (showDebugMessages)
             {
-                Debug.Log("[HeavenBlessingZone] Auto-added SurvivorMana to " + health.name);
+                Debug.Log("[HeavenBlessingZone] Auto-added UnitMana to " + health.name);
             }
         }
 

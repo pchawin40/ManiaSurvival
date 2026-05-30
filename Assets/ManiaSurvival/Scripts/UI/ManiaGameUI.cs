@@ -12,6 +12,7 @@ public class ManiaGameUI : MonoBehaviour
     public TMP_Text survivorCountText;
     public TMP_Text monsterKillsText;
     public TMP_Text gameOverTitleText;
+    public TMP_Text playerManaText;
 
     [Header("Panels")]
     public GameObject startScreen;
@@ -193,6 +194,7 @@ public class ManiaGameUI : MonoBehaviour
         UpdateRolePanels();
         RefreshAbilityLabels();
         RefreshAbilityInfo();
+        RefreshPlayerManaDisplay();
     }
 
     private void OnDestroy()
@@ -1357,54 +1359,112 @@ public class ManiaGameUI : MonoBehaviour
         {
             abilityInfoText.text =
                 "Relentless Hook\n"
-                + "1. Spray — 12 damage close-range cone blast (knockback 1.8).\n"
-                + "2. Hook — Long-range pull, 10 damage on hit (24 units, 9s cd).\n"
-                + "3. Tonic — Heal 35, slow self, toxic gas damages nearby for 2.5s.\n"
-                + "4. Barrage — Ultimate cone barrage for 3s (8 damage per pulse).";
+                + "1. Spray — 12 dmg cone, knockback 2.6 (8 mana, 2s cd).\n"
+                + "2. Hook — Pull + 10 dmg (25 mana, 9s cd).\n"
+                + "3. Tonic — Heal 35, self-slow, toxic gas (35 mana).\n"
+                + "4. Barrage — Ultimate cone knockback (60 mana, 16s cd).";
             return;
         }
 
         abilityInfoText.text =
             "Field Medic\n"
-            + "1. Heal Dart — Heal 6 HP to a wounded ally (or self if hurt).\n"
-            + "2. Heal Pulse — Area heal 4 HP to nearby allies.\n"
-            + "3. Tether — Dash quickly toward an ally.\n"
-            + "4. Sanctuary — Healing zone: 2 HP/s for 4 seconds.";
+            + "1. Heal Dart — Heal 6 HP (10 mana, 2.5s cd).\n"
+            + "2. Heal Pulse — Area heal 4 HP (20 mana, 6s cd).\n"
+            + "3. Tether — Dash to ally (15 mana, 10s cd).\n"
+            + "4. Sanctuary — Healing zone 2 HP/s (45 mana, 16s cd).";
+    }
+
+    private void RefreshPlayerManaDisplay()
+    {
+        if (playerManaText == null)
+        {
+            return;
+        }
+
+        UnitMana mana = ResolveLocalPlayerMana();
+        if (mana == null)
+        {
+            playerManaText.text = string.Empty;
+            return;
+        }
+
+        playerManaText.text = "Mana: " + Mathf.CeilToInt(mana.currentMana) + " / " + Mathf.CeilToInt(mana.maxMana);
+    }
+
+    private UnitMana ResolveLocalPlayerMana()
+    {
+        if (localRoleController == null)
+        {
+            localRoleController = FindFirstObjectByType<LocalRoleController>();
+        }
+
+        if (localRoleController == null)
+        {
+            return null;
+        }
+
+        if (localRoleController.controlMode == PlayerControlMode.MonsterControlled
+            && localRoleController.monsterMovement != null)
+        {
+            return localRoleController.monsterMovement.GetComponent<UnitMana>();
+        }
+
+        if (localRoleController.survivorMovement != null)
+        {
+            return localRoleController.survivorMovement.GetComponent<UnitMana>();
+        }
+
+        return null;
     }
 
     private void ApplySurvivorAbilityLabels()
     {
-        SetButtonLabel(survivorPrimaryButton, survivorAbility1Label, "Heal Dart");
-        SetButtonLabel(survivorAbility2Button, survivorAbility2Label, "Heal Pulse");
-        SetButtonLabel(survivorAbility3Button, survivorAbility3Label, "Tether");
-        SetButtonLabel(survivorUltimateButton, survivorUltimateLabel, "Sanctuary");
+        SetButtonLabel(survivorPrimaryButton, survivorAbility1Label, "Heal Dart", survivorAbilityController, 1, false);
+        SetButtonLabel(survivorAbility2Button, survivorAbility2Label, "Heal Pulse", survivorAbilityController, 2, false);
+        SetButtonLabel(survivorAbility3Button, survivorAbility3Label, "Tether", survivorAbilityController, 3, false);
+        SetButtonLabel(survivorUltimateButton, survivorUltimateLabel, "Sanctuary", survivorAbilityController, 4, false);
     }
 
     private void ApplyPredatorAbilityLabels()
     {
-        SetButtonLabel(predatorMeleeButton, null, "Spray");
-        SetButtonLabel(predatorAbility2Button, predatorAbility2Label, "Hook");
-        SetButtonLabel(predatorAbility3Button, predatorAbility3Label, "Tonic");
-        SetButtonLabel(predatorUltimateButton, predatorUltimateLabel, "Barrage");
+        SetButtonLabel(predatorMeleeButton, null, "Spray", predatorAbilityController, 1, true);
+        SetButtonLabel(predatorAbility2Button, predatorAbility2Label, "Hook", predatorAbilityController, 2, true);
+        SetButtonLabel(predatorAbility3Button, predatorAbility3Label, "Tonic", predatorAbilityController, 3, true);
+        SetButtonLabel(predatorUltimateButton, predatorUltimateLabel, "Barrage", predatorAbilityController, 4, true);
     }
 
-    private void SetButtonLabel(Button button, TMP_Text explicitLabel, string labelText)
+    private void SetButtonLabel(
+        Button button,
+        TMP_Text explicitLabel,
+        string labelText,
+        AbilityController controller,
+        int slotNumber,
+        bool predatorSide)
     {
         if (button == null)
         {
             return;
         }
 
+        int manaCost = 0;
+        if (controller != null)
+        {
+            manaCost = Mathf.RoundToInt(controller.GetSlotManaCost(slotNumber));
+        }
+
         AbilityCooldownButton cooldownButton = button.GetComponent<AbilityCooldownButton>();
         if (cooldownButton != null)
         {
-            cooldownButton.SetAbilityInfo(labelText, 0);
+            cooldownButton.BindCooldownVisual(this, slotNumber, predatorSide);
+            cooldownButton.SetAbilityInfo(labelText, manaCost);
         }
 
         TMP_Text resolvedLabel = explicitLabel != null ? explicitLabel : FindAbilityLabelText(button);
         if (resolvedLabel != null)
         {
-            resolvedLabel.text = labelText;
+            resolvedLabel.text = manaCost > 0
+                ? labelText + "\n" + manaCost + " mana"
+                : labelText;
             return;
         }
 
@@ -1413,6 +1473,11 @@ public class ManiaGameUI : MonoBehaviour
             loggedMissingAbilityLabels = true;
             Debug.Log("[ManiaGameUI] No ability label text found for button '" + button.name + "'. Assign a TMP child or AbilityCooldownButton.");
         }
+    }
+
+    private void SetButtonLabel(Button button, TMP_Text explicitLabel, string labelText)
+    {
+        SetButtonLabel(button, explicitLabel, labelText, null, 0, false);
     }
 
     private TMP_Text FindAbilityLabelText(Button button)
