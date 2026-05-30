@@ -1597,8 +1597,11 @@ public class ManiaGameUI : MonoBehaviour
         AbilityDetail liveDetail = controller != null
             ? controller.GetAbilityDetail(slotNumber)
             : default;
-        AbilityDetail detail = AbilityPresentationFallback.ResolveForUi(predatorSide, slotNumber, liveDetail);
-        string labelText = AbilityPresentationFallback.GetShortLabel(predatorSide, slotNumber, liveDetail);
+        PredatorClass predatorClass = predatorSide && controller != null
+            ? controller.GetCurrentPredatorClass()
+            : PredatorClass.RelentlessHook;
+        AbilityDetail detail = AbilityPresentationFallback.ResolveForUi(predatorSide, predatorClass, slotNumber, liveDetail);
+        string labelText = AbilityPresentationFallback.GetShortLabel(predatorSide, predatorClass, slotNumber, liveDetail);
         int manaCost = controller != null ? Mathf.RoundToInt(controller.GetSlotManaCost(slotNumber)) : 0;
 
         AbilityCooldownButton cooldownButton = button.GetComponent<AbilityCooldownButton>();

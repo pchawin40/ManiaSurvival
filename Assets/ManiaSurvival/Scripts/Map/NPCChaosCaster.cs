@@ -123,6 +123,12 @@ public class NPCChaosCaster : MonoBehaviour
     public int wildZoneDamagePerTick = 4;
     public int wildZoneWeight = 2;
 
+    [Header("Ability 5 — Terrain Chaos")]
+    public bool enableTerrainChaos = true;
+    public float terrainChaosManaCost = 10f;
+    public float terrainChaosCooldown = 16f;
+    public int terrainChaosWeight = 2;
+
     [Header("Debug")]
     public bool enableDebugLogs = true;
 
@@ -135,6 +141,7 @@ public class NPCChaosCaster : MonoBehaviour
         Tornado,
         DragonLeap,
         WildZone,
+        TerrainChaos,
     }
 
     private ManiaGameManager gameManager;
@@ -144,6 +151,7 @@ public class NPCChaosCaster : MonoBehaviour
     private float nextTornadoReadyTime;
     private float nextWildZoneReadyTime;
     private float nextDragonLeapReadyTime;
+    private float nextTerrainChaosReadyTime;
     private bool dragonLeapInProgress;
     private readonly List<GameObject> trackedHelpfulItems = new List<GameObject>();
 
@@ -236,6 +244,13 @@ public class NPCChaosCaster : MonoBehaviour
             case ChaosAbilityId.SpawnHelpfulItem:
                 CastSpawnHelpfulItem();
                 break;
+            case ChaosAbilityId.TerrainChaos:
+                if (TryCastTerrainChaos())
+                {
+                    SpendAbilityMana(terrainChaosManaCost);
+                    nextTerrainChaosReadyTime = Time.time + terrainChaosCooldown;
+                }
+                break;
         }
     }
 
@@ -263,6 +278,11 @@ public class NPCChaosCaster : MonoBehaviour
         if (enableWildZone && Time.time >= nextWildZoneReadyTime && HasNpcMana(wildZoneManaCost))
         {
             ready.Add(ChaosAbilityId.WildZone);
+        }
+
+        if (enableTerrainChaos && Time.time >= nextTerrainChaosReadyTime && HasNpcMana(terrainChaosManaCost))
+        {
+            ready.Add(ChaosAbilityId.TerrainChaos);
         }
 
         if (helpfulItemPrefabs != null && helpfulItemPrefabs.Length > 0)
@@ -332,6 +352,50 @@ public class NPCChaosCaster : MonoBehaviour
         ChaosWildZone zone = zoneHost.AddComponent<ChaosWildZone>();
         zone.Initialize(wildZoneRadius, wildZoneDuration, wildZoneDamagePerTick, gameObject);
         LogNpcAbility("Cast Wild Zone");
+        return true;
+    }
+
+    private bool TryCastTerrainChaos()
+    {
+        if (!MapSpawnUtility.TryGetValidPositionNear(
+                transform.position,
+                chaosCastRadius,
+                spawnSettings,
+                out Vector3 pos))
+        {
+            if (!MapSpawnUtility.TryGetValidPosition(spawnSettings, out pos))
+            {
+                return false;
+            }
+        }
+
+        DynamicTerrainSpawner spawner = DynamicTerrainSpawner.GetOrCreate();
+        if (spawner == null)
+        {
+            return false;
+        }
+
+        int roll = Random.Range(0, 4);
+        switch (roll)
+        {
+            case 0:
+                spawner.SpawnRamp(pos, Quaternion.Euler(0f, Random.Range(0f, 360f), 0f), 12f);
+                LogNpcAbility("Cast Terrain Chaos: ramp");
+                break;
+            case 1:
+                spawner.SpawnWall(pos, Quaternion.Euler(0f, Random.Range(0f, 360f), 0f), 2.5f, 10f);
+                LogNpcAbility("Cast Terrain Chaos: wall");
+                break;
+            case 2:
+                spawner.SpawnJumpPad(pos, 18f);
+                LogNpcAbility("Cast Terrain Chaos: jump pad");
+                break;
+            default:
+                spawner.SpawnSlowZone(pos, 3f, 6f, 0.7f);
+                LogNpcAbility("Cast Terrain Chaos: slow zone");
+                break;
+        }
+
         return true;
     }
 

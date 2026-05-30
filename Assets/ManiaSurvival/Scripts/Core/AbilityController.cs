@@ -398,7 +398,23 @@ public class AbilityController : MonoBehaviour
             return detail;
         }
 
-        return AbilityPresentationFallback.ResolveForUi(controlsPredator, slotNumber, detail);
+        PredatorClass predatorClass = PredatorClass.RelentlessHook;
+        if (controlsPredator && predatorClassManager != null)
+        {
+            predatorClass = predatorClassManager.GetCurrentPredatorClass();
+        }
+
+        return AbilityPresentationFallback.ResolveForUi(controlsPredator, predatorClass, slotNumber, detail);
+    }
+
+    public PredatorClass GetCurrentPredatorClass()
+    {
+        if (!controlsPredator || predatorClassManager == null)
+        {
+            return PredatorClass.RelentlessHook;
+        }
+
+        return predatorClassManager.GetCurrentPredatorClass();
     }
 
     public string GetClassDisplayName()
@@ -550,14 +566,10 @@ public class AbilityController : MonoBehaviour
                 predatorClassManager.useExternalCooldownAuthority = true;
             }
 
-            if (enforceTestLoadouts)
+            if (!PredatorClassManager.IsPlayablePrototypeClass(predatorClassManager.GetCurrentPredatorClass()))
             {
-                predatorClassManager.activeClass = PredatorClass.RelentlessHook;
-            }
-
-            if (predatorClassManager.activeClass != PredatorClass.RelentlessHook)
-            {
-                Debug.LogWarning("[AbilityController] Predator class disabled for this pass. Use RelentlessHook.");
+                Debug.LogWarning("[AbilityController] Predator class '" + predatorClassManager.GetCurrentPredatorClass()
+                    + "' is not enabled for the prototype. Use Relentless Hook, Swarm Overlord, or Dragon Juggernaut.");
                 return false;
             }
 

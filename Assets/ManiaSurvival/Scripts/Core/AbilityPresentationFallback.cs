@@ -7,24 +7,57 @@ public static class AbilityPresentationFallback
 {
     public static AbilityDetail ResolveForUi(bool isPredator, int slotNumber, AbilityDetail liveDetail)
     {
+        return ResolveForUi(isPredator, PredatorClass.RelentlessHook, slotNumber, liveDetail);
+    }
+
+    public static AbilityDetail ResolveForUi(
+        bool isPredator,
+        PredatorClass predatorClass,
+        int slotNumber,
+        AbilityDetail liveDetail)
+    {
         if (liveDetail.IsConfigured)
         {
             return liveDetail;
         }
 
-        return isPredator ? GetRelentlessHookDetail(slotNumber) : GetMedicDetail(slotNumber);
+        if (!isPredator)
+        {
+            return GetMedicDetail(slotNumber);
+        }
+
+        switch (predatorClass)
+        {
+            case PredatorClass.SwarmOverlord:
+                return GetSwarmOverlordDetail(slotNumber);
+            case PredatorClass.Juggernaut:
+                return GetJuggernautDetail(slotNumber);
+            default:
+                return GetRelentlessHookDetail(slotNumber);
+        }
     }
 
     public static string GetShortLabel(bool isPredator, int slotNumber, AbilityDetail liveDetail)
     {
-        AbilityDetail detail = ResolveForUi(isPredator, slotNumber, liveDetail);
+        return GetShortLabel(isPredator, PredatorClass.RelentlessHook, slotNumber, liveDetail);
+    }
+
+    public static string GetShortLabel(
+        bool isPredator,
+        PredatorClass predatorClass,
+        int slotNumber,
+        AbilityDetail liveDetail)
+    {
+        AbilityDetail detail = ResolveForUi(isPredator, predatorClass, slotNumber, liveDetail);
         string label = detail.GetButtonLabelOrDisplayName();
         if (!string.IsNullOrWhiteSpace(label))
         {
             return label;
         }
 
-        return isPredator ? GetPredatorShortLabel(slotNumber) : GetMedicShortLabel(slotNumber);
+        return isPredator
+            ? GetPredatorShortLabel(predatorClass, slotNumber)
+            : GetMedicShortLabel(slotNumber);
     }
 
     public static string GetMedicShortLabel(int slotNumber)
@@ -40,12 +73,37 @@ public static class AbilityPresentationFallback
 
     public static string GetPredatorShortLabel(int slotNumber)
     {
-        switch (slotNumber)
+        return GetPredatorShortLabel(PredatorClass.RelentlessHook, slotNumber);
+    }
+
+    public static string GetPredatorShortLabel(PredatorClass predatorClass, int slotNumber)
+    {
+        switch (predatorClass)
         {
-            case 1: return "Spray";
-            case 2: return "Hook";
-            case 3: return "Tonic";
-            default: return "Barrage";
+            case PredatorClass.SwarmOverlord:
+                switch (slotNumber)
+                {
+                    case 1: return "Spit";
+                    case 2: return "Brood";
+                    case 3: return "Infest";
+                    default: return "Hive";
+                }
+            case PredatorClass.Juggernaut:
+                switch (slotNumber)
+                {
+                    case 1: return "Flame";
+                    case 2: return "Leap";
+                    case 3: return "Roar";
+                    default: return "Meteor";
+                }
+            default:
+                switch (slotNumber)
+                {
+                    case 1: return "Spray";
+                    case 2: return "Hook";
+                    case 3: return "Tonic";
+                    default: return "Barrage";
+                }
         }
     }
 
@@ -88,6 +146,92 @@ public static class AbilityPresentationFallback
                     shortDescription = "Create a healing safe zone.",
                     roleTag = "Ultimate / Zone",
                     themeColor = new Color(1f, 0.82f, 0.35f, 1f)
+                };
+        }
+    }
+
+    public static AbilityDetail GetSwarmOverlordDetail(int slotNumber)
+    {
+        switch (slotNumber)
+        {
+            case 1:
+                return new AbilityDetail
+                {
+                    displayName = "Acid Spit",
+                    buttonLabel = "Spit",
+                    shortDescription = "Cone spit that damages and can slow survivors.",
+                    roleTag = "Cone / Poke",
+                    themeColor = new Color(0.45f, 0.95f, 0.3f, 1f)
+                };
+            case 2:
+                return new AbilityDetail
+                {
+                    displayName = "Brood Spawn",
+                    buttonLabel = "Brood",
+                    shortDescription = "Spawn broodlings that chase and chip survivors.",
+                    roleTag = "Summon",
+                    themeColor = new Color(0.55f, 0.85f, 0.35f, 1f)
+                };
+            case 3:
+                return new AbilityDetail
+                {
+                    displayName = "Infest",
+                    buttonLabel = "Infest",
+                    shortDescription = "Drop a toxic zone that damages and slows.",
+                    roleTag = "Zone / Control",
+                    themeColor = new Color(0.35f, 0.8f, 0.25f, 1f)
+                };
+            default:
+                return new AbilityDetail
+                {
+                    displayName = "Hive Call",
+                    buttonLabel = "Hive",
+                    shortDescription = "Warn, pulse damage, then summon broodlings.",
+                    roleTag = "Ultimate / Zone",
+                    themeColor = new Color(0.65f, 1f, 0.25f, 1f)
+                };
+        }
+    }
+
+    public static AbilityDetail GetJuggernautDetail(int slotNumber)
+    {
+        switch (slotNumber)
+        {
+            case 1:
+                return new AbilityDetail
+                {
+                    displayName = "Flame Breath",
+                    buttonLabel = "Flame",
+                    shortDescription = "Cone fire that burns survivors in front of you.",
+                    roleTag = "Cone / Damage",
+                    themeColor = new Color(1f, 0.45f, 0.15f, 1f)
+                };
+            case 2:
+                return new AbilityDetail
+                {
+                    displayName = "Dragon Leap",
+                    buttonLabel = "Leap",
+                    shortDescription = "Leap forward and slam the landing zone.",
+                    roleTag = "Mobility / Burst",
+                    themeColor = new Color(1f, 0.55f, 0.2f, 1f)
+                };
+            case 3:
+                return new AbilityDetail
+                {
+                    displayName = "Dragon Roar",
+                    buttonLabel = "Roar",
+                    shortDescription = "Knock survivors back and slow them.",
+                    roleTag = "AoE / Control",
+                    themeColor = new Color(1f, 0.65f, 0.25f, 1f)
+                };
+            default:
+                return new AbilityDetail
+                {
+                    displayName = "Meteor",
+                    buttonLabel = "Meteor",
+                    shortDescription = "Warn, then crash down with fire aftermath.",
+                    roleTag = "Ultimate / Zone",
+                    themeColor = new Color(1f, 0.35f, 0.1f, 1f)
                 };
         }
     }

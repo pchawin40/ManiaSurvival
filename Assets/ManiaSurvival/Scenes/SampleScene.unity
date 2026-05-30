@@ -368,6 +368,7 @@ MonoBehaviour:
   cooldownText: {fileID: 126918135}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  insufficientManaColor: {r: 0.25, g: 0.35, b: 0.55, a: 1}
   gameUi: {fileID: 0}
   abilitySlot: 1
   isPredatorSide: 0
@@ -378,6 +379,8 @@ MonoBehaviour:
 
     {1} mana'
   useAbilityLabel: 1
+  abilityIconImage: {fileID: 0}
+  hideIconWhenMissing: 1
 --- !u!114 &49022359
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1605,6 +1608,96 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 164778727}
   m_CullTransparentMesh: 1
+--- !u!1 &176366445
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 176366446}
+  - component: {fileID: 176366448}
+  - component: {fileID: 176366447}
+  m_Layer: 0
+  m_Name: ManaZoneIndicator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &176366446
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 176366445}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.03, z: 0}
+  m_LocalScale: {x: 8, y: 0.05, z: 8}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2020762137}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!23 &176366447
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 176366445}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 618304566}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 1
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &176366448
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 176366445}
+  m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &180511117
 GameObject:
   m_ObjectHideFlags: 0
@@ -2247,6 +2340,7 @@ MonoBehaviour:
   manaText: {fileID: 1423237826}
   manaColor: {r: 0.25, g: 0.6, b: 1, a: 1}
   hideWhenNoMana: 1
+  hideWhenDead: 1
   applyBillboardRotation: 1
   billboardEulerAngles: {x: 60, y: 0, z: 0}
 --- !u!114 &301094447
@@ -2271,8 +2365,17 @@ MonoBehaviour:
   onDeath:
     m_PersistentCalls:
       m_Calls: []
+  temporaryDamageMultiplier: 1
   logSurvivorDamage: 1
   logAbilityEffects: 1
+  showFloatingCombatText: 1
+  showHitFlash: 1
+  damageTextColor: {r: 1, g: 0.42, b: 0.12, a: 1}
+  healTextColor: {r: 0.25, g: 0.95, b: 0.35, a: 1}
+  enableHitDeathAnimations: 1
+  hitReactionCooldown: 0.25
+  deathAnimationDelay: 0.75
+  logAnimationTriggers: 0
 --- !u!114 &301094448
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2295,8 +2398,17 @@ MonoBehaviour:
   onDeath:
     m_PersistentCalls:
       m_Calls: []
+  temporaryDamageMultiplier: 1
   logSurvivorDamage: 1
   logAbilityEffects: 1
+  showFloatingCombatText: 1
+  showHitFlash: 1
+  damageTextColor: {r: 1, g: 0.42, b: 0.12, a: 1}
+  healTextColor: {r: 0.25, g: 0.95, b: 0.35, a: 1}
+  enableHitDeathAnimations: 1
+  hitReactionCooldown: 0.25
+  deathAnimationDelay: 0.75
+  logAnimationTriggers: 0
 --- !u!114 &301094449
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2320,6 +2432,7 @@ MonoBehaviour:
   enableDamageFlash: 1
   damageFlashDuration: 0.12
   damageFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  hideWhenDead: 1
   applyBillboardRotation: 1
   billboardEulerAngles: {x: 60, y: 0, z: 0}
 --- !u!114 &301094450
@@ -3346,6 +3459,7 @@ MonoBehaviour:
   cooldownText: {fileID: 0}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  insufficientManaColor: {r: 0.25, g: 0.35, b: 0.55, a: 1}
   gameUi: {fileID: 0}
   abilitySlot: 1
   isPredatorSide: 0
@@ -3356,6 +3470,8 @@ MonoBehaviour:
 
     {1} mana'
   useAbilityLabel: 1
+  abilityIconImage: {fileID: 0}
+  hideIconWhenMissing: 1
 --- !u!114 &412804837
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5347,6 +5463,7 @@ Transform:
   - {fileID: 867369267}
   - {fileID: 1021986216}
   - {fileID: 277611301}
+  - {fileID: 2020762137}
   m_Father: {fileID: 1554863088}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &605830906
@@ -5816,6 +5933,90 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 613925144}
   m_CullTransparentMesh: 1
+--- !u!21 &618304566
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Standard
+  m_Shader: {fileID: 46, guid: 0000000000000000f000000000000000, type: 0}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - _ALPHAPREMULTIPLY_ON
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 3000
+  stringTagMap:
+    RenderType: Transparent
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailAlbedoMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailNormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EmissionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MetallicGlossMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OcclusionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ParallaxMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _BumpScale: 1
+    - _Cutoff: 0.5
+    - _DetailNormalMapScale: 1
+    - _DstBlend: 10
+    - _GlossMapScale: 1
+    - _Glossiness: 0.5
+    - _GlossyReflections: 1
+    - _Metallic: 0
+    - _Mode: 3
+    - _OcclusionStrength: 1
+    - _Parallax: 0.02
+    - _SmoothnessTextureChannel: 0
+    - _SpecularHighlights: 1
+    - _SrcBlend: 1
+    - _UVSec: 0
+    - _ZWrite: 0
+    m_Colors:
+    - _Color: {r: 0.15, g: 0.75, b: 1, a: 0.45}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!1 &619948360
 GameObject:
   m_ObjectHideFlags: 0
@@ -6014,6 +6215,7 @@ MonoBehaviour:
   cooldownText: {fileID: 0}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  insufficientManaColor: {r: 0.25, g: 0.35, b: 0.55, a: 1}
   gameUi: {fileID: 0}
   abilitySlot: 1
   isPredatorSide: 0
@@ -6024,6 +6226,8 @@ MonoBehaviour:
 
     {1} mana'
   useAbilityLabel: 1
+  abilityIconImage: {fileID: 0}
+  hideIconWhenMissing: 1
 --- !u!114 &621431534
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6191,8 +6395,17 @@ MonoBehaviour:
   onDeath:
     m_PersistentCalls:
       m_Calls: []
+  temporaryDamageMultiplier: 1
   logSurvivorDamage: 1
   logAbilityEffects: 1
+  showFloatingCombatText: 1
+  showHitFlash: 1
+  damageTextColor: {r: 1, g: 0.42, b: 0.12, a: 1}
+  healTextColor: {r: 0.25, g: 0.95, b: 0.35, a: 1}
+  enableHitDeathAnimations: 1
+  hitReactionCooldown: 0.25
+  deathAnimationDelay: 0.75
+  logAnimationTriggers: 0
 --- !u!114 &637681167 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1154864873043892012, guid: 3d0c97f0a07bcc2438154cc20a88e933, type: 3}
@@ -6219,6 +6432,7 @@ MonoBehaviour:
   blinkDistance: 5.5
   blinkCooldown: 9
   collisionCheckRadius: 0.4
+  useAbilityControllerAuthority: 1
   abilityDisplayName: Blink
   manaCost: 3
   cooldownButton: {fileID: 1543053238}
@@ -6234,6 +6448,7 @@ MonoBehaviour:
   hazardLayers:
     serializedVersion: 2
     m_Bits: 2304
+  blinkVfxPrefab: {fileID: 0}
 --- !u!114 &637681174
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6335,24 +6550,6 @@ MonoBehaviour:
   survivorComponentsToDisable: []
   survivorRenderersToHide: []
   survivorCollidersToDisable: []
---- !u!114 &637681182
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 637681156}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6435a604d5dc851468f25f94fd0d27fa, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SurvivorMana
-  maxMana: 20
-  currentMana: 20
-  passiveRegenPerSecond: 0.33
-  onManaChanged:
-    m_PersistentCalls:
-      m_Calls: []
 --- !u!114 &637681183
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6446,6 +6643,10 @@ MonoBehaviour:
   bioticDartRange: 12
   healDartAmount: 3
   bioticDartPredatorDamage: 6
+  bioticDartPredatorKnockback: 5
+  bioticDartSphereCastRadius: 0.65
+  bioticDartAimConeHalfAngle: 38
+  bioticDartCloseRangeInstant: 3.5
   healPulseRadius: 8
   healPulseAmount: 4
   guardianAngelRange: 14
@@ -6456,6 +6657,62 @@ MonoBehaviour:
   sanctuaryRadius: 8
   sanctuaryHealPerSecond: 3
   sanctuaryTickInterval: 1.25
+  bioticDartCastWindup: 0.12
+  healPulseCastWindup: 0.25
+  tetherBlinkCastWindup: 0.05
+  sanctuaryCastWindup: 0.35
+  logCastPresentation: 1
+  medicClassDisplayName: Field Medic
+  medicClassSummary: "Medic \u2014 Heal / mobility support. Weak alone, strong near
+    allies."
+  medicSlot1Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot2Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot3Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot4Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8
@@ -6492,6 +6749,8 @@ MonoBehaviour:
   suzuProjectileLifetime: 2.5
   suzuRadius: 4
   suzuInvulnerabilityDuration: 1
+  suzuDamageReduction: 0.3
+  lifeGripDamageReduction: 0.35
 --- !u!95 &637681186
 Animator:
   serializedVersion: 7
@@ -6529,22 +6788,28 @@ MonoBehaviour:
   controlsPredator: 0
   enforceTestLoadouts: 1
   logAbilityFlow: 1
+  logAbilityMana: 1
   disableLegacyAbilityComponents: 1
   pipelineTestMode: 1
   abilityControllerOwnsCooldowns: 1
   localRoleController: {fileID: 961346313}
   gameManager: {fileID: 1497139249}
   unitHealth: {fileID: 637681161}
+  unitMana: {fileID: 0}
   survivorClassManager: {fileID: 637681185}
   predatorClassManager: {fileID: 0}
-  survivorSlot1Cooldown: 2.5
-  survivorSlot2Cooldown: 8
-  survivorSlot3Cooldown: 10
-  survivorSlot4Cooldown: 28
   survivorSlot1ManaCost: 2
   survivorSlot2ManaCost: 5
   survivorSlot3ManaCost: 4
   survivorSlot4ManaCost: 12
+  predatorSlot1ManaCost: 8
+  predatorSlot2ManaCost: 25
+  predatorSlot3ManaCost: 35
+  predatorSlot4ManaCost: 80
+  survivorSlot1Cooldown: 2.5
+  survivorSlot2Cooldown: 8
+  survivorSlot3Cooldown: 10
+  survivorSlot4Cooldown: 28
   predatorSlot1Cooldown: 3.75
   predatorSlot2Cooldown: 10
   predatorSlot3Cooldown: 14
@@ -6557,10 +6822,16 @@ MonoBehaviour:
   slot3Sound: {fileID: 0}
   slot4Sound: {fileID: 0}
   failedCastSound: {fileID: 0}
+  noManaSound: {fileID: 0}
+  cooldownFailSound: {fileID: 0}
+  usePlaceholderAbilityAudio: 1
+  abilitySfxVolume: 0.85
   logAbilityAudio: 0
   spawnGroundEffects: 1
   groundEffectPrefab: {fileID: 0}
   groundEffectDuration: 2.5
+  logAbilityCasts: 1
+  notifyUiOnCast: 1
 --- !u!1 &644727013
 GameObject:
   m_ObjectHideFlags: 0
@@ -6778,6 +7049,10 @@ MonoBehaviour:
   bioticDartRange: 12
   healDartAmount: 3
   bioticDartPredatorDamage: 6
+  bioticDartPredatorKnockback: 5
+  bioticDartSphereCastRadius: 0.65
+  bioticDartAimConeHalfAngle: 38
+  bioticDartCloseRangeInstant: 3.5
   healPulseRadius: 8
   healPulseAmount: 4
   guardianAngelRange: 14
@@ -6788,6 +7063,62 @@ MonoBehaviour:
   sanctuaryRadius: 8
   sanctuaryHealPerSecond: 3
   sanctuaryTickInterval: 1.25
+  bioticDartCastWindup: 0.12
+  healPulseCastWindup: 0.25
+  tetherBlinkCastWindup: 0.05
+  sanctuaryCastWindup: 0.35
+  logCastPresentation: 1
+  medicClassDisplayName: Field Medic
+  medicClassSummary: "Medic \u2014 Heal / mobility support. Weak alone, strong near
+    allies."
+  medicSlot1Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot2Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot3Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot4Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8
@@ -6824,6 +7155,8 @@ MonoBehaviour:
   suzuProjectileLifetime: 2.5
   suzuRadius: 4
   suzuInvulnerabilityDuration: 1
+  suzuDamageReduction: 0.3
+  lifeGripDamageReduction: 0.35
 --- !u!95 &661074646
 Animator:
   serializedVersion: 7
@@ -6893,8 +7226,17 @@ MonoBehaviour:
   onDeath:
     m_PersistentCalls:
       m_Calls: []
+  temporaryDamageMultiplier: 1
   logSurvivorDamage: 1
   logAbilityEffects: 1
+  showFloatingCombatText: 1
+  showHitFlash: 1
+  damageTextColor: {r: 1, g: 0.42, b: 0.12, a: 1}
+  healTextColor: {r: 0.25, g: 0.95, b: 0.35, a: 1}
+  enableHitDeathAnimations: 1
+  hitReactionCooldown: 0.25
+  deathAnimationDelay: 0.75
+  logAnimationTriggers: 0
 --- !u!114 &661074649
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6914,6 +7256,7 @@ MonoBehaviour:
   cooldownText: {fileID: 1342493038}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  insufficientManaColor: {r: 0.25, g: 0.35, b: 0.55, a: 1}
   gameUi: {fileID: 0}
   abilitySlot: 1
   isPredatorSide: 0
@@ -6924,6 +7267,8 @@ MonoBehaviour:
 
     {1} mana'
   useAbilityLabel: 1
+  abilityIconImage: {fileID: 0}
+  hideIconWhenMissing: 1
 --- !u!114 &661074650
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7114,6 +7459,7 @@ MonoBehaviour:
   cooldownText: {fileID: 452614036}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  insufficientManaColor: {r: 0.25, g: 0.35, b: 0.55, a: 1}
   gameUi: {fileID: 0}
   abilitySlot: 4
   isPredatorSide: 1
@@ -7124,6 +7470,8 @@ MonoBehaviour:
 
     {1} mana'
   useAbilityLabel: 1
+  abilityIconImage: {fileID: 0}
+  hideIconWhenMissing: 1
 --- !u!114 &665206592
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7565,6 +7913,7 @@ MonoBehaviour:
   cooldownText: {fileID: 914894289}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  insufficientManaColor: {r: 0.25, g: 0.35, b: 0.55, a: 1}
   gameUi: {fileID: 0}
   abilitySlot: 1
   isPredatorSide: 0
@@ -7575,6 +7924,8 @@ MonoBehaviour:
 
     {1} mana'
   useAbilityLabel: 1
+  abilityIconImage: {fileID: 0}
+  hideIconWhenMissing: 1
 --- !u!114 &741436848
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8666,6 +9017,10 @@ MonoBehaviour:
   bioticDartRange: 12
   healDartAmount: 3
   bioticDartPredatorDamage: 6
+  bioticDartPredatorKnockback: 5
+  bioticDartSphereCastRadius: 0.65
+  bioticDartAimConeHalfAngle: 38
+  bioticDartCloseRangeInstant: 3.5
   healPulseRadius: 8
   healPulseAmount: 4
   guardianAngelRange: 14
@@ -8676,6 +9031,62 @@ MonoBehaviour:
   sanctuaryRadius: 8
   sanctuaryHealPerSecond: 3
   sanctuaryTickInterval: 1.25
+  bioticDartCastWindup: 0.12
+  healPulseCastWindup: 0.25
+  tetherBlinkCastWindup: 0.05
+  sanctuaryCastWindup: 0.35
+  logCastPresentation: 1
+  medicClassDisplayName: Field Medic
+  medicClassSummary: "Medic \u2014 Heal / mobility support. Weak alone, strong near
+    allies."
+  medicSlot1Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot2Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot3Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot4Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8
@@ -8712,6 +9123,8 @@ MonoBehaviour:
   suzuProjectileLifetime: 2.5
   suzuRadius: 4
   suzuInvulnerabilityDuration: 1
+  suzuDamageReduction: 0.3
+  lifeGripDamageReduction: 0.35
 --- !u!95 &894360460
 Animator:
   serializedVersion: 7
@@ -8781,8 +9194,17 @@ MonoBehaviour:
   onDeath:
     m_PersistentCalls:
       m_Calls: []
+  temporaryDamageMultiplier: 1
   logSurvivorDamage: 1
   logAbilityEffects: 1
+  showFloatingCombatText: 1
+  showHitFlash: 1
+  damageTextColor: {r: 1, g: 0.42, b: 0.12, a: 1}
+  healTextColor: {r: 0.25, g: 0.95, b: 0.35, a: 1}
+  enableHitDeathAnimations: 1
+  hitReactionCooldown: 0.25
+  deathAnimationDelay: 0.75
+  logAnimationTriggers: 0
 --- !u!114 &894360463
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8802,6 +9224,7 @@ MonoBehaviour:
   cooldownText: {fileID: 1953037298}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  insufficientManaColor: {r: 0.25, g: 0.35, b: 0.55, a: 1}
   gameUi: {fileID: 0}
   abilitySlot: 1
   isPredatorSide: 0
@@ -8812,6 +9235,8 @@ MonoBehaviour:
 
     {1} mana'
   useAbilityLabel: 1
+  abilityIconImage: {fileID: 0}
+  hideIconWhenMissing: 1
 --- !u!114 &894360464
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9418,6 +9843,7 @@ MonoBehaviour:
   cooldownText: {fileID: 928868862}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  insufficientManaColor: {r: 0.25, g: 0.35, b: 0.55, a: 1}
   gameUi: {fileID: 0}
   abilitySlot: 1
   isPredatorSide: 0
@@ -9428,6 +9854,8 @@ MonoBehaviour:
 
     {1} mana'
   useAbilityLabel: 1
+  abilityIconImage: {fileID: 0}
+  hideIconWhenMissing: 1
 --- !u!114 &937926837
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9617,6 +10045,7 @@ MonoBehaviour:
   cooldownText: {fileID: 0}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  insufficientManaColor: {r: 0.25, g: 0.35, b: 0.55, a: 1}
   gameUi: {fileID: 0}
   abilitySlot: 1
   isPredatorSide: 0
@@ -9627,6 +10056,8 @@ MonoBehaviour:
 
     {1} mana'
   useAbilityLabel: 1
+  abilityIconImage: {fileID: 0}
+  hideIconWhenMissing: 1
 --- !u!114 &938293880
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9823,6 +10254,7 @@ MonoBehaviour:
   soulwoodAvatarController: {fileID: -3976061171102463217, guid: 63bb14b8995374041820fd9437e0735f, type: 3}
   cameraFollow: {fileID: 46845616}
   logCameraTargetChanges: 1
+  soloMonsterSurvivorSpawner: {fileID: 0}
 --- !u!224 &966300756
 RectTransform:
   m_ObjectHideFlags: 0
@@ -9918,6 +10350,7 @@ MonoBehaviour:
   enableDamageFlash: 1
   damageFlashDuration: 0.12
   damageFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  hideWhenDead: 1
   applyBillboardRotation: 1
   billboardEulerAngles: {x: 60, y: 0, z: 0}
 --- !u!114 &966300762
@@ -10001,6 +10434,7 @@ MonoBehaviour:
   manaText: {fileID: 164778729}
   manaColor: {r: 0.25, g: 0.6, b: 1, a: 1}
   hideWhenNoMana: 1
+  hideWhenDead: 1
   applyBillboardRotation: 1
   billboardEulerAngles: {x: 60, y: 0, z: 0}
 --- !u!1 &976089276
@@ -10254,6 +10688,7 @@ MonoBehaviour:
   cooldownText: {fileID: 0}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  insufficientManaColor: {r: 0.25, g: 0.35, b: 0.55, a: 1}
   gameUi: {fileID: 0}
   abilitySlot: 1
   isPredatorSide: 0
@@ -10264,6 +10699,8 @@ MonoBehaviour:
 
     {1} mana'
   useAbilityLabel: 1
+  abilityIconImage: {fileID: 0}
+  hideIconWhenMissing: 1
 --- !u!114 &1012914810
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10638,13 +11075,13 @@ GameObject:
   - component: {fileID: 1048404664}
   - component: {fileID: 1048404663}
   - component: {fileID: 1048404666}
-  - component: {fileID: 1048404668}
   - component: {fileID: 1048404667}
   - component: {fileID: 1048404672}
   - component: {fileID: 1048404671}
   - component: {fileID: 1048404670}
   - component: {fileID: 1048404669}
   - component: {fileID: 1048404673}
+  - component: {fileID: 1048404674}
   m_Layer: 0
   m_Name: FriendlyTargetDummy
   m_TagString: Survivor
@@ -10771,6 +11208,7 @@ MonoBehaviour:
   enableDamageFlash: 1
   damageFlashDuration: 0.12
   damageFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  hideWhenDead: 1
   applyBillboardRotation: 1
   billboardEulerAngles: {x: 60, y: 0, z: 0}
 --- !u!114 &1048404667
@@ -10795,26 +11233,17 @@ MonoBehaviour:
   onDeath:
     m_PersistentCalls:
       m_Calls: []
+  temporaryDamageMultiplier: 1
   logSurvivorDamage: 1
   logAbilityEffects: 1
---- !u!114 &1048404668
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1048404661}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6435a604d5dc851468f25f94fd0d27fa, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SurvivorMana
-  maxMana: 20
-  currentMana: 20
-  passiveRegenPerSecond: 0.33
-  onManaChanged:
-    m_PersistentCalls:
-      m_Calls: []
+  showFloatingCombatText: 1
+  showHitFlash: 1
+  damageTextColor: {r: 1, g: 0.42, b: 0.12, a: 1}
+  healTextColor: {r: 0.25, g: 0.95, b: 0.35, a: 1}
+  enableHitDeathAnimations: 1
+  hitReactionCooldown: 0.25
+  deathAnimationDelay: 0.75
+  logAnimationTriggers: 0
 --- !u!114 &1048404669
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10831,8 +11260,21 @@ MonoBehaviour:
   wanderRetargetInterval: 3
   wanderMoveSpeed: 3.5
   waypointReachDistance: 0.8
+  fleeRadius: 11
+  fleeMoveSpeed: 5
+  lowHealthFleeThreshold: 0.4
+  woundedFleeSpeedMultiplier: 1.25
+  hellfireAvoidRadius: 4
+  medicThinkInterval: 0.75
+  aiAbilityCooldownMultiplier: 2
   minAbilityInterval: 4
   maxAbilityInterval: 7
+  healDartTargetPercent: 0.85
+  healPulseWoundedPercent: 0.7
+  healPulseCriticalPercent: 0.4
+  sanctuaryInjuredPercent: 0.5
+  sanctuaryPredatorThreatRadius: 12
+  logMedicAiDecisions: 0
   lockRotationDuringPlay: 1
 --- !u!114 &1048404670
 MonoBehaviour:
@@ -10867,6 +11309,10 @@ MonoBehaviour:
   bioticDartRange: 12
   healDartAmount: 3
   bioticDartPredatorDamage: 6
+  bioticDartPredatorKnockback: 5
+  bioticDartSphereCastRadius: 0.65
+  bioticDartAimConeHalfAngle: 38
+  bioticDartCloseRangeInstant: 3.5
   healPulseRadius: 8
   healPulseAmount: 4
   guardianAngelRange: 14
@@ -10877,6 +11323,62 @@ MonoBehaviour:
   sanctuaryRadius: 8
   sanctuaryHealPerSecond: 3
   sanctuaryTickInterval: 1.25
+  bioticDartCastWindup: 0.12
+  healPulseCastWindup: 0.25
+  tetherBlinkCastWindup: 0.05
+  sanctuaryCastWindup: 0.35
+  logCastPresentation: 1
+  medicClassDisplayName: Field Medic
+  medicClassSummary: "Medic \u2014 Heal / mobility support. Weak alone, strong near
+    allies."
+  medicSlot1Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot2Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot3Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot4Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8
@@ -10913,6 +11415,8 @@ MonoBehaviour:
   suzuProjectileLifetime: 2.5
   suzuRadius: 4
   suzuInvulnerabilityDuration: 1
+  suzuDamageReduction: 0.3
+  lifeGripDamageReduction: 0.35
 --- !u!95 &1048404671
 Animator:
   serializedVersion: 7
@@ -10975,22 +11479,28 @@ MonoBehaviour:
   controlsPredator: 0
   enforceTestLoadouts: 1
   logAbilityFlow: 1
+  logAbilityMana: 1
   disableLegacyAbilityComponents: 1
   pipelineTestMode: 1
   abilityControllerOwnsCooldowns: 1
   localRoleController: {fileID: 0}
   gameManager: {fileID: 0}
   unitHealth: {fileID: 0}
+  unitMana: {fileID: 0}
   survivorClassManager: {fileID: 0}
   predatorClassManager: {fileID: 0}
-  survivorSlot1Cooldown: 2.5
-  survivorSlot2Cooldown: 8
-  survivorSlot3Cooldown: 10
-  survivorSlot4Cooldown: 28
   survivorSlot1ManaCost: 2
   survivorSlot2ManaCost: 5
   survivorSlot3ManaCost: 4
   survivorSlot4ManaCost: 12
+  predatorSlot1ManaCost: 8
+  predatorSlot2ManaCost: 25
+  predatorSlot3ManaCost: 35
+  predatorSlot4ManaCost: 80
+  survivorSlot1Cooldown: 2.5
+  survivorSlot2Cooldown: 8
+  survivorSlot3Cooldown: 10
+  survivorSlot4Cooldown: 28
   predatorSlot1Cooldown: 3.75
   predatorSlot2Cooldown: 10
   predatorSlot3Cooldown: 14
@@ -11003,10 +11513,44 @@ MonoBehaviour:
   slot3Sound: {fileID: 0}
   slot4Sound: {fileID: 0}
   failedCastSound: {fileID: 0}
+  noManaSound: {fileID: 0}
+  cooldownFailSound: {fileID: 0}
+  usePlaceholderAbilityAudio: 1
+  abilitySfxVolume: 0.85
   logAbilityAudio: 0
   spawnGroundEffects: 1
   groundEffectPrefab: {fileID: 0}
   groundEffectDuration: 2.5
+  logAbilityCasts: 1
+  notifyUiOnCast: 1
+--- !u!114 &1048404674
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1048404661}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4158db36bf4d2e04d8393f05a717ce1b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitMana
+  maxMana: 20
+  currentMana: 20
+  survivorMaxMana: 20
+  predatorMaxMana: 100
+  npcMaxMana: 100
+  autoApplyMaxManaByRole: 1
+  survivorManaRegenPerSecond: 0.33
+  predatorManaRegenPerSecond: 6
+  npcManaRegenPerSecond: 1
+  autoApplyRegenByRole: 1
+  manaRegenPerSecond: 0.33
+  zoneBonusRegenPerSecond: 0
+  onManaChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  showManaLogs: 0
 --- !u!1 &1072993723
 GameObject:
   m_ObjectHideFlags: 0
@@ -12903,6 +13447,7 @@ MonoBehaviour:
   manaText: {fileID: 605830908}
   manaColor: {r: 0.25, g: 0.6, b: 1, a: 1}
   hideWhenNoMana: 1
+  hideWhenDead: 1
   applyBillboardRotation: 1
   billboardEulerAngles: {x: 60, y: 0, z: 0}
 --- !u!114 &1291826905
@@ -12927,8 +13472,17 @@ MonoBehaviour:
   onDeath:
     m_PersistentCalls:
       m_Calls: []
+  temporaryDamageMultiplier: 1
   logSurvivorDamage: 1
   logAbilityEffects: 1
+  showFloatingCombatText: 1
+  showHitFlash: 1
+  damageTextColor: {r: 1, g: 0.42, b: 0.12, a: 1}
+  healTextColor: {r: 0.25, g: 0.95, b: 0.35, a: 1}
+  enableHitDeathAnimations: 1
+  hitReactionCooldown: 0.25
+  deathAnimationDelay: 0.75
+  logAnimationTriggers: 0
 --- !u!114 &1291826906
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12951,8 +13505,17 @@ MonoBehaviour:
   onDeath:
     m_PersistentCalls:
       m_Calls: []
+  temporaryDamageMultiplier: 1
   logSurvivorDamage: 1
   logAbilityEffects: 1
+  showFloatingCombatText: 1
+  showHitFlash: 1
+  damageTextColor: {r: 1, g: 0.42, b: 0.12, a: 1}
+  healTextColor: {r: 0.25, g: 0.95, b: 0.35, a: 1}
+  enableHitDeathAnimations: 1
+  hitReactionCooldown: 0.25
+  deathAnimationDelay: 0.75
+  logAnimationTriggers: 0
 --- !u!114 &1291826907
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12976,6 +13539,7 @@ MonoBehaviour:
   enableDamageFlash: 1
   damageFlashDuration: 0.12
   damageFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  hideWhenDead: 1
   applyBillboardRotation: 1
   billboardEulerAngles: {x: 60, y: 0, z: 0}
 --- !u!114 &1291826908
@@ -13103,6 +13667,7 @@ MonoBehaviour:
   survivorCountText: {fileID: 1332423948}
   monsterKillsText: {fileID: 1221458530}
   gameOverTitleText: {fileID: 1691793988}
+  playerManaText: {fileID: 0}
   startScreen: {fileID: 1291559119}
   gameplayHUD: {fileID: 1713048607}
   gameOverPanel: {fileID: 1389474387}
@@ -13134,6 +13699,12 @@ MonoBehaviour:
   abilityInfoText: {fileID: 0}
   abilityTooltipPanel: {fileID: 0}
   logTooltipEvents: 0
+  abilityCastFlashText: {fileID: 0}
+  showCastFlashText: 1
+  castFlashDuration: 0.75
+  showClassSummaryInAbilityInfo: 1
+  showDebugClassSummaryLog: 0
+  logAbilityLabelDebug: 0
   survivorOnlyObjects: []
   monsterOnlyObjects: []
   enableSimpleMobileJoystick: 1
@@ -13141,6 +13712,22 @@ MonoBehaviour:
   joystickKnob: {fileID: 401721689}
   uiCamera: {fileID: 0}
   joystickRadius: 80
+  joystickMarginLeft: 24
+  joystickMarginBottom: 24
+  joystickAreaSize: {x: 200, y: 200}
+  survivorSprintButton: {fileID: 0}
+  survivorPickupButton: {fileID: 0}
+  survivorDropButton: {fileID: 0}
+  abilityMarginRight: 24
+  abilityMarginBottom: 24
+  abilityButtonSize: {x: 132, y: 88}
+  abilityButtonSpacing: 12
+  safeAreaPadding: 8
+  tooltipGapAboveAbilities: 96
+  tooltipPanelSize: {x: 250, y: 100}
+  survivorUtilityButtonSize: {x: 120, y: 64}
+  survivorUtilitySpacing: 8
+  survivorUtilityGapAboveJoystick: 12
   playingRoleText: Survive until the timer ends
   monsterWinText: Monster Wins
   survivorWinText: Survivors Win
@@ -13232,6 +13819,7 @@ MonoBehaviour:
   dropButton: {fileID: 621431536}
   dropButtonText: {fileID: 1973488499}
   hideDropWhenUnavailable: 1
+  gameUi: {fileID: 0}
 --- !u!114 &1311636437
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13253,6 +13841,25 @@ MonoBehaviour:
   survivorKillColor: {r: 0.35, g: 0.85, b: 1, a: 1}
   hazardKillColor: {r: 0.85, g: 0.45, b: 1, a: 1}
   genericKillColor: {r: 1, g: 0.95, b: 0.55, a: 1}
+  predatorKilledSurvivorMessages:
+  - '{killer} turned {dead} into campfire seasoning!'
+  - '{dead} got deleted by {killer}!'
+  - '{killer} made {dead} reconsider their life choices.'
+  - '{dead} learned {killer} does not do hugs.'
+  survivorKilledPredatorMessages:
+  - '{dead} got humbled by {killer}!'
+  - '{killer} hurt {dead}''s feelings!'
+  - '{dead} forgot survivors fight back.'
+  - '{killer} sent {dead} to timeout!'
+  hazardDeathMessages:
+  - '{dead} forgot lava is hot!'
+  - '{dead} took a scenic trip through the hazard zone.'
+  - '{killer} and gravity teamed up on {dead}.'
+  - '{dead} discovered the map has teeth.'
+  genericDeathMessages:
+  - '{dead} has left the match.'
+  - Something happened to {dead}. Nobody clapped.
+  - '{dead} respawned in our hearts (not really).'
 --- !u!1 &1332423946
 GameObject:
   m_ObjectHideFlags: 0
@@ -13610,6 +14217,7 @@ MonoBehaviour:
   cooldownText: {fileID: 644727015}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  insufficientManaColor: {r: 0.25, g: 0.35, b: 0.55, a: 1}
   gameUi: {fileID: 0}
   abilitySlot: 1
   isPredatorSide: 0
@@ -13620,6 +14228,8 @@ MonoBehaviour:
 
     {1} mana'
   useAbilityLabel: 1
+  abilityIconImage: {fileID: 0}
+  hideIconWhenMissing: 1
 --- !u!114 &1342540086
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14005,11 +14615,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1389693382}
   m_CullTransparentMesh: 1
---- !u!1 &1415733633 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 297752927558957415, guid: c421d8f9c674ca4449c943fc36b10fc1, type: 3}
-  m_PrefabInstance: {fileID: 364770419}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1423237824
 GameObject:
   m_ObjectHideFlags: 0
@@ -14698,6 +15303,7 @@ MonoBehaviour:
   cooldownText: {fileID: 107132794}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  insufficientManaColor: {r: 0.25, g: 0.35, b: 0.55, a: 1}
   gameUi: {fileID: 0}
   abilitySlot: 1
   isPredatorSide: 0
@@ -14708,6 +15314,8 @@ MonoBehaviour:
 
     {1} mana'
   useAbilityLabel: 1
+  abilityIconImage: {fileID: 0}
+  hideIconWhenMissing: 1
 --- !u!114 &1514859843
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14916,6 +15524,10 @@ MonoBehaviour:
   bioticDartRange: 12
   healDartAmount: 3
   bioticDartPredatorDamage: 6
+  bioticDartPredatorKnockback: 5
+  bioticDartSphereCastRadius: 0.65
+  bioticDartAimConeHalfAngle: 38
+  bioticDartCloseRangeInstant: 3.5
   healPulseRadius: 8
   healPulseAmount: 4
   guardianAngelRange: 14
@@ -14926,6 +15538,62 @@ MonoBehaviour:
   sanctuaryRadius: 8
   sanctuaryHealPerSecond: 3
   sanctuaryTickInterval: 1.25
+  bioticDartCastWindup: 0.12
+  healPulseCastWindup: 0.25
+  tetherBlinkCastWindup: 0.05
+  sanctuaryCastWindup: 0.35
+  logCastPresentation: 1
+  medicClassDisplayName: Field Medic
+  medicClassSummary: "Medic \u2014 Heal / mobility support. Weak alone, strong near
+    allies."
+  medicSlot1Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot2Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot3Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot4Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8
@@ -14962,6 +15630,8 @@ MonoBehaviour:
   suzuProjectileLifetime: 2.5
   suzuRadius: 4
   suzuInvulnerabilityDuration: 1
+  suzuDamageReduction: 0.3
+  lifeGripDamageReduction: 0.35
 --- !u!95 &1534769622
 Animator:
   serializedVersion: 7
@@ -15031,8 +15701,17 @@ MonoBehaviour:
   onDeath:
     m_PersistentCalls:
       m_Calls: []
+  temporaryDamageMultiplier: 1
   logSurvivorDamage: 1
   logAbilityEffects: 1
+  showFloatingCombatText: 1
+  showHitFlash: 1
+  damageTextColor: {r: 1, g: 0.42, b: 0.12, a: 1}
+  healTextColor: {r: 0.25, g: 0.95, b: 0.35, a: 1}
+  enableHitDeathAnimations: 1
+  hitReactionCooldown: 0.25
+  deathAnimationDelay: 0.75
+  logAnimationTriggers: 0
 --- !u!114 &1534769625
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15052,6 +15731,7 @@ MonoBehaviour:
   cooldownText: {fileID: 2000072849}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  insufficientManaColor: {r: 0.25, g: 0.35, b: 0.55, a: 1}
   gameUi: {fileID: 0}
   abilitySlot: 1
   isPredatorSide: 0
@@ -15062,6 +15742,8 @@ MonoBehaviour:
 
     {1} mana'
   useAbilityLabel: 1
+  abilityIconImage: {fileID: 0}
+  hideIconWhenMissing: 1
 --- !u!114 &1534769626
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15392,6 +16074,7 @@ MonoBehaviour:
   cooldownText: {fileID: 1124545568}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  insufficientManaColor: {r: 0.25, g: 0.35, b: 0.55, a: 1}
   gameUi: {fileID: 0}
   abilitySlot: 1
   isPredatorSide: 0
@@ -15402,6 +16085,8 @@ MonoBehaviour:
 
     {1} mana'
   useAbilityLabel: 1
+  abilityIconImage: {fileID: 0}
+  hideIconWhenMissing: 1
 --- !u!1 &1554863087
 GameObject:
   m_ObjectHideFlags: 0
@@ -15765,6 +16450,118 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7353519556985257631, guid: ca5284e8fa1d6e5489707da245a158c2, type: 3}
   m_PrefabInstance: {fileID: 1622502070}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1642303230
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1642303231}
+  - component: {fileID: 1642303234}
+  - component: {fileID: 1642303233}
+  - component: {fileID: 1642303232}
+  m_Layer: 0
+  m_Name: ManaZoneWalkableFloor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1642303231
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1642303230}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.05, z: 0}
+  m_LocalScale: {x: 8, y: 0.1, z: 8}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2020762137}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!23 &1642303232
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1642303230}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 1
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!65 &1642303233
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1642303230}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!33 &1642303234
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1642303230}
+  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &1650787146
 GameObject:
   m_ObjectHideFlags: 0
@@ -17828,8 +18625,17 @@ MonoBehaviour:
   onDeath:
     m_PersistentCalls:
       m_Calls: []
+  temporaryDamageMultiplier: 1
   logSurvivorDamage: 1
   logAbilityEffects: 1
+  showFloatingCombatText: 1
+  showHitFlash: 1
+  damageTextColor: {r: 1, g: 0.42, b: 0.12, a: 1}
+  healTextColor: {r: 0.25, g: 0.95, b: 0.35, a: 1}
+  enableHitDeathAnimations: 1
+  hitReactionCooldown: 0.25
+  deathAnimationDelay: 0.75
+  logAnimationTriggers: 0
 --- !u!223 &1948397539
 Canvas:
   m_ObjectHideFlags: 0
@@ -17876,6 +18682,7 @@ MonoBehaviour:
   enableDamageFlash: 1
   damageFlashDuration: 0.12
   damageFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  hideWhenDead: 1
   applyBillboardRotation: 1
   billboardEulerAngles: {x: 60, y: 0, z: 0}
 --- !u!114 &1948397541
@@ -17940,8 +18747,17 @@ MonoBehaviour:
   onDeath:
     m_PersistentCalls:
       m_Calls: []
+  temporaryDamageMultiplier: 1
   logSurvivorDamage: 1
   logAbilityEffects: 1
+  showFloatingCombatText: 1
+  showHitFlash: 1
+  damageTextColor: {r: 1, g: 0.42, b: 0.12, a: 1}
+  healTextColor: {r: 0.25, g: 0.95, b: 0.35, a: 1}
+  enableHitDeathAnimations: 1
+  hitReactionCooldown: 0.25
+  deathAnimationDelay: 0.75
+  logAnimationTriggers: 0
 --- !u!114 &1948397544
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -17960,6 +18776,7 @@ MonoBehaviour:
   manaText: {fileID: 1946147071}
   manaColor: {r: 0.25, g: 0.6, b: 1, a: 1}
   hideWhenNoMana: 1
+  hideWhenDead: 1
   applyBillboardRotation: 1
   billboardEulerAngles: {x: 60, y: 0, z: 0}
 --- !u!1 &1953037296
@@ -18302,13 +19119,13 @@ GameObject:
   - component: {fileID: 1970627225}
   - component: {fileID: 1970627224}
   - component: {fileID: 1970627227}
-  - component: {fileID: 1970627229}
   - component: {fileID: 1970627228}
   - component: {fileID: 1970627233}
   - component: {fileID: 1970627232}
   - component: {fileID: 1970627231}
   - component: {fileID: 1970627230}
   - component: {fileID: 1970627234}
+  - component: {fileID: 1970627235}
   m_Layer: 0
   m_Name: TestAllyAnchor
   m_TagString: Survivor
@@ -18435,6 +19252,7 @@ MonoBehaviour:
   enableDamageFlash: 1
   damageFlashDuration: 0.12
   damageFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  hideWhenDead: 1
   applyBillboardRotation: 1
   billboardEulerAngles: {x: 60, y: 0, z: 0}
 --- !u!114 &1970627228
@@ -18459,26 +19277,17 @@ MonoBehaviour:
   onDeath:
     m_PersistentCalls:
       m_Calls: []
+  temporaryDamageMultiplier: 1
   logSurvivorDamage: 1
   logAbilityEffects: 1
---- !u!114 &1970627229
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1970627222}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6435a604d5dc851468f25f94fd0d27fa, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SurvivorMana
-  maxMana: 20
-  currentMana: 20
-  passiveRegenPerSecond: 0.33
-  onManaChanged:
-    m_PersistentCalls:
-      m_Calls: []
+  showFloatingCombatText: 1
+  showHitFlash: 1
+  damageTextColor: {r: 1, g: 0.42, b: 0.12, a: 1}
+  healTextColor: {r: 0.25, g: 0.95, b: 0.35, a: 1}
+  enableHitDeathAnimations: 1
+  hitReactionCooldown: 0.25
+  deathAnimationDelay: 0.75
+  logAnimationTriggers: 0
 --- !u!114 &1970627230
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -18495,8 +19304,21 @@ MonoBehaviour:
   wanderRetargetInterval: 3
   wanderMoveSpeed: 3.5
   waypointReachDistance: 0.8
+  fleeRadius: 11
+  fleeMoveSpeed: 5
+  lowHealthFleeThreshold: 0.4
+  woundedFleeSpeedMultiplier: 1.25
+  hellfireAvoidRadius: 4
+  medicThinkInterval: 0.75
+  aiAbilityCooldownMultiplier: 2
   minAbilityInterval: 4
   maxAbilityInterval: 7
+  healDartTargetPercent: 0.85
+  healPulseWoundedPercent: 0.7
+  healPulseCriticalPercent: 0.4
+  sanctuaryInjuredPercent: 0.5
+  sanctuaryPredatorThreatRadius: 12
+  logMedicAiDecisions: 0
   lockRotationDuringPlay: 1
 --- !u!114 &1970627231
 MonoBehaviour:
@@ -18531,6 +19353,10 @@ MonoBehaviour:
   bioticDartRange: 12
   healDartAmount: 3
   bioticDartPredatorDamage: 6
+  bioticDartPredatorKnockback: 5
+  bioticDartSphereCastRadius: 0.65
+  bioticDartAimConeHalfAngle: 38
+  bioticDartCloseRangeInstant: 3.5
   healPulseRadius: 8
   healPulseAmount: 4
   guardianAngelRange: 14
@@ -18541,6 +19367,62 @@ MonoBehaviour:
   sanctuaryRadius: 8
   sanctuaryHealPerSecond: 3
   sanctuaryTickInterval: 1.25
+  bioticDartCastWindup: 0.12
+  healPulseCastWindup: 0.25
+  tetherBlinkCastWindup: 0.05
+  sanctuaryCastWindup: 0.35
+  logCastPresentation: 1
+  medicClassDisplayName: Field Medic
+  medicClassSummary: "Medic \u2014 Heal / mobility support. Weak alone, strong near
+    allies."
+  medicSlot1Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot2Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot3Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot4Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8
@@ -18577,6 +19459,8 @@ MonoBehaviour:
   suzuProjectileLifetime: 2.5
   suzuRadius: 4
   suzuInvulnerabilityDuration: 1
+  suzuDamageReduction: 0.3
+  lifeGripDamageReduction: 0.35
 --- !u!95 &1970627232
 Animator:
   serializedVersion: 7
@@ -18639,22 +19523,28 @@ MonoBehaviour:
   controlsPredator: 0
   enforceTestLoadouts: 1
   logAbilityFlow: 1
+  logAbilityMana: 1
   disableLegacyAbilityComponents: 1
   pipelineTestMode: 1
   abilityControllerOwnsCooldowns: 1
   localRoleController: {fileID: 0}
   gameManager: {fileID: 0}
   unitHealth: {fileID: 0}
+  unitMana: {fileID: 0}
   survivorClassManager: {fileID: 0}
   predatorClassManager: {fileID: 0}
-  survivorSlot1Cooldown: 2.5
-  survivorSlot2Cooldown: 8
-  survivorSlot3Cooldown: 10
-  survivorSlot4Cooldown: 28
   survivorSlot1ManaCost: 2
   survivorSlot2ManaCost: 5
   survivorSlot3ManaCost: 4
   survivorSlot4ManaCost: 12
+  predatorSlot1ManaCost: 8
+  predatorSlot2ManaCost: 25
+  predatorSlot3ManaCost: 35
+  predatorSlot4ManaCost: 80
+  survivorSlot1Cooldown: 2.5
+  survivorSlot2Cooldown: 8
+  survivorSlot3Cooldown: 10
+  survivorSlot4Cooldown: 28
   predatorSlot1Cooldown: 3.75
   predatorSlot2Cooldown: 10
   predatorSlot3Cooldown: 14
@@ -18667,10 +19557,44 @@ MonoBehaviour:
   slot3Sound: {fileID: 0}
   slot4Sound: {fileID: 0}
   failedCastSound: {fileID: 0}
+  noManaSound: {fileID: 0}
+  cooldownFailSound: {fileID: 0}
+  usePlaceholderAbilityAudio: 1
+  abilitySfxVolume: 0.85
   logAbilityAudio: 0
   spawnGroundEffects: 1
   groundEffectPrefab: {fileID: 0}
   groundEffectDuration: 2.5
+  logAbilityCasts: 1
+  notifyUiOnCast: 1
+--- !u!114 &1970627235
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1970627222}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4158db36bf4d2e04d8393f05a717ce1b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitMana
+  maxMana: 20
+  currentMana: 20
+  survivorMaxMana: 20
+  predatorMaxMana: 100
+  npcMaxMana: 100
+  autoApplyMaxManaByRole: 1
+  survivorManaRegenPerSecond: 0.33
+  predatorManaRegenPerSecond: 6
+  npcManaRegenPerSecond: 1
+  autoApplyRegenByRole: 1
+  manaRegenPerSecond: 0.33
+  zoneBonusRegenPerSecond: 0
+  onManaChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  showManaLogs: 0
 --- !u!1 &1973488497
 GameObject:
   m_ObjectHideFlags: 0
@@ -19119,6 +20043,7 @@ MonoBehaviour:
   cooldownText: {fileID: 476633828}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  insufficientManaColor: {r: 0.25, g: 0.35, b: 0.55, a: 1}
   gameUi: {fileID: 0}
   abilitySlot: 1
   isPredatorSide: 0
@@ -19129,6 +20054,8 @@ MonoBehaviour:
 
     {1} mana'
   useAbilityLabel: 1
+  abilityIconImage: {fileID: 0}
+  hideIconWhenMissing: 1
 --- !u!114 &2013123245
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19401,6 +20328,78 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2017594249}
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &2020762136
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2020762137}
+  - component: {fileID: 2020762139}
+  - component: {fileID: 2020762138}
+  m_Layer: 0
+  m_Name: WaterfallManaRegenZone
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2020762137
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2020762136}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.05, z: -107.9}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 176366446}
+  - {fileID: 1642303231}
+  m_Father: {fileID: 585352095}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2020762138
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2020762136}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80231e29a12b80a46b225229ffd91114, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ManaRegenZone
+  survivorBonusManaRegenPerSecond: 2
+  predatorBonusManaRegenPerSecond: 10
+  bonusManaRegenPerSecond: 2
+  showDebugLogs: 1
+--- !u!65 &2020762139
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2020762136}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 10, y: 2.5, z: 10}
+  m_Center: {x: 0, y: 1, z: 0}
 --- !u!1 &2040194525
 GameObject:
   m_ObjectHideFlags: 0
@@ -19670,6 +20669,10 @@ MonoBehaviour:
   bioticDartRange: 12
   healDartAmount: 3
   bioticDartPredatorDamage: 6
+  bioticDartPredatorKnockback: 5
+  bioticDartSphereCastRadius: 0.65
+  bioticDartAimConeHalfAngle: 38
+  bioticDartCloseRangeInstant: 3.5
   healPulseRadius: 8
   healPulseAmount: 4
   guardianAngelRange: 14
@@ -19680,6 +20683,62 @@ MonoBehaviour:
   sanctuaryRadius: 8
   sanctuaryHealPerSecond: 3
   sanctuaryTickInterval: 1.25
+  bioticDartCastWindup: 0.12
+  healPulseCastWindup: 0.25
+  tetherBlinkCastWindup: 0.05
+  sanctuaryCastWindup: 0.35
+  logCastPresentation: 1
+  medicClassDisplayName: Field Medic
+  medicClassSummary: "Medic \u2014 Heal / mobility support. Weak alone, strong near
+    allies."
+  medicSlot1Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot2Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot3Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  medicSlot4Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
   rocketFlailRange: 2.6
   rocketFlailArc: 100
   rocketFlailDamage: 8
@@ -19716,6 +20775,8 @@ MonoBehaviour:
   suzuProjectileLifetime: 2.5
   suzuRadius: 4
   suzuInvulnerabilityDuration: 1
+  suzuDamageReduction: 0.3
+  lifeGripDamageReduction: 0.35
 --- !u!95 &2060611931
 Animator:
   serializedVersion: 7
@@ -19785,8 +20846,17 @@ MonoBehaviour:
   onDeath:
     m_PersistentCalls:
       m_Calls: []
+  temporaryDamageMultiplier: 1
   logSurvivorDamage: 1
   logAbilityEffects: 1
+  showFloatingCombatText: 1
+  showHitFlash: 1
+  damageTextColor: {r: 1, g: 0.42, b: 0.12, a: 1}
+  healTextColor: {r: 0.25, g: 0.95, b: 0.35, a: 1}
+  enableHitDeathAnimations: 1
+  hitReactionCooldown: 0.25
+  deathAnimationDelay: 0.75
+  logAnimationTriggers: 0
 --- !u!114 &2060611934
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19806,6 +20876,7 @@ MonoBehaviour:
   cooldownText: {fileID: 1167456711}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  insufficientManaColor: {r: 0.25, g: 0.35, b: 0.55, a: 1}
   gameUi: {fileID: 0}
   abilitySlot: 1
   isPredatorSide: 0
@@ -19816,6 +20887,8 @@ MonoBehaviour:
 
     {1} mana'
   useAbilityLabel: 1
+  abilityIconImage: {fileID: 0}
+  hideIconWhenMissing: 1
 --- !u!114 &2060611935
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -20006,6 +21079,7 @@ MonoBehaviour:
   cooldownText: {fileID: 1187781595}
   readyColor: {r: 1, g: 1, b: 1, a: 1}
   cooldownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  insufficientManaColor: {r: 0.25, g: 0.35, b: 0.55, a: 1}
   gameUi: {fileID: 0}
   abilitySlot: 1
   isPredatorSide: 0
@@ -20016,6 +21090,8 @@ MonoBehaviour:
 
     {1} mana'
   useAbilityLabel: 1
+  abilityIconImage: {fileID: 0}
+  hideIconWhenMissing: 1
 --- !u!114 &2060645635
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -20784,18 +21860,12 @@ MonoBehaviour:
   enableDragonLeap: 1
   dragonLeapManaCost: 20
   dragonLeapCooldown: 16
-  chaosTreeManaCost: 10
-  chaosTreeCooldown: 12
-  chaosTreeSpawnCountMin: 2
-  chaosTreeSpawnCountMax: 4
-  chaosTreeLifetime: 0
-  chaosCastRadius: 18
-  minDistanceFromPlayers: 3
-  tornadoManaCost: 15
-  tornadoCooldown: 14
-  enableWildZone: 1
-  wildZoneManaCost: 12
-  wildZoneCooldown: 15
+  dragonLeapTargetRadius: 14
+  dragonLeapWarningDuration: 0.65
+  dragonLeapTravelDuration: 0.35
+  dragonLeapImpactRadius: 3
+  dragonLeapDamage: 8
+  dragonLeapArcHeight: 2.5
   spawnSettings:
     mapCenter: {x: 0, y: 0, z: 0}
     mapSize: {x: 40, y: 40}
@@ -20817,6 +21887,13 @@ MonoBehaviour:
     maxAttempts: 20
     noSpawnZoneCheckRadius: 1.5
     noSpawnFilter: 0
+  chaosTreeManaCost: 10
+  chaosTreeCooldown: 12
+  chaosTreeSpawnCountMin: 2
+  chaosTreeSpawnCountMax: 4
+  chaosTreeLifetime: 0
+  chaosCastRadius: 18
+  minDistanceFromPlayers: 3
   treePrefab: {fileID: 565650139}
   treeParent: {fileID: 1936844060}
   treePatchMinCount: 4
@@ -20828,8 +21905,17 @@ MonoBehaviour:
   allowDuplicateSpeedBoots: 0
   maxActiveHelpfulItems: 3
   helpfulItemWeight: 2
+  tornadoManaCost: 15
+  tornadoCooldown: 14
   tornadoPrefab: {fileID: 0}
   tornadoWeight: 1
+  enableWildZone: 1
+  wildZoneManaCost: 12
+  wildZoneCooldown: 15
+  wildZoneRadius: 3.5
+  wildZoneDuration: 6
+  wildZoneDamagePerTick: 4
+  wildZoneWeight: 2
   enableDebugLogs: 1
 --- !u!114 &2138584739
 MonoBehaviour:
@@ -21227,9 +22313,6 @@ PrefabInstance:
       addedObject: {fileID: 637681176}
     - targetCorrespondingSourceObject: {fileID: 1935288733120376740, guid: 3d0c97f0a07bcc2438154cc20a88e933, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 637681182}
-    - targetCorrespondingSourceObject: {fileID: 1935288733120376740, guid: 3d0c97f0a07bcc2438154cc20a88e933, type: 3}
-      insertIndex: -1
       addedObject: {fileID: 637681183}
     - targetCorrespondingSourceObject: {fileID: 1935288733120376740, guid: 3d0c97f0a07bcc2438154cc20a88e933, type: 3}
       insertIndex: -1
@@ -21426,6 +22509,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1901775035134909915, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8924335234456584573}
+    - targetCorrespondingSourceObject: {fileID: 1901775035134909915, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8924335234456584579}
   m_SourcePrefab: {fileID: 100100000, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
 --- !u!1 &8924335234456584550 stripped
 GameObject:
@@ -21454,8 +22540,17 @@ MonoBehaviour:
   onDeath:
     m_PersistentCalls:
       m_Calls: []
+  temporaryDamageMultiplier: 1
   logSurvivorDamage: 1
   logAbilityEffects: 1
+  showFloatingCombatText: 1
+  showHitFlash: 1
+  damageTextColor: {r: 1, g: 0.42, b: 0.12, a: 1}
+  healTextColor: {r: 0.25, g: 0.95, b: 0.35, a: 1}
+  enableHitDeathAnimations: 1
+  hitReactionCooldown: 0.25
+  deathAnimationDelay: 0.75
+  logAnimationTriggers: 0
 --- !u!114 &8924335234456584558
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -21487,6 +22582,8 @@ MonoBehaviour:
   useCameraRelativeMovement: 0
   keyboardInputEnabled: 1
   gravity: -20
+  lastAimDirection: {x: 0, y: 0, z: 1}
+  lastMoveDirection: {x: 0, y: 0, z: 1}
 --- !u!114 &8924335234456584561 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 3695475764972523763, guid: 99286ea9ea27a9a469b744fb65881592, type: 3}
@@ -21623,9 +22720,111 @@ MonoBehaviour:
   cyberSwiftStrikeCooldown: 8
   sprayRange: 8
   sprayHalfAngle: 45
+  sprayDamage: 16
+  sprayKnockback: 6.5
+  sprayCloseRangeForgiveness: 2
+  sprayCloseRangeMaxAngle: 140
+  sprayVfxSegments: 14
+  sprayVfxForwardOffset: 1
+  sprayVfxVerticalOffset: 0.1
+  sprayVfxLifetime: 0.45
+  sprayVfxAlpha: 0.35
+  hookRange: 24
+  hookDamage: 6
+  hookPullForwardDistance: 1.75
+  hookPullDuration: 0.25
+  tonicHealAmount: 35
+  tonicDuration: 2.5
+  tonicSelfSpeedMultiplier: 0.55
+  tonicGasRadius: 4.5
+  tonicGasDamagePerSecond: 5
+  tonicGasPropDamagePerSecond: 5
+  tonicGasSlowMultiplier: 0.275
+  tonicGasSlowDuration: 2.5
+  barrageDuration: 3.5
+  barragePulseInterval: 0.7
   barrageRange: 20
   barrageHalfAngle: 17.5
+  barrageDamagePerPulse: 9
+  barrageKnockbackMin: 2.8
+  barrageKnockbackMax: 4
+  barrageVfxForwardOffset: 1
+  barrageVfxVerticalOffset: 0.1
+  barrageWarningAlpha: 0.28
+  barragePulseAlpha: 0.42
   barrageVfxSegments: 14
+  sprayCastWindup: 0.12
+  hookCastWindup: 0.25
+  tonicCastWindup: 0.2
+  barrageCastWindup: 0.35
+  logCastPresentation: 1
+  enableAbilityFeel: 1
+  logBarrageVfx: 0
+  barrageWarningDuration: 0.75
+  barrageCraterDuration: 10
+  barrageBombPropRadius: 2.5
+  barragePropDamage: 8
+  abilityAudioSource: {fileID: 0}
+  abilitySfxVolume: 0.85
+  usePlaceholderAbilityAudio: 1
+  spraySound: {fileID: 0}
+  hookFireSound: {fileID: 0}
+  hookHitSound: {fileID: 0}
+  tonicSound: {fileID: 0}
+  barrageStartSound: {fileID: 0}
+  barrageBombSound: {fileID: 0}
+  barrageEndSound: {fileID: 0}
+  relentlessHookDisplayName: Relentless Hook
+  relentlessHookClassSummary: "Relentless Hook \u2014 Catch predator. Pull survivors,
+    zone them, punish bad positioning."
+  relentlessSlot1Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  relentlessSlot2Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  relentlessSlot3Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+  relentlessSlot4Detail:
+    displayName: 
+    buttonLabel: 
+    shortDescription: 
+    flavorText: 
+    roleTag: 
+    icon: {fileID: 0}
+    themeColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+    castSound: {fileID: 0}
+    hitSound: {fileID: 0}
+    castVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
 --- !u!95 &8924335234456584571
 Animator:
   serializedVersion: 7
@@ -21663,22 +22862,28 @@ MonoBehaviour:
   controlsPredator: 1
   enforceTestLoadouts: 1
   logAbilityFlow: 1
+  logAbilityMana: 1
   disableLegacyAbilityComponents: 1
   pipelineTestMode: 1
   abilityControllerOwnsCooldowns: 1
   localRoleController: {fileID: 961346313}
   gameManager: {fileID: 1497139249}
   unitHealth: {fileID: 8924335234456584551}
+  unitMana: {fileID: 0}
   survivorClassManager: {fileID: 0}
   predatorClassManager: {fileID: 8924335234456584570}
-  survivorSlot1Cooldown: 2.5
-  survivorSlot2Cooldown: 8
-  survivorSlot3Cooldown: 10
-  survivorSlot4Cooldown: 28
   survivorSlot1ManaCost: 2
   survivorSlot2ManaCost: 5
   survivorSlot3ManaCost: 4
   survivorSlot4ManaCost: 12
+  predatorSlot1ManaCost: 8
+  predatorSlot2ManaCost: 25
+  predatorSlot3ManaCost: 35
+  predatorSlot4ManaCost: 80
+  survivorSlot1Cooldown: 2.5
+  survivorSlot2Cooldown: 8
+  survivorSlot3Cooldown: 10
+  survivorSlot4Cooldown: 28
   predatorSlot1Cooldown: 3.75
   predatorSlot2Cooldown: 10
   predatorSlot3Cooldown: 14
@@ -21691,10 +22896,44 @@ MonoBehaviour:
   slot3Sound: {fileID: 0}
   slot4Sound: {fileID: 0}
   failedCastSound: {fileID: 0}
+  noManaSound: {fileID: 0}
+  cooldownFailSound: {fileID: 0}
+  usePlaceholderAbilityAudio: 1
+  abilitySfxVolume: 0.85
   logAbilityAudio: 0
   spawnGroundEffects: 1
   groundEffectPrefab: {fileID: 0}
   groundEffectDuration: 2.5
+  logAbilityCasts: 1
+  notifyUiOnCast: 1
+--- !u!114 &8924335234456584579
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8924335234456584550}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4158db36bf4d2e04d8393f05a717ce1b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitMana
+  maxMana: 100
+  currentMana: 100
+  survivorMaxMana: 20
+  predatorMaxMana: 100
+  npcMaxMana: 100
+  autoApplyMaxManaByRole: 1
+  survivorManaRegenPerSecond: 0.33
+  predatorManaRegenPerSecond: 6
+  npcManaRegenPerSecond: 1
+  autoApplyRegenByRole: 1
+  manaRegenPerSecond: 6
+  zoneBonusRegenPerSecond: 0
+  onManaChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  showManaLogs: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

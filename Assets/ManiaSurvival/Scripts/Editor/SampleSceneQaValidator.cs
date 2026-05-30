@@ -138,7 +138,8 @@ public static class SampleSceneQaValidator
             Fail("Main Survivor missing");
         }
 
-        ValidateAbilityButtonLabels(gameUi, Pass, Fail);
+        ValidateAbilityButtonLabels(gameUi, monster, Pass, Warn, Fail);
+        ValidatePredatorPrototypeClasses(monster, Pass, Warn, Fail);
 
         if (Object.FindFirstObjectByType<ArenaBounds>() != null || GameObject.Find("ArenaBounds") != null)
         {
@@ -325,7 +326,9 @@ public static class SampleSceneQaValidator
 
     private static void ValidateAbilityButtonLabels(
         ManiaGameUI gameUi,
+        GameObject monster,
         System.Action<string> pass,
+        System.Action<string> warn,
         System.Action<string> fail)
     {
         if (gameUi == null)
@@ -334,15 +337,121 @@ public static class SampleSceneQaValidator
             return;
         }
 
-        ValidateButtonLabel(gameUi.predatorMeleeButton, "Spray", pass, fail);
-        ValidateButtonLabel(gameUi.predatorAbility2Button, "Hook", pass, fail);
-        ValidateButtonLabel(gameUi.predatorAbility3Button, "Tonic", pass, fail);
-        ValidateButtonLabel(gameUi.predatorUltimateButton, "Barrage", pass, fail);
+        PredatorClassManager predatorClassManager = monster != null
+            ? monster.GetComponent<PredatorClassManager>()
+            : null;
+        PredatorClass predatorClass = predatorClassManager != null
+            ? predatorClassManager.GetCurrentPredatorClass()
+            : PredatorClass.RelentlessHook;
+
+        string[] predatorLabels = GetExpectedPredatorLabels(predatorClass);
+        ValidateButtonLabel(gameUi.predatorMeleeButton, predatorLabels[0], pass, fail);
+        ValidateButtonLabel(gameUi.predatorAbility2Button, predatorLabels[1], pass, fail);
+        ValidateButtonLabel(gameUi.predatorAbility3Button, predatorLabels[2], pass, fail);
+        ValidateButtonLabel(gameUi.predatorUltimateButton, predatorLabels[3], pass, fail);
 
         ValidateButtonLabel(gameUi.survivorPrimaryButton, "Biotic", pass, fail);
         ValidateButtonLabel(gameUi.survivorAbility2Button, "Pulse", pass, fail);
         ValidateButtonLabel(gameUi.survivorAbility3Button, "Tether", pass, fail);
         ValidateButtonLabel(gameUi.survivorUltimateButton, "Sanct.", pass, fail);
+
+        ValidatePredatorButtonsAvoidGenericLabels(gameUi, warn, fail);
+    }
+
+    private static string[] GetExpectedPredatorLabels(PredatorClass predatorClass)
+    {
+        switch (predatorClass)
+        {
+            case PredatorClass.SwarmOverlord:
+                return new[] { "Spit", "Brood", "Infest", "Hive" };
+            case PredatorClass.Juggernaut:
+                return new[] { "Flame", "Leap", "Roar", "Meteor" };
+            default:
+                return new[] { "Spray", "Hook", "Tonic", "Barrage" };
+        }
+    }
+
+    private static void ValidatePredatorButtonsAvoidGenericLabels(
+        ManiaGameUI gameUi,
+        System.Action<string> warn,
+        System.Action<string> fail)
+    {
+        Button[] buttons =
+        {
+            gameUi.predatorMeleeButton,
+            gameUi.predatorAbility2Button,
+            gameUi.predatorAbility3Button,
+            gameUi.predatorUltimateButton
+        };
+
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            if (buttons[i] == null)
+            {
+                continue;
+            }
+
+            string label = ReadButtonLabel(buttons[i]);
+            if (string.Equals(label.Trim(), "Ability", System.StringComparison.OrdinalIgnoreCase))
+            {
+                fail("Predator ability button '" + buttons[i].name + "' still uses generic label 'Ability'");
+            }
+        }
+
+        pass("Predator ability buttons avoid generic 'Ability' label");
+    }
+
+    private static void ValidatePredatorPrototypeClasses(
+        GameObject monster,
+        System.Action<string> pass,
+        System.Action<string> warn,
+        System.Action<string> fail)
+    {
+        if (monster == null)
+        {
+            fail("Cannot validate predator prototype classes — Monster missing");
+            return;
+        }
+
+        PredatorClassManager manager = monster.GetComponent<PredatorClassManager>();
+        if (manager == null)
+        {
+            fail("Monster missing PredatorClassManager for prototype validation");
+            return;
+        }
+
+        if (!PredatorClassManager.IsPlayablePrototypeClass(manager.GetCurrentPredatorClass()))
+        {
+            warn("Monster active predator class is not one of the three prototype classes: "
+                + manager.GetCurrentPredatorClass());
+        }
+        else
+        {
+            pass("Monster predator class is playable prototype: " + manager.GetClassDisplayName());
+        }
+
+        for (int slot = 1; slot <= 4; slot++)
+        {
+            AbilityDetail detail = manager.GetPredatorAbilityDetail(slot);
+            string label = detail.GetButtonLabelOrDisplayName();
+            if (string.IsNullOrWhiteSpace(label) || string.Equals(label, "Ability", System.StringComparison.OrdinalIgnoreCase))
+            {
+                fail("Predator slot " + slot + " has missing or generic ability label");
+                continue;
+            }
+
+            pass("Predator slot " + slot + " label configured: " + label);
+        }
+
+        PredatorClassSwitcher switcher = monster.GetComponent<PredatorClassSwitcher>();
+        if (switcher == null)
+        {
+            warn("Monster missing PredatorClassSwitcher (F1/F2/F3 dev switching)");
+        }
+        else
+        {
+            pass("Monster has PredatorClassSwitcher for dev class hotkeys");
+        }
     }
 
     private static void ValidateButtonLabel(

@@ -8,7 +8,7 @@ public enum PredatorClass { SwarmOverlord, SubterraneanStalker, DoomShieldColoss
 [RequireComponent(typeof(UnitHealth))]
 [RequireComponent(typeof(CharacterController))]
 [RequireComponent(typeof(Animator))]
-public class PredatorClassManager : MonoBehaviour
+public partial class PredatorClassManager : MonoBehaviour
 {
     private const float SharedGlobalCooldown = 0.25f;
 
@@ -157,7 +157,7 @@ public class PredatorClassManager : MonoBehaviour
     [Header("Relentless Hook - Ability Identity")]
     public string relentlessHookDisplayName = "Relentless Hook";
     [TextArea(2, 4)]
-    public string relentlessHookClassSummary = "Relentless Hook — Catch predator. Pull survivors, zone them, punish bad positioning.";
+    public string relentlessHookClassSummary = "Relentless Hook — Catch predator. Pull survivors, pressure them with cones, and punish bad positioning.";
     public AbilityDetail relentlessSlot1Detail;
     public AbilityDetail relentlessSlot2Detail;
     public AbilityDetail relentlessSlot3Detail;
@@ -186,36 +186,7 @@ public class PredatorClassManager : MonoBehaviour
             abilityAudioSource = GetComponent<AudioSource>();
         }
 
-        EnsureRelentlessAbilityDetails();
-    }
-
-    public string GetClassDisplayName()
-    {
-        return activeClass == PredatorClass.RelentlessHook ? relentlessHookDisplayName : activeClass.ToString();
-    }
-
-    public string GetClassSummary()
-    {
-        if (activeClass == PredatorClass.RelentlessHook)
-        {
-            return relentlessHookClassSummary;
-        }
-
-        return GetClassDisplayName();
-    }
-
-    public AbilityDetail GetAbilityDetail(int slotNumber)
-    {
-        EnsureRelentlessAbilityDetails();
-
-        switch (slotNumber)
-        {
-            case 1: return relentlessSlot1Detail;
-            case 2: return relentlessSlot2Detail;
-            case 3: return relentlessSlot3Detail;
-            case 4: return relentlessSlot4Detail;
-            default: return AbilityDetail.CreateFallback(slotNumber, relentlessHookDisplayName);
-        }
+        EnsurePrototypeAbilityDetails();
     }
 
     private void EnsureRelentlessAbilityDetails()
@@ -340,6 +311,7 @@ public class PredatorClassManager : MonoBehaviour
     {
         StopRelentlessBarrage("disabled");
         StopTonicEffects("disabled");
+        ResetPrototypeClassState();
     }
 
     // Slot 0: melee / primary.
@@ -353,10 +325,10 @@ public class PredatorClassManager : MonoBehaviour
 
         switch (activeClass)
         {
-            case PredatorClass.SwarmOverlord: CastSwarmOverlordForgeHammer(); break;
+            case PredatorClass.SwarmOverlord: return CastSwarmSpit();
             case PredatorClass.SubterraneanStalker: CastSubterraneanDrillGauntlets(); break;
             case PredatorClass.DoomShieldColossus: CastDoomShieldGauntletPummel(); break;
-            case PredatorClass.Juggernaut: CastJuggernautHandCannon(); break;
+            case PredatorClass.Juggernaut: return CastJuggernautFlameBreath();
             case PredatorClass.CyberNinja: CastCyberNinjaShurikenFan(); break;
             case PredatorClass.Vanguard: CastVanguardRocketHammer(); break;
             case PredatorClass.RelentlessHook: CastRelentlessHookScrapGun(); break;
@@ -376,10 +348,10 @@ public class PredatorClassManager : MonoBehaviour
 
         switch (activeClass)
         {
-            case PredatorClass.SwarmOverlord: CastSwarmOverlordDeploySentryTurret(); break;
+            case PredatorClass.SwarmOverlord: return CastSwarmBrood();
             case PredatorClass.SubterraneanStalker: CastSubterraneanBurrowUnderground(); break;
             case PredatorClass.DoomShieldColossus: CastDoomShieldKineticGrasp(); break;
-            case PredatorClass.Juggernaut: StartCoroutine(CastJuggernautRocketPunchCoroutine()); break;
+            case PredatorClass.Juggernaut: return CastJuggernautLeap();
             case PredatorClass.CyberNinja: StartCoroutine(CastCyberNinjaSwiftStrikeCoroutine()); break;
             case PredatorClass.Vanguard: StartCoroutine(CastVanguardChargeCoroutine()); break;
             case PredatorClass.RelentlessHook: StartCoroutine(CastRelentlessChainHookCoroutine()); break;
@@ -399,10 +371,10 @@ public class PredatorClassManager : MonoBehaviour
 
         switch (activeClass)
         {
-            case PredatorClass.SwarmOverlord: CastSwarmOverlordCallMinionSwarm(); break;
+            case PredatorClass.SwarmOverlord: return CastSwarmInfest();
             case PredatorClass.SubterraneanStalker: StartCoroutine(CastSubterraneanEruptionDashCoroutine()); break;
             case PredatorClass.DoomShieldColossus: StartCoroutine(CastDoomShieldCarnageOverrunCoroutine()); break;
-            case PredatorClass.Juggernaut: StartCoroutine(CastJuggernautSeismicSlamCoroutine()); break;
+            case PredatorClass.Juggernaut: return CastJuggernautRoar();
             case PredatorClass.CyberNinja: StartCoroutine(CastCyberNinjaDeflectCoroutine()); break;
             case PredatorClass.Vanguard: CastVanguardFireStrike(); break;
             case PredatorClass.RelentlessHook: StartCoroutine(CastRelentlessTakeABreatherCoroutine()); break;
@@ -421,6 +393,16 @@ public class PredatorClassManager : MonoBehaviour
             return false;
         }
 
+        if (activeClass == PredatorClass.SwarmOverlord && IsSwarmHiveActive())
+        {
+            return false;
+        }
+
+        if (activeClass == PredatorClass.Juggernaut && IsJuggernautMeteorActive())
+        {
+            return false;
+        }
+
         if (!TryConsumeSharedGcd(Ability3Hash))
         {
             return false;
@@ -428,7 +410,7 @@ public class PredatorClassManager : MonoBehaviour
 
         switch (activeClass)
         {
-            case PredatorClass.SwarmOverlord: CastSwarmOverlordMoltenCore(); break;
+            case PredatorClass.SwarmOverlord: return CastSwarmHive();
             case PredatorClass.SubterraneanStalker: CastSubterraneanTectonicFault(); break;
             case PredatorClass.DoomShieldColossus: CastDoomShieldCageMatch(); break;
             case PredatorClass.Juggernaut: StartCoroutine(CastJuggernautMeteorStrikeCoroutine()); break;
@@ -450,6 +432,16 @@ public class PredatorClassManager : MonoBehaviour
             return false;
         }
 
+        if (activeClass == PredatorClass.SwarmOverlord && IsSwarmHiveActive())
+        {
+            return false;
+        }
+
+        if (activeClass == PredatorClass.Juggernaut && IsJuggernautMeteorActive())
+        {
+            return false;
+        }
+
         if (!TryConsumeSharedGcd(UltimateHash))
         {
             return false;
@@ -457,10 +449,10 @@ public class PredatorClassManager : MonoBehaviour
 
         switch (activeClass)
         {
-            case PredatorClass.SwarmOverlord: CastSwarmOverlordMoltenCore(); break;
+            case PredatorClass.SwarmOverlord: return CastSwarmHive();
             case PredatorClass.SubterraneanStalker: CastSubterraneanTectonicFault(); break;
             case PredatorClass.DoomShieldColossus: CastDoomShieldCageMatch(); break;
-            case PredatorClass.Juggernaut: StartCoroutine(CastJuggernautMeteorStrikeCoroutine()); break;
+            case PredatorClass.Juggernaut: return CastJuggernautMeteor();
             case PredatorClass.CyberNinja: CastCyberNinjaDragonblade(); break;
             case PredatorClass.Vanguard: CastVanguardEarthshatter(); break;
             case PredatorClass.RelentlessHook: return StartRelentlessBarrage();
@@ -601,81 +593,6 @@ public class PredatorClassManager : MonoBehaviour
         if (abilityAudioSource != null)
         {
             abilityAudioSource.PlayOneShot(detail.castSound, abilitySfxVolume);
-        }
-    }
-
-    // ──────────────────────────────────────────────────────────────────────────
-    // SwarmOverlord
-    // ──────────────────────────────────────────────────────────────────────────
-
-    private void CastSwarmOverlordForgeHammer()
-    {
-        UnitHealth[] survivors = GetSurvivorsInRange(transform.position, 2.5f);
-        for (int i = 0; i < survivors.Length; i++)
-        {
-            survivors[i].TakeDamage(baseMeleeDamage, gameObject);
-        }
-
-        AutoSentryTurret sentry = FindClosestOwnedSentry();
-        if (sentry != null)
-        {
-            sentry.Repair(10);
-        }
-    }
-
-    private void CastSwarmOverlordDeploySentryTurret()
-    {
-        if (sentryTurretPrefab == null)
-        {
-            return;
-        }
-
-        Vector3 spawnPos = transform.position + transform.forward * 2f;
-        GameObject turretObj = Instantiate(sentryTurretPrefab, spawnPos, Quaternion.identity);
-        AutoSentryTurret turret = turretObj.GetComponent<AutoSentryTurret>();
-        if (turret == null)
-        {
-            turret = turretObj.AddComponent<AutoSentryTurret>();
-        }
-        turret.Initialize(this, targetLayers, survivorTag);
-    }
-
-    private void CastSwarmOverlordCallMinionSwarm()
-    {
-        if (minionPrefab == null)
-        {
-            return;
-        }
-
-        for (int i = 0; i < 3; i++)
-        {
-            Vector3 offset = Quaternion.Euler(0f, -20f + (i * 20f), 0f) * transform.forward * 1.5f;
-            GameObject minionObj = Instantiate(minionPrefab, transform.position + offset, Quaternion.identity);
-            TrackingMinion minion = minionObj.GetComponent<TrackingMinion>();
-            if (minion == null)
-            {
-                minion = minionObj.AddComponent<TrackingMinion>();
-            }
-            minion.Initialize(targetLayers, survivorTag);
-        }
-    }
-
-    private void CastSwarmOverlordMoltenCore()
-    {
-        for (int i = 0; i < 3; i++)
-        {
-            Vector3 pos = transform.position + transform.forward * (2f + i * 1.5f);
-            if (moltenHazardPrefab != null)
-            {
-                Instantiate(moltenHazardPrefab, pos, Quaternion.identity);
-            }
-            else
-            {
-                GameObject hazard = new GameObject("MoltenCoreHazard");
-                hazard.transform.position = pos;
-                PersistentGroundHazard h = hazard.AddComponent<PersistentGroundHazard>();
-                h.Configure(targetLayers, survivorTag, 5f, 2.2f, 3);
-            }
         }
     }
 
@@ -858,128 +775,6 @@ public class PredatorClassManager : MonoBehaviour
         ring.transform.position = transform.position;
         ring.transform.localScale = new Vector3(8f, 1f, 8f);
         Destroy(ring, 5f);
-    }
-
-    // ──────────────────────────────────────────────────────────────────────────
-    // Juggernaut
-    // ──────────────────────────────────────────────────────────────────────────
-
-    private void CastJuggernautHandCannon()
-    {
-        const int pellets = 8;
-        for (int i = 0; i < pellets; i++)
-        {
-            Vector3 dir = Quaternion.Euler(Random.Range(-8f, 8f), Random.Range(-12f, 12f), 0f) * transform.forward;
-            if (Physics.Raycast(GetProjectileSpawnPosition(), dir, out RaycastHit hit, 6f, targetLayers, QueryTriggerInteraction.Ignore))
-            {
-                UnitHealth h = hit.collider.GetComponentInParent<UnitHealth>();
-                if (h != null && h.CompareTag(survivorTag) && !h.IsDead)
-                {
-                    h.TakeDamage(4, gameObject);
-                }
-            }
-        }
-    }
-
-    private IEnumerator CastJuggernautRocketPunchCoroutine()
-    {
-        Vector3 dir = transform.forward;
-        float duration = 0.25f;
-        float speed = 13f;
-        float elapsed = 0f;
-        UnitHealth pinned = null;
-        bool slammedOnWall = false;
-
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            CollisionFlags flags = TryMoveSelf(dir * speed * Time.deltaTime);
-            if ((flags & CollisionFlags.Sides) != 0)
-            {
-                slammedOnWall = true;
-            }
-
-            if (pinned == null)
-            {
-                pinned = FindClosestSurvivor(transform.position, 1.3f);
-            }
-            yield return null;
-        }
-
-        if (pinned != null)
-        {
-            pinned.TakeDamage(14, gameObject);
-            if (slammedOnWall)
-            {
-                StartCoroutine(ApplySurvivorControlLock(pinned, 1.2f));
-            }
-        }
-    }
-
-    private IEnumerator CastJuggernautSeismicSlamCoroutine()
-    {
-        Vector3 start = transform.position;
-        Vector3 peak = start + Vector3.up * 3f + transform.forward * 2f;
-        float upDuration = 0.2f;
-        float downDuration = 0.2f;
-        float t = 0f;
-        while (t < upDuration)
-        {
-            t += Time.deltaTime;
-            transform.position = Vector3.Lerp(start, peak, t / upDuration);
-            yield return null;
-        }
-
-        t = 0f;
-        while (t < downDuration)
-        {
-            t += Time.deltaTime;
-            transform.position = Vector3.Lerp(peak, start + transform.forward * 2f, t / downDuration);
-            yield return null;
-        }
-
-        Vector3 center = transform.position;
-        UnitHealth[] hits = GetSurvivorsInRange(center, 4f);
-        for (int i = 0; i < hits.Length; i++)
-        {
-            Vector3 pullDir = (center - hits[i].transform.position);
-            pullDir.y = 0f;
-            ApplyKnockback(hits[i], pullDir.normalized, 1.2f);
-            hits[i].TakeDamage(9, gameObject);
-        }
-    }
-
-    private IEnumerator CastJuggernautMeteorStrikeCoroutine()
-    {
-        Vector3 start = transform.position;
-        Vector3 sky = start + Vector3.up * 12f;
-        float rise = 0.35f;
-        float fall = 0.35f;
-        bool prevCollisions = characterController.detectCollisions;
-        characterController.detectCollisions = false;
-
-        float t = 0f;
-        while (t < rise)
-        {
-            t += Time.deltaTime;
-            transform.position = Vector3.Lerp(start, sky, t / rise);
-            yield return null;
-        }
-
-        t = 0f;
-        while (t < fall)
-        {
-            t += Time.deltaTime;
-            transform.position = Vector3.Lerp(sky, start, t / fall);
-            yield return null;
-        }
-
-        characterController.detectCollisions = prevCollisions;
-        UnitHealth[] hits = GetSurvivorsInRange(transform.position, 5f);
-        for (int i = 0; i < hits.Length; i++)
-        {
-            hits[i].TakeDamage(18, gameObject);
-        }
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -1250,6 +1045,7 @@ public class PredatorClassManager : MonoBehaviour
         }
 
         QueueSprayPresentationVfx(origin, forward, range, halfAngle);
+        SpawnRelentlessSprayTerrain(transform.position, forward, range, halfAngle);
 
         LogPredatorAbility("Spray hit " + hits.Count + " survivors");
     }
@@ -1515,6 +1311,7 @@ public class PredatorClassManager : MonoBehaviour
 
         if (target == null)
         {
+            SpawnHookAnchorMark(chainEnd);
             yield return new WaitForSeconds(0.45f);
             ClearActiveHookChain();
             yield break;
@@ -1536,6 +1333,7 @@ public class PredatorClassManager : MonoBehaviour
         Vector3 end = GetHookPullDestination(start, pullForwardDistance);
         Debug.Log("[PredatorAbility] Hook pull start: " + start);
         Debug.Log("[PredatorAbility] Hook pull destination: " + end);
+        SpawnHookDragTrail(start, end);
 
         LineRenderer hookLine = activeHookChain != null ? activeHookChain.GetComponent<LineRenderer>() : null;
         yield return PullSurvivorWithControlSuspend(target, end, pullDuration, hookLine);
@@ -1591,6 +1389,7 @@ public class PredatorClassManager : MonoBehaviour
         }
 
         SpawnTonicGasVfx();
+        SpawnTonicTerrainZone();
         tonicEffectRoutine = StartCoroutine(TonicEffectRoutine());
         LogPredatorAbility("Tonic slow started x" + tonicSelfSpeedMultiplier.ToString("0.00")
             + " for " + tonicDuration.ToString("0.0") + "s");
@@ -1920,6 +1719,7 @@ public class PredatorClassManager : MonoBehaviour
             yield return new WaitForSeconds(pulseInterval);
         }
 
+        SpawnBarrageFinalObstacles(GetChestCastOrigin(), GetFlatForward(logAim: false), barrageRange);
         isBarrageActive = false;
         relentlessBarrageRoutine = null;
         ClearBarragePulseVfx();
@@ -1989,6 +1789,7 @@ public class PredatorClassManager : MonoBehaviour
         }
 
         DamageBarragePropsInCone(origin, forward, range, halfAngle, pulseNumber);
+        SpawnBarragePulseTerrain(origin, forward, range);
 
         return hitCount;
     }

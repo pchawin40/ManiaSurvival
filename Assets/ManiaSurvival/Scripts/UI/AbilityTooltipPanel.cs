@@ -265,7 +265,10 @@ public class AbilityTooltipPanel : MonoBehaviour
         AbilityDetail liveDetail = controller != null
             ? controller.GetAbilityDetail(slotNumber)
             : default;
-        return AbilityPresentationFallback.ResolveForUi(isPredator, slotNumber, liveDetail);
+        PredatorClass predatorClass = isPredator && controller != null
+            ? controller.GetCurrentPredatorClass()
+            : PredatorClass.RelentlessHook;
+        return AbilityPresentationFallback.ResolveForUi(isPredator, predatorClass, slotNumber, liveDetail);
     }
 
     private void FitPanelToContent()
@@ -458,7 +461,10 @@ public class AbilityTooltipPanel : MonoBehaviour
         AbilityDetail liveDetail = controller != null
             ? controller.GetAbilityDetail(slotNumber)
             : default;
-        AbilityDetail detail = AbilityPresentationFallback.ResolveForUi(isPredator, slotNumber, liveDetail);
+        PredatorClass predatorClass = isPredator && controller != null
+            ? controller.GetCurrentPredatorClass()
+            : PredatorClass.RelentlessHook;
+        AbilityDetail detail = AbilityPresentationFallback.ResolveForUi(isPredator, predatorClass, slotNumber, liveDetail);
 
         float fallbackCooldown = controller != null
             ? controller.GetSlotCooldownDuration(slotNumber)

@@ -240,6 +240,67 @@ public static class PredatorAbilityFeelVfx
         Object.Destroy(flash, lifetime * 0.55f);
     }
 
+    public static void SpawnWarningCircle(Vector3 position, float radius, float lifetime, Color tint)
+    {
+        GameObject ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        ring.name = "WarningCircleVFX";
+        RemoveCollider(ring);
+        ring.transform.position = position + Vector3.up * 0.04f;
+        ring.transform.localScale = new Vector3(radius * 2f, 0.03f, radius * 2f);
+        ApplyColor(ring, tint);
+        Object.Destroy(ring, Mathf.Max(0.1f, lifetime));
+    }
+
+    public static void SpawnFireCone(Vector3 origin, Vector3 forward, float range, float halfAngle, Color tint, float lifetime)
+    {
+        forward.y = 0f;
+        if (forward.sqrMagnitude <= 0.001f)
+        {
+            forward = Vector3.forward;
+        }
+
+        forward.Normalize();
+        float width = Mathf.Tan(halfAngle * Mathf.Deg2Rad) * range * 2f;
+
+        GameObject cone = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        cone.name = "FireConeVFX";
+        RemoveCollider(cone);
+        cone.transform.position = origin + forward * (range * 0.5f) + Vector3.up * 0.05f;
+        cone.transform.rotation = Quaternion.LookRotation(forward);
+        cone.transform.localScale = new Vector3(Mathf.Max(1.5f, width), 0.04f, range);
+        ApplyColor(cone, tint);
+        Object.Destroy(cone, Mathf.Max(0.1f, lifetime));
+    }
+
+    public static void SpawnShockwaveRing(Vector3 position, float radius, Color tint, float lifetime)
+    {
+        GameObject ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        ring.name = "ShockwaveRingVFX";
+        RemoveCollider(ring);
+        ring.transform.position = position + Vector3.up * 0.05f;
+        ring.transform.localScale = new Vector3(radius * 2f, 0.05f, radius * 2f);
+        ApplyColor(ring, tint);
+        Object.Destroy(ring, Mathf.Max(0.1f, lifetime));
+    }
+
+    public static void SpawnSpitProjectile(Vector3 origin, Vector3 forward, float range, Color tint, float lifetime)
+    {
+        forward.y = 0f;
+        if (forward.sqrMagnitude <= 0.001f)
+        {
+            forward = Vector3.forward;
+        }
+
+        forward.Normalize();
+        GameObject blob = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        blob.name = "SpitProjectileVFX";
+        RemoveCollider(blob);
+        blob.transform.position = origin + forward * (range * 0.65f) + Vector3.up * 0.55f;
+        blob.transform.localScale = Vector3.one * 0.55f;
+        ApplyColor(blob, tint);
+        Object.Destroy(blob, Mathf.Max(0.1f, lifetime));
+    }
+
     public static void SpawnTonicChannelRing(Transform parent, float radius, float duration)
     {
         GameObject ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
