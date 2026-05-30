@@ -468,7 +468,7 @@ public class AbilityTooltipPanel : MonoBehaviour
                 return new AbilityTooltipData
                 {
                     className = "Field Medic",
-                    abilityName = "Tether / Blink",
+                    abilityName = "Tether",
                     description = "Dash to ally. No ally: blink forward.",
                     cooldown = 10f,
                     effect = "Mobility escape",

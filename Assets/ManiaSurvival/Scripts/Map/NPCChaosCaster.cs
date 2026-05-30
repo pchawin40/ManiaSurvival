@@ -158,7 +158,6 @@ public class NPCChaosCaster : MonoBehaviour
             npcMana.maxMana = npcMaxMana;
             npcMana.currentMana = npcMaxMana;
             npcMana.manaRegenPerSecond = npcManaRegenPerSecond;
-            lastLoggedMana = npcMana.currentMana;
         }
     }
 

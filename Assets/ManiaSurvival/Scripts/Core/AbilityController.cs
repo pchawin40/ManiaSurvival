@@ -528,7 +528,7 @@ public class AbilityController : MonoBehaviour
         {
             case 1: return "Field Medic - Heal Dart";
             case 2: return "Field Medic - Healing Pulse";
-            case 3: return "Field Medic - Tether / Blink";
+            case 3: return "Field Medic - Tether";
             default: return "Field Medic - Protection Zone";
         }
     }

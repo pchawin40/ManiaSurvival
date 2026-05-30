@@ -1371,7 +1371,7 @@ public class ManiaGameUI : MonoBehaviour
             "Field Medic\n"
             + "1. Heal Dart — Heal ally (2 mana, 2.5s cd).\n"
             + "2. Heal Pulse — Area heal (5 mana, 8s cd).\n"
-            + "3. Tether / Blink — Dash to ally or blink forward (4 mana, 10s cd).\n"
+            + "3. Tether — Dash to ally or blink forward (4 mana, 10s cd).\n"
             + "4. Sanctuary — Healing zone (12 mana, 28s cd).";
     }
 
@@ -1422,7 +1422,7 @@ public class ManiaGameUI : MonoBehaviour
     {
         SetButtonLabel(survivorPrimaryButton, survivorAbility1Label, "Heal Dart", survivorAbilityController, 1, false);
         SetButtonLabel(survivorAbility2Button, survivorAbility2Label, "Heal Pulse", survivorAbilityController, 2, false);
-        SetButtonLabel(survivorAbility3Button, survivorAbility3Label, "Tether / Blink", survivorAbilityController, 3, false);
+        SetButtonLabel(survivorAbility3Button, survivorAbility3Label, "Tether", survivorAbilityController, 3, false);
         SetButtonLabel(survivorUltimateButton, survivorUltimateLabel, "Sanctuary", survivorAbilityController, 4, false);
     }
 
