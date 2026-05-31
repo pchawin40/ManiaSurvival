@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 9072114925855080895}
   - component: {fileID: 1154864873043892011}
   - component: {fileID: 1154864873043892012}
+  - component: {fileID: 2800747765322867515}
   m_Layer: 0
   m_Name: Survivor
   m_TagString: Survivor
@@ -194,6 +195,17 @@ MonoBehaviour:
   onDeath:
     m_PersistentCalls:
       m_Calls: []
+  temporaryDamageMultiplier: 1
+  logSurvivorDamage: 1
+  logAbilityEffects: 1
+  showFloatingCombatText: 1
+  showHitFlash: 1
+  damageTextColor: {r: 1, g: 0.42, b: 0.12, a: 1}
+  healTextColor: {r: 0.25, g: 0.95, b: 0.35, a: 1}
+  enableHitDeathAnimations: 1
+  hitReactionCooldown: 0.25
+  deathAnimationDelay: 0.75
+  logAnimationTriggers: 0
 --- !u!114 &1154864873043892011
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -222,7 +234,47 @@ MonoBehaviour:
   blinkCooldown: 10
   collisionCheckRadius: 0.4
   useAbilityControllerAuthority: 1
+  abilityDisplayName: Blink
+  manaCost: 6
   cooldownButton: {fileID: 0}
   obstacleLayers:
     serializedVersion: 2
     m_Bits: 4294967295
+  pathBlockerLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  landingBlockerLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  hazardLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  blinkVfxPrefab: {fileID: 0}
+--- !u!114 &2800747765322867515
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1935288733120376740}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4158db36bf4d2e04d8393f05a717ce1b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitMana
+  maxMana: 20
+  currentMana: 20
+  survivorMaxMana: 20
+  predatorMaxMana: 100
+  npcMaxMana: 100
+  autoApplyMaxManaByRole: 1
+  survivorManaRegenPerSecond: 0.33
+  predatorManaRegenPerSecond: 6
+  npcManaRegenPerSecond: 1
+  autoApplyRegenByRole: 1
+  manaRegenPerSecond: 0.33
+  zoneBonusRegenPerSecond: 0
+  onManaChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  showManaLogs: 0
