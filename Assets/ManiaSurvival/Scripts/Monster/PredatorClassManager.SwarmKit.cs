@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Text;
 using UnityEngine;
 
 public partial class PredatorClassManager
@@ -16,28 +17,53 @@ public partial class PredatorClassManager
 
     public bool CastSwarmBrood()
     {
+        Debug.Log("[SwarmCast] Brood cast requested.");
+
         if (!CanCastPrototypeAbility())
         {
+            Debug.Log("[SwarmSpawnFail] reason=predator dead or round not active.");
             return false;
         }
 
+        UnitMana mana = GetComponent<UnitMana>();
+        float manaBefore = mana != null ? mana.currentMana : -1f;
+        Debug.Log("[SwarmCast] Mana before=" + manaBefore.ToString("0") + " cost=" + swarmBroodManaCost.ToString("0"));
+
         PruneBroodlingList();
+        int activeBefore = CleanupActiveBroodlingsWithLog();
+        Debug.Log("[SwarmCast] Active brood count before=" + activeBefore + " max=" + maxActiveBroodlings);
+
         int spawnCount = Mathf.Max(1, swarmBroodSpawnCount);
-        int available = Mathf.Max(0, maxActiveBroodlings - activeBroodlings.Count);
+        int available = GetAvailableBroodSlots();
         if (available <= 0)
         {
-            Debug.Log("[AbilityBlock] Brood blocked: active brood cap reached");
+            Debug.Log("[AbilityBlock] Brood blocked: active brood cap reached " + activeBefore + "/" + maxActiveBroodlings);
             LogPredatorAbility("Brood rejected: max broodlings active.");
             return false;
         }
 
         int toSpawn = Mathf.Min(spawnCount, available);
+        Debug.Log("[SwarmCast] Attempting to spawn " + toSpawn + " broodlings.");
+
+        LogBroodSpawnPoints(toSpawn);
+
+        int spawned = 0;
         for (int i = 0; i < toSpawn; i++)
         {
-            SpawnSafeBroodling(i, toSpawn, "Brood");
+            if (SpawnSafeBroodling(i, toSpawn, "Brood"))
+            {
+                spawned++;
+            }
         }
 
-        LogPredatorAbility("Brood spawned " + toSpawn + " broodlings (cap " + maxActiveBroodlings + ", cost " + swarmBroodManaCost.ToString("0") + " mana)");
+        if (spawned <= 0)
+        {
+            Debug.Log("[SwarmSpawnFail] reason=all broodling spawn attempts failed.");
+            return false;
+        }
+
+        Debug.Log("[SwarmCast] Brood requested " + spawnCount + ", spawned " + spawned + ".");
+        LogPredatorAbility("Brood spawned " + spawned + " broodlings (cap " + maxActiveBroodlings + ", cost " + swarmBroodManaCost.ToString("0") + " mana)");
         return true;
     }
 
@@ -54,13 +80,17 @@ public partial class PredatorClassManager
 
     public bool CastSwarmHive()
     {
+        Debug.Log("[SwarmCast] Hive cast requested.");
+
         if (!CanCastPrototypeAbility() || IsSwarmHiveActive())
         {
+            Debug.Log("[SwarmSpawnFail] reason=hive cast blocked (round inactive or hive already active).");
             return false;
         }
 
         if (!TryBeginSwarmHive())
         {
+            Debug.Log("[SwarmSpawnFail] reason=TryBeginSwarmHive failed.");
             return false;
         }
 
@@ -251,16 +281,32 @@ public partial class PredatorClassManager
             }
         }
 
-        int broodToSpawn = Mathf.Max(0, swarmHiveBroodSpawnCount);
+        int broodRequested = Mathf.Max(0, swarmHiveBroodSpawnCount);
+        int activeBeforeHive = CleanupActiveBroodlingsWithLog();
+        int hiveAvailable = Mathf.Max(0, maxActiveBroodlings - activeBeforeHive);
+        int broodToSpawn = Mathf.Min(broodRequested, hiveAvailable);
+
+        if (broodToSpawn <= 0)
+        {
+            Debug.Log("[SwarmCast] Hive brood spawn skipped: active cap reached " + activeBeforeHive + "/" + maxActiveBroodlings);
+        }
+        else
+        {
+            Debug.Log("[SwarmCast] Hive requested " + broodRequested + " broodlings, spawning " + broodToSpawn
+                + " (active " + activeBeforeHive + "/" + maxActiveBroodlings + ").");
+        }
+
+        int hiveSpawned = 0;
         for (int i = 0; i < broodToSpawn; i++)
         {
-            if (GetActiveBroodlingCount() >= maxActiveBroodlings)
+            if (SpawnSafeBroodling(i, broodToSpawn, "Hive"))
             {
-                break;
+                hiveSpawned++;
             }
-
-            SpawnSafeBroodling(i, broodToSpawn, "Hive");
         }
+
+        Debug.Log("[SwarmCast] Hive requested " + broodRequested + " broodlings, spawned " + hiveSpawned
+            + " due to active cap " + GetActiveBroodlingCount() + "/" + maxActiveBroodlings);
 
         isSwarmHiveActive = false;
         swarmHiveRoutine = null;
@@ -292,12 +338,46 @@ public partial class PredatorClassManager
         LogPredatorAbility("Swarm Hive pulse hit " + hits.Length);
     }
 
-    private void SpawnSafeBroodling(int index, int total, string sourceAbility)
+    private void LogBroodSpawnPoints(int total)
     {
-        float angleStep = total <= 1 ? 0f : 360f / total;
-        float yaw = angleStep * index + Random.Range(-12f, 12f);
-        Vector3 offset = Quaternion.Euler(0f, yaw, 0f) * GetFlatForward() * broodSpawnOffsetRadius;
-        Vector3 spawnPos = ResolveBroodSpawnPosition(transform.position + offset);
+        for (int i = 0; i < total; i++)
+        {
+            if (TryResolveBroodSpawnPosition(i, total, out Vector3 spawnPos, out _))
+            {
+                Debug.Log("[SwarmCast] Spawn point " + (i + 1) + " = " + spawnPos.ToString("F2"));
+            }
+            else
+            {
+                Debug.Log("[SwarmCast] Spawn point " + (i + 1) + " = unresolved (will use fallback ring search)");
+            }
+        }
+    }
+
+    private bool SpawnSafeBroodling(int index, int total, string sourceAbility)
+    {
+        Debug.Log("[SwarmSpawn] " + sourceAbility + " broodling spawn attempt index=" + index
+            + " position=pending");
+
+        if (!TryResolveBroodSpawnPosition(index, total, out Vector3 spawnPos, out string resolveFailReason))
+        {
+            Debug.Log("[SwarmSpawnFail] reason=no valid spawn position for index " + index + " (" + resolveFailReason + ").");
+            return false;
+        }
+
+        Debug.Log("[SwarmSpawn] Broodling spawn attempt index=" + index + " position=" + spawnPos.ToString("F2"));
+
+        bool groundOk = TrySnapBroodlingToGround(ref spawnPos, out float groundY, out string groundFailReason);
+        Debug.Log("[SwarmSpawn] Ground check result=" + (groundOk ? "success" : "fail")
+            + " groundY=" + groundY.ToString("F2")
+            + (groundOk ? string.Empty : " reason=" + groundFailReason));
+
+        bool forbidden = PlayableBoundsHelper.TryGetForbiddenSpawnPositionReason(spawnPos, 0.85f, out string forbiddenReason);
+        Debug.Log("[SwarmSpawn] Forbidden zone check=" + (forbidden ? "warn" : "success")
+            + (forbidden ? " reason=" + forbiddenReason : string.Empty));
+        if (forbidden)
+        {
+            Debug.LogWarning("[SwarmSpawn] Spawning broodling near forbidden zone anyway at " + spawnPos.ToString("F2"));
+        }
 
         if (enableAbilityFeel)
         {
@@ -308,18 +388,34 @@ public partial class PredatorClassManager
                 new Color(0.45f, 0.95f, 0.25f, 0.5f));
         }
 
+        SpawnBroodHatchMarker(spawnPos, broodlingHatchDuration + 0.15f);
+
         GameObject minionObj;
-        bool usedPrefab = TryInstantiateSafeBroodlingPrefab(spawnPos, out minionObj);
+        string prefabLabel;
+        bool usedPrefab = TryInstantiateSafeBroodlingPrefab(spawnPos, out minionObj, out prefabLabel);
         if (!usedPrefab)
         {
-            minionObj = BroodlingMinion.SpawnRuntimeCapsule(spawnPos, new Color(0.4f, 0.9f, 0.25f, 1f), broodlingScale);
+            prefabLabel = "runtime capsule";
+            minionObj = BroodlingMinion.SpawnRuntimeCapsule(
+                spawnPos,
+                new Color(0.35f, 0.95f, 0.22f, 1f),
+                broodlingScale);
         }
 
-        minionObj.SetActive(false);
+        if (minionObj == null)
+        {
+            Debug.Log("[SwarmSpawnFail] reason=spawn returned null object.");
+            return false;
+        }
+
+        minionObj.transform.SetParent(null, true);
+        minionObj.transform.position = spawnPos;
+        minionObj.transform.localScale = Vector3.one * Mathf.Clamp(broodlingScale, 0.45f, 0.55f);
+
+        Debug.Log("[SwarmSpawn] Prefab used=" + prefabLabel);
+
         BroodlingMinion.SanitizeLegacyComponents(minionObj);
         BroodlingMinion.EnsureBroodlingPhysics(minionObj);
-
-        minionObj.transform.localScale = Vector3.one * Mathf.Clamp(broodlingScale, 0.45f, 0.55f);
 
         BroodlingMinion broodling = minionObj.GetComponent<BroodlingMinion>();
         if (broodling == null)
@@ -341,26 +437,85 @@ public partial class PredatorClassManager
             index + 1,
             broodlingPostHatchBiteDelay);
 
-        BroodlingMinion.LogSpawnDiagnostics(minionObj, broodling, sourceAbility, usedPrefab);
         minionObj.SetActive(true);
+
+        LogBroodlingSpawnResult(minionObj, broodling, sourceAbility, prefabLabel);
         SpawnSwarmBroodNest(spawnPos);
+        return true;
     }
 
-    private bool TryInstantiateSafeBroodlingPrefab(Vector3 spawnPos, out GameObject minionObj)
+    private static void LogBroodlingSpawnResult(GameObject minionObj, BroodlingMinion broodling, string sourceAbility, string prefabLabel)
+    {
+        StringBuilder componentList = new StringBuilder();
+        MonoBehaviour[] behaviours = minionObj.GetComponentsInChildren<MonoBehaviour>(true);
+        for (int i = 0; i < behaviours.Length; i++)
+        {
+            if (behaviours[i] == null)
+            {
+                continue;
+            }
+
+            if (componentList.Length > 0)
+            {
+                componentList.Append(", ");
+            }
+
+            componentList.Append(behaviours[i].GetType().Name);
+        }
+
+        UnitHealth health = minionObj.GetComponent<UnitHealth>();
+        Debug.Log("[SwarmSpawn] Spawned object=" + minionObj.name
+            + " active=" + minionObj.activeInHierarchy
+            + " position=" + minionObj.transform.position.ToString("F2")
+            + " scale=" + minionObj.transform.localScale.ToString("F2"));
+        Debug.Log("[SwarmSpawn] Components=" + componentList);
+        Debug.Log("[SwarmSpawn] UnitHealth=" + (health != null ? "exists" : "missing")
+            + " hp=" + (health != null ? health.currentHealth + "/" + health.maxHealth : "n/a"));
+        Debug.Log("[SwarmSpawn] BroodlingMinion=" + (broodling != null ? "exists" : "missing")
+            + " damage=" + (broodling != null ? broodling.contactDamage.ToString() : "n/a")
+            + " interval=" + (broodling != null ? broodling.contactInterval.ToString("0.00") + "s" : "n/a")
+            + " speed=" + (broodling != null ? broodling.moveSpeed.ToString("0.0") : "n/a")
+            + " lifetime=" + (broodling != null ? broodling.lifetime.ToString("0.0") + "s" : "n/a")
+            + " source=" + sourceAbility + " prefab=" + prefabLabel);
+    }
+
+    private void SpawnBroodHatchMarker(Vector3 position, float lifetime)
+    {
+        GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        marker.name = "BroodHatchMarker";
+        Collider markerCollider = marker.GetComponent<Collider>();
+        if (markerCollider != null)
+        {
+            Destroy(markerCollider);
+        }
+
+        marker.transform.position = position + Vector3.up * 0.2f;
+        marker.transform.localScale = Vector3.one * 0.38f;
+        Renderer renderer = marker.GetComponent<Renderer>();
+        if (renderer != null)
+        {
+            renderer.sharedMaterial = BroodlingMinion.CreateBroodlingMaterial(new Color(0.25f, 0.55f, 0.15f, 0.85f));
+        }
+
+        Destroy(marker, Mathf.Max(0.2f, lifetime));
+    }
+
+    private bool TryInstantiateSafeBroodlingPrefab(Vector3 spawnPos, out GameObject minionObj, out string prefabLabel)
     {
         minionObj = null;
+        prefabLabel = "none";
         if (!IsSafeBroodlingPrefab(broodlingPrefab))
         {
             if (broodlingPrefab != null)
             {
-                Debug.LogWarning("[SwarmDebug] Rejected unsafe broodlingPrefab '" + broodlingPrefab.name
-                    + "'. Using runtime broodling capsule instead.");
+                Debug.LogWarning("[SwarmSpawn] Rejected unsafe broodlingPrefab '" + broodlingPrefab.name + "'.");
             }
 
             return false;
         }
 
         minionObj = Instantiate(broodlingPrefab, spawnPos, Quaternion.identity);
+        prefabLabel = broodlingPrefab.name;
         return true;
     }
 
@@ -392,6 +547,74 @@ public partial class PredatorClassManager
         }
 
         return true;
+    }
+
+    private bool TryResolveBroodSpawnPosition(int index, int total, out Vector3 spawnPos, out string failReason)
+    {
+        failReason = string.Empty;
+        float angleStep = total <= 1 ? 0f : 360f / total;
+        float yaw = angleStep * index + Random.Range(-12f, 12f);
+        Vector3 offset = Quaternion.Euler(0f, yaw, 0f) * GetFlatForward() * broodSpawnOffsetRadius;
+        Vector3 desired = transform.position + offset;
+
+        if (TryFinalizeBroodSpawnCandidate(desired, out spawnPos))
+        {
+            return true;
+        }
+
+        const int fallbackAttempts = 12;
+        for (int attempt = 0; attempt < fallbackAttempts; attempt++)
+        {
+            float ringAngle = attempt * (360f / fallbackAttempts);
+            float ringRadius = Random.Range(1.5f, 3.5f);
+            Vector3 ringOffset = Quaternion.Euler(0f, ringAngle, 0f) * GetFlatForward() * ringRadius;
+            desired = transform.position + ringOffset;
+            if (TryFinalizeBroodSpawnCandidate(desired, out spawnPos))
+            {
+                Debug.LogWarning("[SwarmSpawn] Used fallback ring spawn for index " + index + " at " + spawnPos.ToString("F2"));
+                return true;
+            }
+        }
+
+        Vector3 emergency = transform.position + GetFlatForward() * 1.5f;
+        if (TryFinalizeBroodSpawnCandidate(emergency, out spawnPos))
+        {
+            Debug.LogWarning("[SwarmSpawn] Used emergency forward spawn for index " + index + " at " + spawnPos.ToString("F2"));
+            return true;
+        }
+
+        failReason = "no valid candidate after ring search";
+        spawnPos = transform.position;
+        return false;
+    }
+
+    private bool TryFinalizeBroodSpawnCandidate(Vector3 desired, out Vector3 spawnPos)
+    {
+        spawnPos = ResolveBroodSpawnPosition(desired);
+
+        if (!PlayableBoundsHelper.IsPositionInsidePlayableBounds(spawnPos))
+        {
+            spawnPos = PlayableBoundsHelper.ClampToPlayableBounds(spawnPos);
+        }
+
+        return true;
+    }
+
+    private bool TrySnapBroodlingToGround(ref Vector3 position, out float groundY, out string failReason)
+    {
+        failReason = string.Empty;
+        Vector3 rayStart = position + Vector3.up * 12f;
+        if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit hit, 24f, ~0, QueryTriggerInteraction.Ignore))
+        {
+            groundY = hit.point.y;
+            position.y = groundY + Mathf.Max(0.35f, broodlingGroundClearance);
+            return true;
+        }
+
+        groundY = transform.position.y;
+        position.y = groundY;
+        failReason = "no ground raycast hit — using predator Y";
+        return false;
     }
 
     private Vector3 ResolveBroodSpawnPosition(Vector3 desired)

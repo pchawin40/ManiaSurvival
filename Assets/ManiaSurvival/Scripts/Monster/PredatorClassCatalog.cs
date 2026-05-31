@@ -94,9 +94,9 @@ public static class PredatorClassCatalog
             abilityShortDescriptions = new[]
             {
                 "Lobbed infection glob — splat, slow, and corrupt.",
-                "Hatch four weak broodlings (45 mana, cap 8).",
+                "Hatch three weak broodlings (45 mana, cap 12).",
                 "Seed a warning zone, then bloom corruption DOT.",
-                "Telegraphed hive pulse plus a small brood wave."
+                "Telegraphed hive pulse plus a big brood wave."
             }
         };
 

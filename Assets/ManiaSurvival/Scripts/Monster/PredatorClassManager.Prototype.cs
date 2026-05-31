@@ -36,18 +36,23 @@ public partial class PredatorClassManager
     [Header("Swarm Overlord - Brood")]
     public GameObject broodlingPrefab;
     public float swarmBroodManaCost = 45f;
-    public int swarmBroodSpawnCount = 4;
-    public int maxActiveBroodlings = 8;
-    public float broodlingLifetime = 9f;
+    public int swarmBroodSpawnCount = 3;
+    public int maxActiveBroodlings = 12;
+    public float broodlingLifetime = 20f;
     public int broodlingDamage = 2;
     public int broodlingMaxHealth = 5;
-    public float broodlingMoveSpeed = 3f;
+    public float broodlingMoveSpeed = 2.6f;
     public float broodlingScale = 0.5f;
     public float broodlingHatchDuration = 0.7f;
-    public float broodlingContactInterval = 1.5f;
-    public float broodlingPostHatchBiteDelay = 0.2f;
+    public float broodlingContactInterval = 1.6f;
+    public float broodlingPostHatchBiteDelay = 0.35f;
     public float broodlingFadeOutDuration = 0.35f;
     public float broodSpawnOffsetRadius = 2.2f;
+    public float broodlingGroundClearance = 0.55f;
+    public bool showBroodlingHealthBars = true;
+    public float broodlingHealthBarWidth = 0.6f;
+    public float broodlingHealthBarHeight = 0.08f;
+    public float broodlingHealthBarYOffset = 0.8f;
 
     [Header("Swarm Overlord - Infest")]
     public float swarmInfestRadius = 4f;
@@ -63,7 +68,7 @@ public partial class PredatorClassManager
     public int swarmHivePulseDamage = 4;
     public float swarmHivePulseInterval = 1.1f;
     public int swarmHivePulseCount = 2;
-    public int swarmHiveBroodSpawnCount = 2;
+    public int swarmHiveBroodSpawnCount = 8;
 
     [Header("Dragon Juggernaut - Flame")]
     public float juggernautFlameRange = 8f;
@@ -453,15 +458,41 @@ public partial class PredatorClassManager
 
     internal int GetActiveBroodlingCount()
     {
+        return CleanupActiveBroodlingsWithLog();
+    }
+
+    internal int GetAvailableBroodSlots()
+    {
+        int active = CleanupActiveBroodlingsWithLog();
+        return Mathf.Max(0, maxActiveBroodlings - active);
+    }
+
+    internal int CleanupActiveBroodlingsWithLog()
+    {
+        int before = activeBroodlings.Count;
         PruneBroodlingList();
-        return activeBroodlings.Count;
+        int after = activeBroodlings.Count;
+        if (before != after)
+        {
+            Debug.Log("[SwarmBrood] Active brood cleanup: before " + before + " after " + after + ".");
+        }
+
+        return after;
     }
 
     private void PruneBroodlingList()
     {
         for (int i = activeBroodlings.Count - 1; i >= 0; i--)
         {
-            if (activeBroodlings[i] == null)
+            BroodlingMinion broodling = activeBroodlings[i];
+            if (broodling == null)
+            {
+                activeBroodlings.RemoveAt(i);
+                continue;
+            }
+
+            UnitHealth health = broodling.Health;
+            if (health == null || health.IsDead)
             {
                 activeBroodlings.RemoveAt(i);
             }

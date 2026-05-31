@@ -645,27 +645,27 @@ public static class SampleSceneQaValidator
             pass("Swarm Brood mana cost configured: " + manager.swarmBroodManaCost.ToString("0"));
         }
 
-        if (manager.maxActiveBroodlings > 8)
+        if (manager.maxActiveBroodlings != 12)
         {
-            warn("Active brood cap is high: " + manager.maxActiveBroodlings);
+            warn("Active brood cap expected 12 for Hive wave tuning: " + manager.maxActiveBroodlings);
         }
         else
         {
             pass("Active brood cap configured: " + manager.maxActiveBroodlings);
         }
 
-        if (manager.swarmBroodSpawnCount > 4)
+        if (manager.swarmBroodSpawnCount != 3)
         {
-            warn("Brood spawn count is high: " + manager.swarmBroodSpawnCount);
+            warn("Brood spawn count expected 3: " + manager.swarmBroodSpawnCount);
         }
         else
         {
             pass("Brood spawn count configured: " + manager.swarmBroodSpawnCount);
         }
 
-        if (manager.swarmHiveBroodSpawnCount > 2)
+        if (manager.swarmHiveBroodSpawnCount != 8)
         {
-            warn("Hive brood spawn count is high: " + manager.swarmHiveBroodSpawnCount);
+            warn("Hive brood spawn count expected 8: " + manager.swarmHiveBroodSpawnCount);
         }
         else
         {

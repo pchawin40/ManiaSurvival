@@ -53,6 +53,16 @@ public class UnitHealth : MonoBehaviour
         currentHealth = maxHealth;
         IsDead = false;
 
+        if (onDamaged == null)
+        {
+            onDamaged = new UnityEvent();
+        }
+
+        if (onDeath == null)
+        {
+            onDeath = new UnityEvent();
+        }
+
         if (showHitFlash)
         {
             visualFeedback = GetComponent<UnitHealthVisualFeedback>();
@@ -210,7 +220,9 @@ public class UnitHealth : MonoBehaviour
 
         onDeath?.Invoke();
 
-        if (CompareTag("Survivor"))
+        bool isBroodlingSummon = GetComponent<BroodlingMinion>() != null;
+
+        if (CompareTag("Survivor") && !isBroodlingSummon)
         {
             ManiaGameManager manager = ManiaGameManager.Instance;
             if (manager != null)
@@ -219,15 +231,18 @@ public class UnitHealth : MonoBehaviour
             }
         }
 
-        DeathMessageManager feed = DeathMessageManager.Instance;
-        if (feed == null)
+        if (!isBroodlingSummon)
         {
-            feed = FindFirstObjectByType<DeathMessageManager>();
-        }
+            DeathMessageManager feed = DeathMessageManager.Instance;
+            if (feed == null)
+            {
+                feed = FindFirstObjectByType<DeathMessageManager>();
+            }
 
-        if (feed != null)
-        {
-            feed.ShowDeathMessage(this, damageSource);
+            if (feed != null)
+            {
+                feed.ShowDeathMessage(this, damageSource);
+            }
         }
 
         TryPlayDeathAnimation();

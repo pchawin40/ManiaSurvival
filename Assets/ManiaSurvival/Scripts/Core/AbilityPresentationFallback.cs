@@ -198,7 +198,7 @@ public static class AbilityPresentationFallback
                 {
                     displayName = "Brood Hatch",
                     buttonLabel = "Brood",
-                    shortDescription = "Hatch four weak broodlings (45 mana, cap 8). Survivors can kill them.",
+                    shortDescription = "Hatch three weak broodlings (45 mana, cap 12). Survivors can kill them.",
                     roleTag = "Summon",
                     themeColor = new Color(0.55f, 0.85f, 0.35f, 1f)
                 };
@@ -216,7 +216,7 @@ public static class AbilityPresentationFallback
                 {
                     displayName = "Hive Call",
                     buttonLabel = "Hive",
-                    shortDescription = "Warn, pulse damage, then summon broodlings.",
+                    shortDescription = "Warn, pulse damage, then summon a big brood wave.",
                     roleTag = "Ultimate / Zone",
                     themeColor = new Color(0.65f, 1f, 0.25f, 1f)
                 };

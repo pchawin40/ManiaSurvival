@@ -17,16 +17,16 @@ public class BroodlingMinion : MonoBehaviour
         typeof(MonsterAttack)
     };
 
-    public float moveSpeed = 3f;
+    public float moveSpeed = 2.6f;
     public float contactRadius = 0.95f;
     public int contactDamage = 2;
-    public float lifetime = 9f;
+    public float lifetime = 20f;
     public float hatchDuration = 0.7f;
-    public float contactInterval = 1.5f;
-    public float postHatchBiteDelay = 0.2f;
+    public float contactInterval = 1.6f;
+    public float postHatchBiteDelay = 0.35f;
     public int maxHealth = 5;
     public float fadeOutDuration = 0.35f;
-    public float wanderStrength = 0.18f;
+    public float wanderStrength = 0.12f;
 
     private PredatorClassManager owner;
     private UnitHealth unitHealth;
@@ -39,14 +39,18 @@ public class BroodlingMinion : MonoBehaviour
     private bool isHatched;
     private bool isExpiring;
     private bool deathHandled;
+    private bool loggedHatchBiteSkip;
     private Renderer cachedRenderer;
-    private WorldHealthBar healthBar;
     private readonly Dictionary<UnitHealth, float> nextBiteByTarget = new Dictionary<UnitHealth, float>();
-    private Color activeTint = new Color(0.4f, 0.9f, 0.25f, 1f);
-    private Color hatchTint = new Color(0.25f, 0.45f, 0.18f, 1f);
+    private Color activeTint = new Color(0.35f, 0.95f, 0.22f, 1f);
+    private Color hatchTint = new Color(0.25f, 0.55f, 0.15f, 1f);
 
     public bool IsHatched => isHatched;
+    public bool IsExpiring => isExpiring;
     public UnitHealth Health => unitHealth;
+    public float MaxLifetime => lifetime;
+    public float RemainingLifetime => lifeRemaining;
+    public float Lifetime01 => lifetime > 0f ? Mathf.Clamp01(lifeRemaining / lifetime) : 0f;
 
     public void Initialize(
         PredatorClassManager predatorOwner,
@@ -60,7 +64,7 @@ public class BroodlingMinion : MonoBehaviour
         int health,
         float fadeSeconds,
         int spawnIndex,
-        float biteDelayAfterHatch = 0.2f)
+        float biteDelayAfterHatch = 0.35f)
     {
         owner = predatorOwner;
         targetLayers = layers;
@@ -68,17 +72,19 @@ public class BroodlingMinion : MonoBehaviour
         lifetime = Mathf.Max(1f, lifeSeconds);
         lifeRemaining = lifetime;
         contactDamage = Mathf.Clamp(damage, 1, 2);
-        moveSpeed = Mathf.Clamp(speed, 2.5f, 3.2f);
+        moveSpeed = Mathf.Clamp(speed, 2f, 3.5f);
         hatchDuration = Mathf.Max(0f, hatchSeconds);
         hatchRemaining = hatchDuration;
-        contactInterval = Mathf.Clamp(contactCooldown, 1.25f, 2f);
-        postHatchBiteDelay = Mathf.Clamp(biteDelayAfterHatch, 0.15f, 0.35f);
+        contactInterval = contactCooldown > 0f ? contactCooldown : 1.6f;
+        contactInterval = Mathf.Clamp(contactInterval, 1.6f, 2.5f);
+        postHatchBiteDelay = Mathf.Clamp(biteDelayAfterHatch, 0.1f, 1f);
         maxHealth = Mathf.Max(1, health);
         fadeOutDuration = Mathf.Max(0f, fadeSeconds);
         spawnTime = Time.time;
         globalBiteUnlockTime = spawnTime + hatchDuration + postHatchBiteDelay;
         isHatched = hatchDuration <= 0f;
         isExpiring = false;
+        loggedHatchBiteSkip = false;
 
         SanitizeLegacyComponents(gameObject);
         gameObject.name = "Broodling_" + Mathf.Max(1, spawnIndex).ToString("00");
@@ -97,23 +103,30 @@ public class BroodlingMinion : MonoBehaviour
             return;
         }
 
+        int removedCount = 0;
         for (int typeIndex = 0; typeIndex < LegacyDamageComponentTypes.Length; typeIndex++)
         {
-            RemoveLegacyComponentsOfType(minionObject, LegacyDamageComponentTypes[typeIndex]);
+            removedCount += RemoveLegacyComponentsOfType(minionObject, LegacyDamageComponentTypes[typeIndex]);
         }
 
-        RemoveLegacyComponentsByName(minionObject, "DamageOnTouch");
-        RemoveLegacyComponentsByName(minionObject, "MonsterAttackDamage");
-        RemoveLegacyComponentsByName(minionObject, "ContactDamage");
+        removedCount += RemoveLegacyComponentsByName(minionObject, "DamageOnTouch");
+        removedCount += RemoveLegacyComponentsByName(minionObject, "MonsterAttackDamage");
+        removedCount += RemoveLegacyComponentsByName(minionObject, "ContactDamage");
+
+        if (removedCount <= 0)
+        {
+            Debug.Log("[SwarmSanitize] No legacy damage components found on " + minionObject.name + ".");
+        }
     }
 
-    private static void RemoveLegacyComponentsOfType(GameObject minionObject, System.Type componentType)
+    private static int RemoveLegacyComponentsOfType(GameObject minionObject, System.Type componentType)
     {
         if (componentType == null)
         {
-            return;
+            return 0;
         }
 
+        int removed = 0;
         Component[] components = minionObject.GetComponentsInChildren(componentType, true);
         for (int i = 0; i < components.Length; i++)
         {
@@ -123,16 +136,20 @@ public class BroodlingMinion : MonoBehaviour
             }
 
             DisableAndDestroyLegacyComponent(components[i]);
+            removed++;
         }
+
+        return removed;
     }
 
-    private static void RemoveLegacyComponentsByName(GameObject minionObject, string typeName)
+    private static int RemoveLegacyComponentsByName(GameObject minionObject, string typeName)
     {
         if (string.IsNullOrWhiteSpace(typeName))
         {
-            return;
+            return 0;
         }
 
+        int removed = 0;
         MonoBehaviour[] behaviours = minionObject.GetComponentsInChildren<MonoBehaviour>(true);
         for (int i = 0; i < behaviours.Length; i++)
         {
@@ -142,14 +159,16 @@ public class BroodlingMinion : MonoBehaviour
                 continue;
             }
 
-            string behaviourTypeName = behaviour.GetType().Name;
-            if (behaviourTypeName != typeName)
+            if (behaviour.GetType().Name != typeName)
             {
                 continue;
             }
 
             DisableAndDestroyLegacyComponent(behaviour);
+            removed++;
         }
+
+        return removed;
     }
 
     private static void DisableAndDestroyLegacyComponent(Component component)
@@ -164,8 +183,8 @@ public class BroodlingMinion : MonoBehaviour
             behaviour.enabled = false;
         }
 
-        Debug.Log("[SwarmDebug] Removed legacy damage component: " + component.GetType().Name
-            + " from " + component.gameObject.name);
+        Debug.Log("[SwarmSanitize] Removed legacy component " + component.GetType().Name
+            + " from " + component.gameObject.name + ".");
         Object.Destroy(component);
     }
 
@@ -177,9 +196,34 @@ public class BroodlingMinion : MonoBehaviour
         }
 
         Collider[] colliders = minionObject.GetComponentsInChildren<Collider>(true);
+        if (colliders.Length > 1)
+        {
+            Debug.LogWarning("[SwarmSpawn] Multiple colliders on " + minionObject.name + " — keeping one trigger collider.");
+        }
+
+        Collider primary = null;
         for (int i = 0; i < colliders.Length; i++)
         {
-            colliders[i].isTrigger = true;
+            if (colliders[i] == null)
+            {
+                continue;
+            }
+
+            if (primary == null)
+            {
+                primary = colliders[i];
+                primary.isTrigger = false;
+                continue;
+            }
+
+            Object.Destroy(colliders[i]);
+        }
+
+        if (primary == null)
+        {
+            SphereCollider added = minionObject.AddComponent<SphereCollider>();
+            added.isTrigger = false;
+            added.radius = 0.45f;
         }
 
         Rigidbody body = minionObject.GetComponent<Rigidbody>();
@@ -190,45 +234,39 @@ public class BroodlingMinion : MonoBehaviour
         }
     }
 
-    public static void LogSpawnDiagnostics(GameObject minionObject, BroodlingMinion broodling, string sourceAbility, bool usedPrefab)
+    public static Material CreateBroodlingMaterial(Color tint)
     {
-        if (minionObject == null || broodling == null)
+        Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+        if (shader == null)
         {
-            return;
+            shader = Shader.Find("Standard");
         }
 
-        StringBuilder componentList = new StringBuilder();
-        MonoBehaviour[] behaviours = minionObject.GetComponentsInChildren<MonoBehaviour>(true);
-        for (int i = 0; i < behaviours.Length; i++)
+        if (shader == null)
         {
-            if (behaviours[i] == null)
-            {
-                continue;
-            }
-
-            if (componentList.Length > 0)
-            {
-                componentList.Append(", ");
-            }
-
-            componentList.Append(behaviours[i].GetType().Name);
+            shader = Shader.Find("Unlit/Color");
         }
 
-        Debug.Log("[SwarmDebug] Spawned broodling " + minionObject.name + " via " + sourceAbility
-            + " (prefab=" + (usedPrefab ? "yes" : "runtime") + ")");
-        Debug.Log("[SwarmDebug] Components on " + minionObject.name + ": " + componentList);
-        Debug.Log("[SwarmDebug] Damage settings: BroodlingMinion.damage=" + broodling.contactDamage
-            + ", interval=" + broodling.contactInterval.ToString("0.00")
-            + "s, speed=" + broodling.moveSpeed.ToString("0.0")
-            + ", postHatchBiteDelay=" + broodling.postHatchBiteDelay.ToString("0.00") + "s");
+        Material mat = new Material(shader);
+        mat.color = tint;
+        return mat;
     }
 
     private void EnsureHealth()
     {
+        Debug.Log("[SwarmHealth] Ensuring health for " + gameObject.name + ".");
+
         unitHealth = GetComponent<UnitHealth>();
         if (unitHealth == null)
         {
             unitHealth = gameObject.AddComponent<UnitHealth>();
+            Debug.Log("[SwarmHealth] Added UnitHealth " + maxHealth + "/" + maxHealth + " to " + gameObject.name + ".");
+        }
+
+        if (unitHealth == null)
+        {
+            Debug.LogWarning("[SwarmBarsERROR] Missing UnitHealth on " + gameObject.name + ", health setup skipped.");
+            return;
         }
 
         unitHealth.maxHealth = maxHealth;
@@ -239,12 +277,33 @@ public class BroodlingMinion : MonoBehaviour
         unitHealth.logSurvivorDamage = false;
         unitHealth.logAbilityEffects = false;
         unitHealth.enableHitDeathAnimations = false;
+
+        if (unitHealth.onDeath == null)
+        {
+            unitHealth.onDeath = new UnityEngine.Events.UnityEvent();
+        }
+
+        unitHealth.onDeath.RemoveListener(HandleBroodlingDeath);
         unitHealth.onDeath.AddListener(HandleBroodlingDeath);
+
+        Debug.Log("[SwarmSpawn] Broodling HP initialized: " + unitHealth.currentHealth + "/" + unitHealth.maxHealth
+            + " on " + gameObject.name);
     }
 
     private void EnsureHealthBar()
     {
-        healthBar = MiniWorldHealthBarBuilder.Attach(unitHealth, 0.52f, 0.75f);
+        if (owner != null && !owner.showBroodlingHealthBars)
+        {
+            return;
+        }
+
+        if (unitHealth == null)
+        {
+            Debug.LogWarning("[SwarmBarsERROR] Missing UnitHealth on " + gameObject.name + ", bars skipped.");
+            return;
+        }
+
+        BroodlingOverheadBars.Attach(this, unitHealth, owner);
     }
 
     private void HandleBroodlingDeath()
@@ -255,6 +314,7 @@ public class BroodlingMinion : MonoBehaviour
         }
 
         deathHandled = true;
+        owner?.UnregisterBroodling(this);
         Debug.Log("[SwarmBrood] " + gameObject.name + " destroyed.");
         SurvivorAbilityFeelVfx.SpawnBroodlingDeathPop(transform.position);
     }
@@ -281,13 +341,6 @@ public class BroodlingMinion : MonoBehaviour
             return;
         }
 
-        lifeRemaining -= Time.deltaTime;
-        if (lifeRemaining <= 0f)
-        {
-            BeginExpire("lifetime");
-            return;
-        }
-
         if (!isHatched)
         {
             hatchRemaining -= Time.deltaTime;
@@ -298,6 +351,13 @@ public class BroodlingMinion : MonoBehaviour
                 ApplyHatchVisual();
             }
 
+            return;
+        }
+
+        lifeRemaining -= Time.deltaTime;
+        if (lifeRemaining <= 0f)
+        {
+            BeginExpire("lifetime");
             return;
         }
 
@@ -327,8 +387,19 @@ public class BroodlingMinion : MonoBehaviour
 
     private void TryApplyContactDamage(UnitHealth target)
     {
-        if (target == null || target.IsDead || !isHatched || isExpiring)
+        if (target == null || target.IsDead || isExpiring)
         {
+            return;
+        }
+
+        if (!isHatched)
+        {
+            if (!loggedHatchBiteSkip)
+            {
+                loggedHatchBiteSkip = true;
+                Debug.Log("[SwarmBrood] Bite skipped: still hatching (" + gameObject.name + ").");
+            }
+
             return;
         }
 
@@ -343,7 +414,7 @@ public class BroodlingMinion : MonoBehaviour
         }
 
         nextBiteByTarget[target] = Time.time + contactInterval;
-        GameObject source = owner != null ? owner.gameObject : gameObject;
+        GameObject source = gameObject;
         target.TakeDamage(contactDamage, source);
         Debug.Log("[SwarmBrood] " + gameObject.name + " bit " + target.name + " for " + contactDamage
             + " damage. Target HP: " + target.currentHealth + "/" + target.maxHealth
@@ -358,6 +429,7 @@ public class BroodlingMinion : MonoBehaviour
         }
 
         isExpiring = true;
+        owner?.UnregisterBroodling(this);
         float lived = Time.time - spawnTime;
         Debug.Log("[SwarmBrood] Broodling expired after " + lived.ToString("0.0") + " seconds (" + reason + ")");
 
@@ -389,11 +461,15 @@ public class BroodlingMinion : MonoBehaviour
     {
         if (cachedRenderer == null)
         {
+            cachedRenderer = GetComponentInChildren<Renderer>();
+        }
+
+        if (cachedRenderer == null)
+        {
             return;
         }
 
-        Material mat = cachedRenderer.material;
-        mat.color = isHatched ? activeTint : hatchTint;
+        cachedRenderer.sharedMaterial = CreateBroodlingMaterial(isHatched ? activeTint : hatchTint);
     }
 
     private UnitHealth FindClosestSurvivor()
@@ -436,7 +512,6 @@ public class BroodlingMinion : MonoBehaviour
         GameObject minion = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         minion.name = "Broodling_Runtime";
         minion.transform.position = position;
-        minion.SetActive(false);
 
         float safeScale = Mathf.Clamp(scale, 0.45f, 0.65f);
         minion.transform.localScale = new Vector3(safeScale, safeScale, safeScale);
@@ -444,20 +519,15 @@ public class BroodlingMinion : MonoBehaviour
         Collider col = minion.GetComponent<Collider>();
         if (col != null)
         {
-            col.isTrigger = true;
+            col.isTrigger = false;
         }
 
         Renderer renderer = minion.GetComponent<Renderer>();
         if (renderer != null)
         {
-            Material mat = new Material(Shader.Find("Standard"));
-            mat.color = tint;
-            renderer.material = mat;
+            renderer.sharedMaterial = CreateBroodlingMaterial(tint);
         }
 
-        minion.AddComponent<BroodlingMinion>();
-        SanitizeLegacyComponents(minion);
-        EnsureBroodlingPhysics(minion);
         return minion;
     }
 }

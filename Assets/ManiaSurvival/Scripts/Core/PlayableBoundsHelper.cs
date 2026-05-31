@@ -68,8 +68,9 @@ public static class PlayableBoundsHelper
         return new Vector3(adjustedHorizontal.x, motion.y, adjustedHorizontal.z);
     }
 
-    public static bool IsForbiddenSpawnPosition(Vector3 position, float radius = 1f)
+    public static bool TryGetForbiddenSpawnPositionReason(Vector3 position, float radius, out string reason)
     {
+        reason = string.Empty;
         Collider[] overlaps = Physics.OverlapSphere(
             position + Vector3.up * 0.5f,
             Mathf.Max(0.1f, radius),
@@ -84,18 +85,54 @@ public static class PlayableBoundsHelper
                 continue;
             }
 
-            if (TryGetForbiddenSpawnReason(col.gameObject, out _))
+            if (TryGetForbiddenSpawnReason(col.gameObject, out reason))
             {
                 return true;
             }
         }
 
-        return IsNearNamedMapZone(position, "Water", 2f)
-            || IsNearNamedMapZone(position, "Heaven", 4f)
-            || IsNearNamedMapZone(position, "Portal", 5f)
-            || IsNearNamedMapZone(position, "Hell", 4f)
-            || IsNearNamedMapZone(position, "Lava", 4f)
-            || IsNearNamedMapZone(position, "Spawn", 4f);
+        if (IsNearNamedMapZone(position, "Water", 2f))
+        {
+            reason = "water";
+            return true;
+        }
+
+        if (IsNearNamedMapZone(position, "Heaven", 4f))
+        {
+            reason = "heaven";
+            return true;
+        }
+
+        if (IsNearNamedMapZone(position, "Portal", 5f))
+        {
+            reason = "portal";
+            return true;
+        }
+
+        if (IsNearNamedMapZone(position, "Hell", 4f))
+        {
+            reason = "hell";
+            return true;
+        }
+
+        if (IsNearNamedMapZone(position, "Lava", 4f))
+        {
+            reason = "lava";
+            return true;
+        }
+
+        if (IsNearNamedMapZone(position, "Spawn", 4f))
+        {
+            reason = "spawn";
+            return true;
+        }
+
+        return false;
+    }
+
+    public static bool IsForbiddenSpawnPosition(Vector3 position, float radius = 1f)
+    {
+        return TryGetForbiddenSpawnPositionReason(position, radius, out _);
     }
 
     public static void ClampUnitIfOutside(Transform unitTransform, CharacterController controller, string reason)

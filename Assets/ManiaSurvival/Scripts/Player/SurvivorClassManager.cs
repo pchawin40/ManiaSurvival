@@ -43,7 +43,7 @@ public class SurvivorClassManager : MonoBehaviour
     public float bioticDartSpeed = 18f;
     public float bioticDartLifetime = 2f;
     [Tooltip("Max range for Biotic Dart aim line and hit validation.")]
-    public float bioticDartRange = 12f;
+    public float bioticDartRange = 9f;
     public int healDartAmount = 3;
     public int bioticDartPredatorDamage = 6;
     [Tooltip("Knockback when Biotic Dart hits a monster.")]
@@ -55,7 +55,7 @@ public class SurvivorClassManager : MonoBehaviour
     [Tooltip("Max enemy units Biotic can hit per offensive cast.")]
     public int bioticDartMaxEnemyHits = 3;
     [Tooltip("Cone half-angle for Biotic offensive multi-hit.")]
-    public float bioticDartOffensiveConeHalfAngle = 30f;
+    public float bioticDartOffensiveConeHalfAngle = 35f;
     [Tooltip("Sphere cast radius — wider = easier to hit nearby allies.")]
     public float bioticDartSphereCastRadius = 0.65f;
     [Tooltip("Aim cone half-angle when no direct line hit (degrees).")]
@@ -876,7 +876,7 @@ public class SurvivorClassManager : MonoBehaviour
             }
         }
 
-        Debug.Log("[Biotic] Offensive cast hit " + applied + " enemy units.");
+        Debug.Log("[Biotic] Offensive cone hit " + applied + " enemy units.");
     }
 
     private bool HasBioticOffensiveTargetsInCone(Vector3 direction)
@@ -925,6 +925,8 @@ public class SurvivorClassManager : MonoBehaviour
             candidates.Add((health, angle, distance));
         }
 
+        AppendBioticBroodlingConeTargets(direction, halfAngle, candidates);
+
         candidates.Sort((a, b) =>
         {
             int angleCompare = a.angle.CompareTo(b.angle);
@@ -944,6 +946,50 @@ public class SurvivorClassManager : MonoBehaviour
         }
 
         return results;
+    }
+
+    private void AppendBioticBroodlingConeTargets(
+        Vector3 direction,
+        float halfAngle,
+        List<(UnitHealth health, float angle, float distance)> candidates)
+    {
+        BroodlingMinion[] broodlings = FindObjectsByType<BroodlingMinion>(FindObjectsSortMode.None);
+        for (int i = 0; i < broodlings.Length; i++)
+        {
+            BroodlingMinion broodling = broodlings[i];
+            if (broodling == null)
+            {
+                continue;
+            }
+
+            UnitHealth health = broodling.Health;
+            if (!IsBioticOffensiveTarget(health))
+            {
+                continue;
+            }
+
+            if (!IsUnitWithinFlatRange(health, transform.position, bioticDartRange))
+            {
+                continue;
+            }
+
+            Vector3 toTarget = health.transform.position - transform.position;
+            toTarget.y = 0f;
+            float distance = toTarget.magnitude;
+            if (distance <= 0.05f)
+            {
+                candidates.Add((health, 0f, distance));
+                continue;
+            }
+
+            float angle = Vector3.Angle(direction, toTarget / distance);
+            if (angle > halfAngle)
+            {
+                continue;
+            }
+
+            candidates.Add((health, angle, distance));
+        }
     }
 
     private bool IsBioticOffensiveTarget(UnitHealth health)
@@ -974,7 +1020,7 @@ public class SurvivorClassManager : MonoBehaviour
             }
 
             ApplyKnockback(target, summonKnockDir.normalized, bioticDartSummonKnockback);
-            Debug.Log("[Biotic] Hit " + target.name + " for " + bioticDartSummonDamage
+            Debug.Log("[Biotic] Hit broodling " + target.name + " for " + bioticDartSummonDamage
                 + " damage. HP: " + target.currentHealth + "/" + target.maxHealth + ".");
             if (target.IsDead)
             {
