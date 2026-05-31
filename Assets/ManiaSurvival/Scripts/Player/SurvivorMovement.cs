@@ -25,10 +25,24 @@ public class SurvivorMovement : MonoBehaviour
     [Header("Keyboard Input")]
     public bool keyboardInputEnabled = true;
     public Key sprintKey = Key.LeftShift;
-    public Key dodgeKey = Key.Space;
+    public Key dodgeKey = Key.LeftCtrl;
+    public Key jumpKey = Key.Space;
+
+    [Header("Jump")]
+    public bool enableJump = false;
+    public bool allowSurvivorDoubleJump = true;
+    public float jumpHeight = 1.7f;
+    public float doubleJumpHeight = 1.4f;
+    public int maxJumps = 2;
+    public float groundedCheckDistance = 0.15f;
+    public float jumpCooldown = 0.08f;
 
     [Header("Gravity")]
-    public float gravity = -20f;
+    public float gravity = -22f;
+
+    [Header("Debug")]
+    public bool movementDebugLogs;
+    public bool enableJumpDebugLogs;
 
     public float CurrentStamina { get; private set; }
     public float StaminaPercent => maxStamina <= 0f ? 0f : CurrentStamina / maxStamina;
@@ -50,6 +64,8 @@ public class SurvivorMovement : MonoBehaviour
     private float temporarySpeedEffectEndTime;
     private Coroutine temporarySpeedEffectRoutine;
     private float externalMovementLockUntil;
+    private int jumpsUsed;
+    private float lastJumpTime;
     private Animator animator;
 
     private void Awake()
@@ -93,6 +109,11 @@ public class SurvivorMovement : MonoBehaviour
             TryDodge();
         }
 
+        if (keyboardInputEnabled && WasKeyPressedThisFrame(jumpKey))
+        {
+            TryJump();
+        }
+
         Vector2 input = GetMoveInput();
         Vector3 moveDirection = BuildWorldDirection(input);
 
@@ -109,7 +130,6 @@ public class SurvivorMovement : MonoBehaviour
 
         if (IsSprinting)
         {
-            Debug.Log("Sprint held");
             CurrentStamina = Mathf.Max(0f, CurrentStamina - staminaDrainPerSecond * Time.deltaTime);
         }
         else
@@ -184,8 +204,102 @@ public class SurvivorMovement : MonoBehaviour
             return false;
         }
 
-        characterController.Move(motion);
+        Vector3 start = transform.position;
+        motion = PlayableBoundsHelper.ConstrainHorizontalMotion(start, motion);
+        CollisionFlags flags = characterController.Move(motion);
+
+        if ((flags & CollisionFlags.Above) != 0 && verticalVelocity > 0f)
+        {
+            verticalVelocity = 0f;
+        }
+
+        PlayableBoundsHelper.ClampUnitIfOutside(transform, characterController, "survivor-move");
         return true;
+    }
+
+    public bool TryJump()
+    {
+        if (!enableJump || !CanUseCharacterController())
+        {
+            return false;
+        }
+
+        if (Time.time - lastJumpTime < jumpCooldown)
+        {
+            return false;
+        }
+
+        int allowedJumps = maxJumps;
+        if (!allowSurvivorDoubleJump)
+        {
+            allowedJumps = 1;
+        }
+
+        bool grounded = IsGroundedForJump();
+        if (grounded)
+        {
+            jumpsUsed = 0;
+        }
+
+        if (jumpsUsed >= allowedJumps)
+        {
+            if (enableJumpDebugLogs || movementDebugLogs)
+            {
+                Debug.Log("[Movement] Jump blocked: not enough jumps");
+            }
+
+            return false;
+        }
+
+        Vector3 predicted = transform.position + Vector3.up * jumpHeight;
+        if (!PlayableBoundsHelper.IsPositionInsidePlayableBounds(predicted))
+        {
+            if (enableJumpDebugLogs || movementDebugLogs)
+            {
+                Debug.Log("[Movement] Jump blocked: out of bounds");
+            }
+
+            return false;
+        }
+
+        jumpsUsed++;
+        lastJumpTime = Time.time;
+        float height = jumpsUsed == 1 ? jumpHeight : doubleJumpHeight;
+        verticalVelocity = Mathf.Sqrt(height * -2f * gravity);
+
+        if (enableJumpDebugLogs || movementDebugLogs)
+        {
+            Debug.Log(jumpsUsed >= 2
+                ? "[Movement] Survivor double jump " + jumpsUsed + "/" + allowedJumps
+                : "[Movement] Survivor jump " + jumpsUsed + "/" + allowedJumps);
+        }
+
+        return true;
+    }
+
+    private bool IsGroundedForJump()
+    {
+        if (characterController != null && characterController.isGrounded)
+        {
+            return true;
+        }
+
+        float radius = characterController != null ? characterController.radius * 0.95f : 0.35f;
+        Vector3 origin = transform.position + Vector3.up * 0.05f;
+        return Physics.SphereCast(origin, radius, Vector3.down, out _, groundedCheckDistance + 0.05f, ~0, QueryTriggerInteraction.Ignore);
+    }
+
+    private void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        if (hit.normal.y > 0.5f && verticalVelocity < 0f)
+        {
+            jumpsUsed = 0;
+        }
+
+        if (hit.normal.y < -0.5f && verticalVelocity > 0f)
+        {
+            verticalVelocity = 0f;
+        }
     }
 
     public void SetMoveInput(Vector2 input)
@@ -303,9 +417,10 @@ public class SurvivorMovement : MonoBehaviour
 
     private void ApplyGravity()
     {
-        if (characterController.isGrounded && verticalVelocity < 0f)
+        if (IsGroundedForJump() && verticalVelocity < 0f)
         {
             verticalVelocity = -1f;
+            jumpsUsed = 0;
         }
 
         verticalVelocity += gravity * Time.deltaTime;

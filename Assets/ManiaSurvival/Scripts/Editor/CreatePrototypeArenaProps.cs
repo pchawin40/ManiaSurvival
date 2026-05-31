@@ -10,11 +10,18 @@ using UnityEngine.SceneManagement;
 public static class CreatePrototypeArenaProps
 {
     public const string ParentObjectName = "PrototypeMapProps_Auto";
+    public const string DebugMarkersParentName = "PrototypeMapProps_DebugMarkers";
 
     private static readonly string[] LegacyParentNames =
     {
         "PrototypeArenaTerrain_Auto",
         ParentObjectName
+    };
+
+    private static readonly string[] LegacyDebugParentNames =
+    {
+        DebugMarkersParentName,
+        "PrototypeMapPropsGroundDebug"
     };
 
     // Tunable generation counts (editor constants).
@@ -34,11 +41,32 @@ public static class CreatePrototypeArenaProps
     private const float SpawnAvoidRadius = 3.5f;
     private const float PortalAvoidRadius = 5f;
     private const float HellPitAvoidRadius = 7f;
+    private const float MinDistanceFromPlayersOrSpawns = 4f;
+    private const float MinDistanceFromPortal = 5f;
+    private const float MinDistanceFromHellPit = 4f;
+    private const float MinDistanceFromWater = 2f;
+    private const float MinDistanceFromHeavenZone = 4f;
+    private const float GroundSkinOffset = 0.02f;
+    private const float GroundRayOriginY = 100f;
+
+    public static bool enableGroundSnapDebug = false;
+
+    private static readonly string[] ForbiddenNameTokens =
+    {
+        "water", "heaven", "hell", "lava", "pit", "portal", "recovery", "safezone",
+        "manaregen", "hazard", "deathzone", "hellfire", "nowater", "noswim"
+    };
+
+    private static readonly string[] PrimaryFloorNameTokens =
+    {
+        "floor", "ground", "safezone", "safe", "arena", "map", "walkable"
+    };
 
     private static readonly List<Vector3> PlacedCenters = new List<Vector3>();
     private static readonly HashSet<int> GeneratedInstanceIds = new HashSet<int>();
     private static GenerationStats stats;
     private static float cachedFallbackGroundY = float.NaN;
+    private static PrototypeMapPropsGroundDebug groundDebug;
 
     [MenuItem("Mania Survival/Map/Create Prototype Terrain Props")]
     public static void CreateTerrainProps()
@@ -67,6 +95,33 @@ public static class CreatePrototypeArenaProps
             Undo.DestroyObjectImmediate(existing);
             removedAny = true;
             Debug.Log("[PrototypeMapProps] Cleared '" + LegacyParentNames[i] + "'.");
+        }
+
+        for (int i = 0; i < LegacyDebugParentNames.Length; i++)
+        {
+            GameObject debugParent = GameObject.Find(LegacyDebugParentNames[i]);
+            if (debugParent == null)
+            {
+                continue;
+            }
+
+            Undo.DestroyObjectImmediate(debugParent);
+            removedAny = true;
+            Debug.Log("[PrototypeMapProps] Cleared debug markers '" + LegacyDebugParentNames[i] + "'.");
+        }
+
+        PrototypeMapPropsGroundDebug[] orphanDebugComponents = Object.FindObjectsByType<PrototypeMapPropsGroundDebug>(FindObjectsSortMode.None);
+        for (int i = 0; i < orphanDebugComponents.Length; i++)
+        {
+            PrototypeMapPropsGroundDebug debugComponent = orphanDebugComponents[i];
+            if (debugComponent == null)
+            {
+                continue;
+            }
+
+            Undo.DestroyObjectImmediate(debugComponent);
+            removedAny = true;
+            Debug.Log("[PrototypeMapProps] Removed orphan PrototypeMapPropsGroundDebug from '" + debugComponent.gameObject.name + "'.");
         }
 
         if (removedAny)
@@ -117,6 +172,7 @@ public static class CreatePrototypeArenaProps
         PlacedCenters.Clear();
         GeneratedInstanceIds.Clear();
         cachedFallbackGroundY = float.NaN;
+        groundDebug = null;
         stats = new GenerationStats();
     }
 
@@ -130,6 +186,17 @@ public static class CreatePrototypeArenaProps
         }
 
         parentObject.transform.localPosition = Vector3.zero;
+        if (enableGroundSnapDebug)
+        {
+            groundDebug = parentObject.AddComponent<PrototypeMapPropsGroundDebug>();
+            groundDebug.enableGroundSnapDebug = true;
+            groundDebug.ClearMarkers();
+        }
+        else
+        {
+            groundDebug = null;
+        }
+
         RegisterGeneratedRoot(parentObject);
         return parentObject.transform;
     }
@@ -180,6 +247,7 @@ public static class CreatePrototypeArenaProps
         while (placed < count && attempts < maxAttempts)
         {
             attempts++;
+            stats.treeAttempts++;
             Vector3 xz = RandomXZ(minX, maxX, minZ, maxZ);
             float trunkHeight = Random.Range(2.5f, 4.2f);
             float trunkRadius = Random.Range(0.35f, 0.55f);
@@ -189,9 +257,11 @@ public static class CreatePrototypeArenaProps
                 continue;
             }
 
-            CreateTree(prefix + "_" + placed, xz, Random.Range(0f, 360f), trunkHeight, trunkRadius, canopyScale);
-            placed++;
-            stats.trees++;
+            if (CreateTree(prefix + "_" + placed, xz, Random.Range(0f, 360f), trunkHeight, trunkRadius, canopyScale))
+            {
+                placed++;
+                stats.trees++;
+            }
         }
 
         stats.skippedForest += Mathf.Max(0, count - placed);
@@ -205,6 +275,7 @@ public static class CreatePrototypeArenaProps
         while (placed < count && attempts < maxAttempts)
         {
             attempts++;
+            stats.rockAttempts++;
             Vector3 xz = RandomXZ(minX, maxX, minZ, maxZ);
             float scale = Random.Range(0.75f, 1.45f);
             bool stump = Random.value < 0.35f;
@@ -213,17 +284,15 @@ public static class CreatePrototypeArenaProps
                 continue;
             }
 
-            if (stump)
-            {
-                CreateStump(prefix + "_Stump_" + placed, xz, scale);
-            }
-            else
-            {
-                CreateRock(prefix + "_Rock_" + placed, xz, Random.Range(0f, 360f), scale, blocking: true);
-            }
+            bool created = stump
+                ? CreateStump(prefix + "_Stump_" + placed, xz, scale)
+                : CreateRock(prefix + "_Rock_" + placed, xz, Random.Range(0f, 360f), scale, blocking: true);
 
-            placed++;
-            stats.rocks++;
+            if (created)
+            {
+                placed++;
+                stats.rocks++;
+            }
         }
 
         stats.skippedRocks += Mathf.Max(0, count - placed);
@@ -245,6 +314,7 @@ public static class CreatePrototypeArenaProps
 
         for (int i = 0; i < count && i < wallSpots.Length; i++)
         {
+            stats.wallAttempts++;
             Vector3 xz = wallSpots[i];
             if (!IsValidPropPosition(xz, 1.6f))
             {
@@ -252,8 +322,10 @@ public static class CreatePrototypeArenaProps
                 continue;
             }
 
-            CreateWall("ChokeWall_" + i, xz, Random.Range(-25f, 25f), Random.Range(2.4f, 3.6f));
-            stats.walls++;
+            if (CreateWall("ChokeWall_" + i, xz, Random.Range(-25f, 25f), Random.Range(2.4f, 3.6f)))
+            {
+                stats.walls++;
+            }
         }
     }
 
@@ -281,6 +353,7 @@ public static class CreatePrototypeArenaProps
         int rampsPlaced = 0;
         for (int i = 0; i < rampCount && i < rampSpots.Length; i++)
         {
+            stats.rampAttempts++;
             Vector3 xz = rampSpots[i];
             if (!IsValidPropPosition(xz, 2f))
             {
@@ -288,14 +361,17 @@ public static class CreatePrototypeArenaProps
                 continue;
             }
 
-            CreateRamp("Ramp_" + i, xz, Random.Range(0f, 360f));
-            rampsPlaced++;
-            stats.ramps++;
+            if (CreateRamp("Ramp_" + i, xz, Random.Range(0f, 360f)))
+            {
+                rampsPlaced++;
+                stats.ramps++;
+            }
         }
 
         int platformsPlaced = 0;
         for (int i = 0; i < platformCount && i < platformSpots.Length; i++)
         {
+            stats.platformAttempts++;
             Vector3 xz = platformSpots[i];
             if (!IsValidPropPosition(xz, 2.5f))
             {
@@ -305,9 +381,11 @@ public static class CreatePrototypeArenaProps
 
             float deckHeight = Random.Range(1.1f, 1.8f);
             Vector3 deckSize = new Vector3(Random.Range(3.2f, 4.8f), 0.35f, Random.Range(3.2f, 4.8f));
-            CreatePlatform("Platform_" + i, xz, deckHeight, deckSize);
-            platformsPlaced++;
-            stats.platforms++;
+            if (CreatePlatform("Platform_" + i, xz, deckHeight, deckSize))
+            {
+                platformsPlaced++;
+                stats.platforms++;
+            }
         }
 
         if (platformsPlaced > 0 && rampsPlaced == 0)
@@ -322,6 +400,7 @@ public static class CreatePrototypeArenaProps
         Vector3 step = new Vector3(1.6f, 0f, 1.4f);
         for (int i = 0; i < count; i++)
         {
+            stats.stepAttempts++;
             Vector3 xz = start + step * i;
             if (!IsValidPropPosition(xz, 0.8f))
             {
@@ -330,8 +409,10 @@ public static class CreatePrototypeArenaProps
             }
 
             float blockHeight = 0.35f + (i * 0.12f);
-            CreateSteppingBlock("Step_" + i, xz, blockHeight);
-            stats.steppingBlocks++;
+            if (CreateSteppingBlock("Step_" + i, xz, blockHeight))
+            {
+                stats.steppingBlocks++;
+            }
         }
     }
 
@@ -347,6 +428,7 @@ public static class CreatePrototypeArenaProps
 
         for (int i = 0; i < count && i < padSpots.Length; i++)
         {
+            stats.jumpPadAttempts++;
             Vector3 xz = padSpots[i];
             if (!IsValidPropPosition(xz, 1.4f))
             {
@@ -354,8 +436,10 @@ public static class CreatePrototypeArenaProps
                 continue;
             }
 
-            CreateJumpPad("JumpPad_" + i, xz, Random.Range(0f, 360f));
-            stats.jumpPads++;
+            if (CreateJumpPad("JumpPad_" + i, xz, Random.Range(0f, 360f)))
+            {
+                stats.jumpPads++;
+            }
         }
     }
 
@@ -369,6 +453,7 @@ public static class CreatePrototypeArenaProps
 
         for (int i = 0; i < count && i < bridgeSpots.Length; i++)
         {
+            stats.bridgeAttempts++;
             Vector3 xz = bridgeSpots[i];
             if (!IsValidPropPosition(xz, 2f))
             {
@@ -376,12 +461,14 @@ public static class CreatePrototypeArenaProps
                 continue;
             }
 
-            CreateBridge("Bridge_" + i, xz, i == 0 ? 0f : 90f);
-            stats.bridges++;
+            if (CreateBridge("Bridge_" + i, xz, i == 0 ? 0f : 90f))
+            {
+                stats.bridges++;
+            }
         }
     }
 
-    private static void CreateTree(
+    private static bool CreateTree(
         string name,
         Vector3 xz,
         float yaw,
@@ -389,7 +476,11 @@ public static class CreatePrototypeArenaProps
         float trunkRadius,
         float canopyScale)
     {
-        float groundY = GetGroundY(xz);
+        if (!TryResolveGroundY(xz, name, out float groundY))
+        {
+            return false;
+        }
+
         GameObject root = CreateRoot(name, xz, groundY, yaw, stats.parent);
 
         GameObject trunk = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -403,7 +494,7 @@ public static class CreatePrototypeArenaProps
         GameObject canopy = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         canopy.name = "Canopy";
         canopy.transform.SetParent(root.transform, false);
-        canopy.transform.localPosition = new Vector3(0f, trunkHeight + canopyScale * 0.35f, 0f);
+        canopy.transform.localPosition = new Vector3(0f, trunkHeight + canopyScale * 0.75f, 0f);
         canopy.transform.localScale = Vector3.one * canopyScale;
         ApplyColor(canopy, Random.value < 0.35f
             ? new Color(0.12f, 0.42f, 0.18f)
@@ -411,16 +502,22 @@ public static class CreatePrototypeArenaProps
         Object.DestroyImmediate(canopy.GetComponent<Collider>());
 
         RegisterPlacement(xz);
+        return true;
     }
 
-    private static void CreateRock(string name, Vector3 xz, float yaw, float scale, bool blocking)
+    private static bool CreateRock(string name, Vector3 xz, float yaw, float scale, bool blocking)
     {
-        float groundY = GetGroundY(xz);
+        if (!TryResolveGroundY(xz, name, out float groundY))
+        {
+            return false;
+        }
+
         GameObject root = CreateRoot(name, xz, groundY, yaw, stats.parent);
         GameObject body = GameObject.CreatePrimitive(Random.value < 0.5f ? PrimitiveType.Sphere : PrimitiveType.Cube);
         body.name = "RockBody";
         body.transform.SetParent(root.transform, false);
-        body.transform.localPosition = new Vector3(0f, scale * 0.45f, 0f);
+        float halfHeight = scale * 0.5f;
+        body.transform.localPosition = new Vector3(0f, halfHeight, 0f);
         body.transform.localScale = new Vector3(scale * Random.Range(0.9f, 1.2f), scale * Random.Range(0.75f, 1.05f), scale * Random.Range(0.85f, 1.15f));
         body.transform.localRotation = Quaternion.Euler(Random.Range(-8f, 8f), Random.Range(0f, 180f), Random.Range(-10f, 10f));
         ApplyColor(body, new Color(0.46f, 0.48f, 0.52f));
@@ -434,78 +531,106 @@ public static class CreatePrototypeArenaProps
         }
 
         RegisterPlacement(xz);
+        return true;
     }
 
-    private static void CreateStump(string name, Vector3 xz, float scale)
+    private static bool CreateStump(string name, Vector3 xz, float scale)
     {
-        float groundY = GetGroundY(xz);
+        if (!TryResolveGroundY(xz, name, out float groundY))
+        {
+            return false;
+        }
+
         GameObject root = CreateRoot(name, xz, groundY, Random.Range(0f, 360f), stats.parent);
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         body.name = "StumpBody";
         body.transform.SetParent(root.transform, false);
-        body.transform.localPosition = new Vector3(0f, scale * 0.22f, 0f);
-        body.transform.localScale = new Vector3(scale, scale * 0.35f, scale);
+        float stumpHeight = scale * 0.35f;
+        body.transform.localPosition = new Vector3(0f, stumpHeight, 0f);
+        body.transform.localScale = new Vector3(scale, stumpHeight, scale);
         ApplyColor(body, new Color(0.45f, 0.3f, 0.16f));
         Object.DestroyImmediate(body.GetComponent<Collider>());
         RegisterPlacement(xz);
+        return true;
     }
 
-    private static void CreateRamp(string name, Vector3 xz, float yaw)
+    private static bool CreateRamp(string name, Vector3 xz, float yaw)
     {
-        float groundY = GetGroundY(xz);
+        if (!TryResolveGroundY(xz, name, out float groundY))
+        {
+            return false;
+        }
+
         GameObject root = CreateRoot(name, xz, groundY, yaw, stats.parent);
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
         body.name = "RampBody";
         body.transform.SetParent(root.transform, false);
-        body.transform.localPosition = new Vector3(0f, 0.45f, 1.35f);
+        float rampHalfHeight = 0.14f;
+        body.transform.localPosition = new Vector3(0f, rampHalfHeight, 1.35f);
         body.transform.localRotation = Quaternion.Euler(16f, 0f, 0f);
         body.transform.localScale = new Vector3(3.2f, 0.28f, 4.2f);
         ApplyColor(body, new Color(0.56f, 0.53f, 0.48f));
         ConfigureSolid(body);
         RegisterPlacement(xz);
+        return true;
     }
 
-    private static void CreatePlatform(string name, Vector3 xz, float deckHeight, Vector3 deckSize)
+    private static bool CreatePlatform(string name, Vector3 xz, float deckHeight, Vector3 deckSize)
     {
-        float groundY = GetGroundY(xz);
-        GameObject root = CreateRoot(name, xz, groundY, 0f, stats.parent);
+        if (!TryResolveGroundY(xz, name, out float groundY))
+        {
+            return false;
+        }
 
-        GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        body.name = "PlatformBody";
-        body.transform.SetParent(root.transform, false);
-        body.transform.localPosition = new Vector3(0f, deckHeight, 0f);
-        body.transform.localScale = deckSize;
-        ApplyColor(body, new Color(0.5f, 0.48f, 0.44f));
-        ConfigureSolid(body);
+        GameObject root = CreateRoot(name, xz, groundY, 0f, stats.parent);
 
         GameObject support = GameObject.CreatePrimitive(PrimitiveType.Cube);
         support.name = "Support";
         support.transform.SetParent(root.transform, false);
-        support.transform.localPosition = new Vector3(0f, deckHeight * 0.45f, 0f);
-        support.transform.localScale = new Vector3(deckSize.x * 0.82f, deckHeight * 0.9f, deckSize.z * 0.82f);
+        support.transform.localPosition = new Vector3(0f, deckHeight * 0.5f, 0f);
+        support.transform.localScale = new Vector3(deckSize.x * 0.82f, deckHeight, deckSize.z * 0.82f);
         ApplyColor(support, new Color(0.42f, 0.4f, 0.38f));
         ConfigureSolid(support);
 
+        GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        body.name = "PlatformBody";
+        body.transform.SetParent(root.transform, false);
+        body.transform.localPosition = new Vector3(0f, deckHeight + deckSize.y * 0.5f, 0f);
+        body.transform.localScale = deckSize;
+        ApplyColor(body, new Color(0.5f, 0.48f, 0.44f));
+        ConfigureSolid(body);
+
         RegisterPlacement(xz);
+        return true;
     }
 
-    private static void CreateWall(string name, Vector3 xz, float yaw, float length)
+    private static bool CreateWall(string name, Vector3 xz, float yaw, float length)
     {
-        float groundY = GetGroundY(xz);
+        if (!TryResolveGroundY(xz, name, out float groundY))
+        {
+            return false;
+        }
+
         GameObject root = CreateRoot(name, xz, groundY, yaw, stats.parent);
+        float wallHeight = 1.3f;
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
         body.name = "WallBody";
         body.transform.SetParent(root.transform, false);
-        body.transform.localPosition = new Vector3(0f, 0.65f, 0f);
-        body.transform.localScale = new Vector3(length, 1.3f, 0.55f);
+        body.transform.localPosition = new Vector3(0f, wallHeight * 0.5f, 0f);
+        body.transform.localScale = new Vector3(length, wallHeight, 0.55f);
         ApplyColor(body, new Color(0.34f, 0.33f, 0.3f));
         ConfigureSolid(body);
         RegisterPlacement(xz);
+        return true;
     }
 
-    private static void CreateSteppingBlock(string name, Vector3 xz, float height)
+    private static bool CreateSteppingBlock(string name, Vector3 xz, float height)
     {
-        float groundY = GetGroundY(xz);
+        if (!TryResolveGroundY(xz, name, out float groundY))
+        {
+            return false;
+        }
+
         GameObject root = CreateRoot(name, xz, groundY, 0f, stats.parent);
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
         body.name = "StepBody";
@@ -515,17 +640,23 @@ public static class CreatePrototypeArenaProps
         ApplyColor(body, new Color(0.58f, 0.55f, 0.5f));
         ConfigureSolid(body);
         RegisterPlacement(xz);
+        return true;
     }
 
-    private static void CreateJumpPad(string name, Vector3 xz, float yaw)
+    private static bool CreateJumpPad(string name, Vector3 xz, float yaw)
     {
-        float groundY = GetGroundY(xz);
+        if (!TryResolveGroundY(xz, name, out float groundY))
+        {
+            return false;
+        }
+
+        float padHeight = 0.16f;
         GameObject root = CreateRoot(name, xz, groundY, yaw, stats.parent);
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         body.name = "PadBody";
         body.transform.SetParent(root.transform, false);
-        body.transform.localPosition = new Vector3(0f, 0.08f, 0f);
-        body.transform.localScale = new Vector3(2f, 0.08f, 2f);
+        body.transform.localPosition = new Vector3(0f, padHeight * 0.5f, 0f);
+        body.transform.localScale = new Vector3(2f, padHeight * 0.5f, 2f);
         ApplyColor(body, new Color(0.2f, 0.85f, 1f, 0.85f));
 
         Collider col = body.GetComponent<Collider>();
@@ -538,27 +669,69 @@ public static class CreatePrototypeArenaProps
         jumpPad.affectsSurvivors = true;
         jumpPad.affectsPredator = true;
         RegisterPlacement(xz);
+        return true;
     }
 
-    private static void CreateBridge(string name, Vector3 xz, float yaw)
+    private static bool CreateBridge(string name, Vector3 xz, float yaw)
     {
-        float groundY = GetGroundY(xz);
+        if (!TryResolveGroundY(xz, name, out float groundY))
+        {
+            return false;
+        }
+
         GameObject root = CreateRoot(name, xz, groundY, yaw, stats.parent);
+        float deckHalfHeight = 0.09f;
         GameObject deck = GameObject.CreatePrimitive(PrimitiveType.Cube);
         deck.name = "BridgeDeck";
         deck.transform.SetParent(root.transform, false);
-        deck.transform.localPosition = new Vector3(0f, 0.55f, 0f);
-        deck.transform.localScale = new Vector3(1.2f, 0.18f, 4.5f);
+        deck.transform.localPosition = new Vector3(0f, deckHalfHeight, 0f);
+        deck.transform.localScale = new Vector3(1.2f, deckHalfHeight * 2f, 4.5f);
         ApplyColor(deck, new Color(0.52f, 0.46f, 0.38f));
         ConfigureSolid(deck);
         RegisterPlacement(xz);
+        return true;
+    }
+
+    private static bool TryResolveGroundY(Vector3 xz, string propName, out float groundY)
+    {
+        groundY = 0f;
+        if (GetGroundHit(xz, out RaycastHit hit))
+        {
+            groundY = hit.point.y - GroundSkinOffset;
+            TrackGroundY(groundY);
+            AddGroundDebugMarker(new Vector3(xz.x, groundY, xz.z), true, "ok");
+            if (enableGroundSnapDebug)
+            {
+                Debug.Log("[PrototypeMapProps] Ground snapped " + propName + " at "
+                    + new Vector3(xz.x, 0f, xz.z) + " to y=" + groundY.ToString("0.###"));
+            }
+
+            return true;
+        }
+
+        stats.skippedNoGround++;
+        AddGroundDebugMarker(new Vector3(xz.x, GetFallbackGroundY(), xz.z), false, "no ground");
+        Debug.Log("[PrototypeMapProps] Ground raycast failed at "
+            + new Vector3(xz.x, 0f, xz.z) + ", skipped prop");
+        return false;
+    }
+
+    private static void AddGroundDebugMarker(Vector3 position, bool success, string reason)
+    {
+        if (!enableGroundSnapDebug || groundDebug == null)
+        {
+            return;
+        }
+
+        groundDebug.AddMarker(position, success, reason);
     }
 
     private static GameObject CreateRoot(string name, Vector3 xz, float groundY, float yaw, Transform parent)
     {
         GameObject root = new GameObject(name);
-        root.transform.SetParent(parent, false);
-        root.transform.position = new Vector3(xz.x, groundY, xz.z);
+        Vector3 worldPos = new Vector3(xz.x, groundY, xz.z);
+        root.transform.SetParent(parent, true);
+        root.transform.position = worldPos;
         root.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
         RegisterGeneratedRoot(root);
         return root;
@@ -582,42 +755,290 @@ public static class CreatePrototypeArenaProps
         }
     }
 
-    private static float GetGroundY(Vector3 xzPosition)
+    private static bool GetGroundHit(Vector3 xzPosition, out RaycastHit hit)
     {
-        Vector3 origin = new Vector3(xzPosition.x, 120f, xzPosition.z);
+        hit = default;
+        Vector3 origin = new Vector3(xzPosition.x, GroundRayOriginY, xzPosition.z);
         RaycastHit[] hits = Physics.RaycastAll(origin, Vector3.down, 250f, ~0, QueryTriggerInteraction.Ignore);
-        if (hits != null && hits.Length > 0)
+        if (hits == null || hits.Length == 0)
         {
-            System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-            for (int i = 0; i < hits.Length; i++)
+            stats.failedGroundRaycasts++;
+            return false;
+        }
+
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        RaycastHit? bestPrimary = null;
+        float bestPrimaryY = float.MaxValue;
+        RaycastHit? bestSecondary = null;
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider col = hits[i].collider;
+            if (!IsValidGroundCollider(col))
             {
-                Collider col = hits[i].collider;
-                if (col == null || col.isTrigger)
+                continue;
+            }
+
+            if (IsPrimaryArenaFloor(col))
+            {
+                if (hits[i].point.y < bestPrimaryY)
                 {
-                    continue;
+                    bestPrimaryY = hits[i].point.y;
+                    bestPrimary = hits[i];
                 }
 
-                if (IsGeneratedPropCollider(col))
-                {
-                    continue;
-                }
+                continue;
+            }
 
-                if (!IsLikelyWalkableSurface(col))
-                {
-                    continue;
-                }
-
-                TrackGroundY(hits[i].point.y);
-                return hits[i].point.y;
+            if (!bestSecondary.HasValue)
+            {
+                bestSecondary = hits[i];
             }
         }
 
+        if (bestPrimary.HasValue)
+        {
+            hit = bestPrimary.Value;
+            return true;
+        }
+
+        if (bestSecondary.HasValue)
+        {
+            hit = bestSecondary.Value;
+            return true;
+        }
+
         stats.failedGroundRaycasts++;
-        float fallback = GetFallbackGroundY();
-        Debug.LogWarning("[PrototypeMapProps] Ground raycast failed at "
-            + new Vector3(xzPosition.x, 0f, xzPosition.z) + ", using fallback Y " + fallback.ToString("0.###"));
-        TrackGroundY(fallback);
-        return fallback;
+        return false;
+    }
+
+    private static bool IsValidGroundCollider(Collider col)
+    {
+        if (col == null || col.isTrigger)
+        {
+            return false;
+        }
+
+        if (IsGeneratedPropCollider(col))
+        {
+            return false;
+        }
+
+        if (IsPlayerOrUiCollider(col))
+        {
+            return false;
+        }
+
+        if (IsForbiddenSurfaceCollider(col))
+        {
+            return false;
+        }
+
+        return IsLikelyWalkableSurface(col);
+    }
+
+    private static bool IsPrimaryArenaFloor(Collider col)
+    {
+        if (col == null)
+        {
+            return false;
+        }
+
+        if (ContainsAnyToken(col.gameObject.name, PrimaryFloorNameTokens))
+        {
+            return true;
+        }
+
+        if (col.gameObject.CompareTag("Ground"))
+        {
+            return true;
+        }
+
+        string layerName = LayerMask.LayerToName(col.gameObject.layer).ToLowerInvariant();
+        return layerName.Contains("ground") || layerName.Contains("floor") || layerName.Contains("arena");
+    }
+
+    private static bool IsForbiddenSurfaceCollider(Collider col)
+    {
+        return TryGetForbiddenReason(col.gameObject, out _);
+    }
+
+    private static bool IsPlayerOrUiCollider(Collider col)
+    {
+        if (col == null)
+        {
+            return false;
+        }
+
+        if (col.GetComponentInParent<SurvivorMovement>() != null
+            || col.GetComponentInParent<MonsterPlayerMovement>() != null)
+        {
+            return true;
+        }
+
+        string lower = col.gameObject.name.ToLowerInvariant();
+        return lower.Contains("canvas") || lower.Contains("ui") || lower.Contains("hud");
+    }
+
+    private static bool IsForbiddenPropPosition(Vector3 position, float radius)
+    {
+        if (TryGetForbiddenZoneReason(position, radius, out string reason))
+        {
+            stats.skippedForbiddenZones++;
+            AddGroundDebugMarker(new Vector3(position.x, GetFallbackGroundY(), position.z), false, reason);
+            Debug.Log("[PrototypeMapProps] Skipped prop near forbidden zone: " + reason);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryGetForbiddenZoneReason(Vector3 position, float radius, out string reason)
+    {
+        reason = string.Empty;
+        Collider[] overlaps = Physics.OverlapSphere(
+            new Vector3(position.x, GetFallbackGroundY() + 0.5f, position.z),
+            radius,
+            ~0,
+            QueryTriggerInteraction.Collide);
+
+        for (int i = 0; i < overlaps.Length; i++)
+        {
+            Collider col = overlaps[i];
+            if (col == null || IsGeneratedPropCollider(col))
+            {
+                continue;
+            }
+
+            if (TryGetForbiddenReason(col.gameObject, out reason))
+            {
+                return true;
+            }
+        }
+
+        if (IsNearNamedZone(position, "Water", MinDistanceFromWater, out reason))
+        {
+            return true;
+        }
+
+        if (IsNearNamedZone(position, "Heaven", MinDistanceFromHeavenZone, out reason))
+        {
+            return true;
+        }
+
+        if (IsNearNamedZone(position, "Portal", MinDistanceFromPortal, out reason))
+        {
+            return true;
+        }
+
+        if (IsNearNamedZone(position, "Hell", MinDistanceFromHellPit, out reason)
+            || IsNearNamedZone(position, "Lava", MinDistanceFromHellPit, out reason)
+            || IsNearNamedZone(position, "Pit", MinDistanceFromHellPit, out reason))
+        {
+            return true;
+        }
+
+        if (IsNearPlayerOrSpawn(position, MinDistanceFromPlayersOrSpawns + radius))
+        {
+            reason = "Spawn";
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryGetForbiddenReason(GameObject target, out string reason)
+    {
+        reason = string.Empty;
+        if (target == null)
+        {
+            return false;
+        }
+
+        string lowerName = target.name.ToLowerInvariant();
+        string lowerTag = target.tag.ToLowerInvariant();
+        string lowerLayer = LayerMask.LayerToName(target.layer).ToLowerInvariant();
+        string combined = lowerName + " " + lowerTag + " " + lowerLayer;
+
+        for (int i = 0; i < ForbiddenNameTokens.Length; i++)
+        {
+            string token = ForbiddenNameTokens[i];
+            if (combined.Contains(token))
+            {
+                reason = char.ToUpper(token[0]) + token.Substring(1);
+                return true;
+            }
+        }
+
+        if (target.GetComponent<HeavenPortal>() != null
+            || target.GetComponent<HeavenRecoveryZone>() != null
+            || target.GetComponent<HellfirePitDamageZone>() != null
+            || target.GetComponent<NoSpawnZone>() != null)
+        {
+            reason = target.name;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsNearNamedZone(Vector3 position, string token, float minDistance, out string reason)
+    {
+        reason = token;
+        string tokenLower = token.ToLowerInvariant();
+        Transform mapRoot = FindMapRoot();
+        if (mapRoot == null)
+        {
+            return false;
+        }
+
+        Transform[] transforms = mapRoot.GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < transforms.Length; i++)
+        {
+            Transform candidate = transforms[i];
+            if (candidate == null || !candidate.name.ToLowerInvariant().Contains(tokenLower))
+            {
+                continue;
+            }
+
+            if (candidate.GetComponent<Renderer>() == null && candidate.GetComponent<Collider>() == null)
+            {
+                continue;
+            }
+
+            Vector3 objPos = candidate.position;
+            if (Vector3.Distance(new Vector3(position.x, 0f, position.z), new Vector3(objPos.x, 0f, objPos.z)) <= minDistance)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsNearPlayerOrSpawn(Vector3 position, float radius)
+    {
+        return IsNearPlayerSpawn(position, radius);
+    }
+
+    private static bool ContainsAnyToken(string value, string[] tokens)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return false;
+        }
+
+        string lower = value.ToLowerInvariant();
+        for (int i = 0; i < tokens.Length; i++)
+        {
+            if (lower.Contains(tokens[i]))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool IsLikelyWalkableSurface(Collider col)
@@ -629,13 +1050,17 @@ public static class CreatePrototypeArenaProps
             || lower.Contains("trunk")
             || lower.Contains("canopy")
             || lower.Contains("wallbody")
-            || lower.Contains("choke"))
+            || lower.Contains("choke")
+            || lower.Contains("rampbody")
+            || lower.Contains("bridgedeck")
+            || lower.Contains("platformbody")
+            || lower.Contains("stepbody")
+            || lower.Contains("padbody"))
         {
             return false;
         }
 
         if (lower.Contains("floor")
-            || lower.Contains("platform")
             || lower.Contains("walkable")
             || lower.Contains("safezone")
             || lower.Contains("safe")
@@ -643,6 +1068,11 @@ public static class CreatePrototypeArenaProps
             || col.gameObject.CompareTag("Ground"))
         {
             return true;
+        }
+
+        if (lower.Contains("platform"))
+        {
+            return false;
         }
 
         Transform walker = col.transform;
@@ -752,6 +1182,11 @@ public static class CreatePrototypeArenaProps
             return false;
         }
 
+        if (IsForbiddenPropPosition(flat, radius))
+        {
+            return false;
+        }
+
         if (IsInsideHellPit(flat))
         {
             stats.skippedHellPit++;
@@ -770,7 +1205,7 @@ public static class CreatePrototypeArenaProps
             return false;
         }
 
-        if (IsNearPlayerSpawn(flat, SpawnAvoidRadius + radius))
+        if (IsNearPlayerSpawn(flat, MinDistanceFromPlayersOrSpawns + radius))
         {
             stats.skippedNearSpawn++;
             return false;
@@ -784,13 +1219,6 @@ public static class CreatePrototypeArenaProps
                 stats.skippedTooClose++;
                 return false;
             }
-        }
-
-        float groundY = GetGroundY(xz);
-        if (groundY < 0.25f)
-        {
-            stats.skippedBelowGround++;
-            return false;
         }
 
         return true;
@@ -968,28 +1396,29 @@ public static class CreatePrototypeArenaProps
     private static void LogGenerationSummary()
     {
         string groundRange = stats.minGroundY <= stats.maxGroundY
-            ? stats.minGroundY.ToString("0.###") + " to " + stats.maxGroundY.ToString("0.###")
+            ? stats.minGroundY.ToString("0.00") + " to " + stats.maxGroundY.ToString("0.00")
             : "n/a";
 
+        Debug.Log("[PrototypeMapProps] Created Trees " + stats.trees + "/" + stats.treeAttempts
+            + ", Rocks " + stats.rocks + "/" + stats.rockAttempts
+            + ", Ramps " + stats.ramps + "/" + stats.rampAttempts
+            + ", Platforms " + stats.platforms + "/" + stats.platformAttempts);
+        Debug.Log("[PrototypeMapProps] Skipped: " + stats.skippedNoGround + " no ground, "
+            + stats.skippedForbiddenZones + " forbidden zones");
+        Debug.Log("[PrototypeMapProps] GroundY range: " + groundRange);
         Debug.Log("[PrototypeMapProps] Created:\n"
-            + "- Trees: " + stats.trees + "\n"
-            + "- Rocks: " + stats.rocks + "\n"
-            + "- Ramps: " + stats.ramps + "\n"
-            + "- Platforms: " + stats.platforms + "\n"
             + "- Stepping Blocks: " + stats.steppingBlocks + "\n"
             + "- Walls: " + stats.walls + "\n"
             + "- Jump Pads: " + stats.jumpPads + "\n"
             + "- Bridges: " + stats.bridges + "\n"
-            + "- GroundY range: " + groundRange + "\n"
             + "- Parent: " + ParentObjectName + "\n"
-            + "Skipped: centralClear=" + stats.skippedCentralClear
+            + "Skipped detail: centralClear=" + stats.skippedCentralClear
             + ", outsideArena=" + stats.skippedOutsideArena
             + ", hellPit=" + stats.skippedHellPit
             + ", heavenPortal=" + stats.skippedHeavenPortal
             + ", noSpawn=" + stats.skippedNoSpawn
             + ", nearSpawn=" + stats.skippedNearSpawn
             + ", tooClose=" + stats.skippedTooClose
-            + ", belowGround=" + stats.skippedBelowGround
             + ", failedRaycasts=" + stats.failedGroundRaycasts
             + ", forestShortfall=" + stats.skippedForest
             + ", rockShortfall=" + stats.skippedRocks);
@@ -1006,6 +1435,14 @@ public static class CreatePrototypeArenaProps
         public int walls;
         public int jumpPads;
         public int bridges;
+        public int treeAttempts;
+        public int rockAttempts;
+        public int rampAttempts;
+        public int platformAttempts;
+        public int stepAttempts;
+        public int wallAttempts;
+        public int jumpPadAttempts;
+        public int bridgeAttempts;
         public int skippedCentralClear;
         public int skippedOutsideArena;
         public int skippedHellPit;
@@ -1014,6 +1451,8 @@ public static class CreatePrototypeArenaProps
         public int skippedNearSpawn;
         public int skippedTooClose;
         public int skippedBelowGround;
+        public int skippedNoGround;
+        public int skippedForbiddenZones;
         public int failedGroundRaycasts;
         public int skippedForest;
         public int skippedRocks;

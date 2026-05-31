@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum PredatorClass { SwarmOverlord, SubterraneanStalker, DoomShieldColossus, Juggernaut, CyberNinja, Vanguard, RelentlessHook }
+public enum PredatorClass { SwarmOverlord, SubterraneanStalker, DoomShieldColossus, Juggernaut, CyberNinja, Vanguard, RelentlessHook, ShadowStalker, IronColossus, PlagueGardener }
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(UnitHealth))]
@@ -187,6 +187,12 @@ public partial class PredatorClassManager : MonoBehaviour
         }
 
         EnsurePrototypeAbilityDetails();
+        ApplyPredatorClassThemeColor(activeClass);
+
+        if (monsterMovement != null)
+        {
+            monsterMovement.ApplyPredatorMovementProfile(activeClass);
+        }
     }
 
     private void EnsureRelentlessAbilityDetails()
@@ -332,6 +338,9 @@ public partial class PredatorClassManager : MonoBehaviour
             case PredatorClass.CyberNinja: CastCyberNinjaShurikenFan(); break;
             case PredatorClass.Vanguard: CastVanguardRocketHammer(); break;
             case PredatorClass.RelentlessHook: CastRelentlessHookScrapGun(); break;
+            case PredatorClass.ShadowStalker: return CastShadowSlash();
+            case PredatorClass.IronColossus: return CastIronCrush();
+            case PredatorClass.PlagueGardener: return CastPlagueThorn();
         }
 
         return true;
@@ -355,6 +364,9 @@ public partial class PredatorClassManager : MonoBehaviour
             case PredatorClass.CyberNinja: StartCoroutine(CastCyberNinjaSwiftStrikeCoroutine()); break;
             case PredatorClass.Vanguard: StartCoroutine(CastVanguardChargeCoroutine()); break;
             case PredatorClass.RelentlessHook: StartCoroutine(CastRelentlessChainHookCoroutine()); break;
+            case PredatorClass.ShadowStalker: return CastShadowVanish();
+            case PredatorClass.IronColossus: return CastIronGuard();
+            case PredatorClass.PlagueGardener: return CastPlagueRoot();
         }
 
         return true;
@@ -378,6 +390,9 @@ public partial class PredatorClassManager : MonoBehaviour
             case PredatorClass.CyberNinja: StartCoroutine(CastCyberNinjaDeflectCoroutine()); break;
             case PredatorClass.Vanguard: CastVanguardFireStrike(); break;
             case PredatorClass.RelentlessHook: StartCoroutine(CastRelentlessTakeABreatherCoroutine()); break;
+            case PredatorClass.ShadowStalker: return CastShadowMark();
+            case PredatorClass.IronColossus: return CastIronQuake();
+            case PredatorClass.PlagueGardener: return CastPlagueSpore();
         }
 
         return true;
@@ -403,6 +418,21 @@ public partial class PredatorClassManager : MonoBehaviour
             return false;
         }
 
+        if (activeClass == PredatorClass.ShadowStalker && IsShadowNightActive())
+        {
+            return false;
+        }
+
+        if (activeClass == PredatorClass.IronColossus && IsIronFortActive())
+        {
+            return false;
+        }
+
+        if (activeClass == PredatorClass.PlagueGardener && IsPlagueBloomActive())
+        {
+            return false;
+        }
+
         if (!TryConsumeSharedGcd(Ability3Hash))
         {
             return false;
@@ -417,6 +447,9 @@ public partial class PredatorClassManager : MonoBehaviour
             case PredatorClass.CyberNinja: CastCyberNinjaDragonblade(); break;
             case PredatorClass.Vanguard: CastVanguardEarthshatter(); break;
             case PredatorClass.RelentlessHook: return StartRelentlessBarrage();
+            case PredatorClass.ShadowStalker: return CastShadowNight();
+            case PredatorClass.IronColossus: return CastIronFort();
+            case PredatorClass.PlagueGardener: return CastPlagueBloom();
         }
 
         return true;
@@ -442,6 +475,21 @@ public partial class PredatorClassManager : MonoBehaviour
             return false;
         }
 
+        if (activeClass == PredatorClass.ShadowStalker && IsShadowNightActive())
+        {
+            return false;
+        }
+
+        if (activeClass == PredatorClass.IronColossus && IsIronFortActive())
+        {
+            return false;
+        }
+
+        if (activeClass == PredatorClass.PlagueGardener && IsPlagueBloomActive())
+        {
+            return false;
+        }
+
         if (!TryConsumeSharedGcd(UltimateHash))
         {
             return false;
@@ -456,6 +504,9 @@ public partial class PredatorClassManager : MonoBehaviour
             case PredatorClass.CyberNinja: CastCyberNinjaDragonblade(); break;
             case PredatorClass.Vanguard: CastVanguardEarthshatter(); break;
             case PredatorClass.RelentlessHook: return StartRelentlessBarrage();
+            case PredatorClass.ShadowStalker: return CastShadowNight();
+            case PredatorClass.IronColossus: return CastIronFort();
+            case PredatorClass.PlagueGardener: return CastPlagueBloom();
         }
 
         return true;

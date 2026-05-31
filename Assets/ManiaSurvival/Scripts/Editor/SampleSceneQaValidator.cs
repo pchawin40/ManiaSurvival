@@ -146,7 +146,7 @@ public static class SampleSceneQaValidator
         }
 
         ValidateAbilityButtonLabels(gameUi, monster, Pass, Warn, Fail);
-        ValidatePredatorPrototypeClasses(monster, Pass, Warn, Fail);
+        ValidatePredatorPrototypeClasses(monster, Pass, Warn, Fail, Info);
 
         if (Object.FindFirstObjectByType<ArenaBounds>() != null || GameObject.Find("ArenaBounds") != null)
         {
@@ -162,6 +162,7 @@ public static class SampleSceneQaValidator
         ValidateWaterfallManaZone(Pass, Fail);
         ValidateBlockerColliders(allObjects, Pass, Fail);
         ValidateGeneratedProps(allObjects, Pass, Info, Fail);
+        ValidateMovementTraversal(survivor, monster, gameUi, Pass, Warn, Info);
 
         Debug.Log("[QA] SampleScene validation complete: " + passCount + " pass, "
             + infoCount + " info, " + warnCount + " warnings, " + failCount + " fails");
@@ -445,6 +446,12 @@ public static class SampleSceneQaValidator
                 return new[] { "Spit", "Brood", "Infest", "Hive" };
             case PredatorClass.Juggernaut:
                 return new[] { "Flame", "Leap", "Roar", "Meteor" };
+            case PredatorClass.ShadowStalker:
+                return new[] { "Slash", "Vanish", "Mark", "Night." };
+            case PredatorClass.IronColossus:
+                return new[] { "Crush", "Guard", "Quake", "Fort." };
+            case PredatorClass.PlagueGardener:
+                return new[] { "Thorn", "Root", "Spore", "Bloom" };
             default:
                 return new[] { "Spray", "Hook", "Tonic", "Barrage" };
         }
@@ -485,7 +492,8 @@ public static class SampleSceneQaValidator
         GameObject monster,
         System.Action<string> pass,
         System.Action<string> warn,
-        System.Action<string> fail)
+        System.Action<string> fail,
+        System.Action<string> info)
     {
         if (monster == null)
         {
@@ -502,7 +510,7 @@ public static class SampleSceneQaValidator
 
         if (!PredatorClassManager.IsPlayablePrototypeClass(manager.GetCurrentPredatorClass()))
         {
-            warn("Monster active predator class is not one of the three prototype classes: "
+            warn("Monster active predator class is not one of the six playable classes: "
                 + manager.GetCurrentPredatorClass());
         }
         else
@@ -523,14 +531,53 @@ public static class SampleSceneQaValidator
             pass("Predator slot " + slot + " label configured: " + label);
         }
 
+        ValidatePredatorClassCatalogPortraits(info, warn);
+
         PredatorClassSwitcher switcher = monster.GetComponent<PredatorClassSwitcher>();
         if (switcher == null)
         {
-            warn("Monster missing PredatorClassSwitcher (F1/F2/F3 dev switching)");
+            warn("Monster missing PredatorClassSwitcher (F1-F6 dev switching)");
         }
         else
         {
             pass("Monster has PredatorClassSwitcher for dev class hotkeys");
+        }
+
+        PredatorClassSelectPanel selectPanel = Object.FindFirstObjectByType<PredatorClassSelectPanel>();
+        if (selectPanel == null)
+        {
+            info("PredatorClassSelectPanel not in scene — ManiaGameUI will build one at runtime under startScreen");
+        }
+        else
+        {
+            pass("PredatorClassSelectPanel exists in scene");
+        }
+    }
+
+    private static void ValidatePredatorClassCatalogPortraits(
+        System.Action<string> info,
+        System.Action<string> warn)
+    {
+        IReadOnlyList<PredatorClass> playable = PredatorClassCatalog.GetPlayableClasses();
+        int missingPortraitCount = 0;
+
+        for (int i = 0; i < playable.Count; i++)
+        {
+            PredatorClassDetail detail = PredatorClassCatalog.GetDetail(playable[i]);
+            if (detail.HasPortrait)
+            {
+                info("Predator class portrait assigned: " + detail.displayName);
+            }
+            else
+            {
+                missingPortraitCount++;
+                warn("Predator class portrait missing (optional): " + detail.displayName);
+            }
+        }
+
+        if (missingPortraitCount == playable.Count)
+        {
+            info("No predator class portraits assigned yet — UI uses theme colors instead");
         }
     }
 
@@ -722,6 +769,95 @@ public static class SampleSceneQaValidator
         else
         {
             fail("A critical floor/platform collider is trigger-only");
+        }
+    }
+
+    private static void ValidateMovementTraversal(
+        GameObject survivor,
+        GameObject monster,
+        ManiaGameUI gameUi,
+        System.Action<string> pass,
+        System.Action<string> warn,
+        System.Action<string> info)
+    {
+        if (survivor != null)
+        {
+            SurvivorMovement survivorMove = survivor.GetComponent<SurvivorMovement>();
+            if (survivorMove != null)
+            {
+                if (survivorMove.enableJump)
+                {
+                    pass("Survivor jump enabled (Space / optional UI button)");
+                }
+                else
+                {
+                    info("Survivor jump disabled (enableJump=false)");
+                }
+
+                info("Survivor jump defaults: height " + survivorMove.jumpHeight.ToString("0.0")
+                    + ", double " + survivorMove.doubleJumpHeight.ToString("0.0")
+                    + ", gravity " + survivorMove.gravity.ToString("0.0"));
+            }
+
+            if (survivor.GetComponent<SurvivorBlinkAbility>() != null)
+            {
+                pass("Survivor blink ability present (bounds checked at landing)");
+            }
+        }
+
+        if (monster != null)
+        {
+            MonsterPlayerMovement predatorMove = monster.GetComponent<MonsterPlayerMovement>();
+            if (predatorMove != null)
+            {
+                if (predatorMove.enablePredatorJump)
+                {
+                    pass("Predator heavy jump enabled");
+                }
+                else
+                {
+                    info("Predator jump disabled (enablePredatorJump=false)");
+                }
+
+                if (predatorMove.enablePredatorPounce)
+                {
+                    pass("Predator pounce enabled (Q or Shift+Space / optional UI)");
+                }
+                else
+                {
+                    warn("MonsterPlayerMovement.enablePredatorPounce is false");
+                }
+
+                info("Predator pounce tuning: distance " + predatorMove.pounceDistance.ToString("0.0")
+                    + ", cooldown " + predatorMove.pounceCooldown.ToString("0.0")
+                    + ", landing radius " + predatorMove.pounceLandingRadius.ToString("0.0"));
+            }
+            else
+            {
+                warn("Monster missing MonsterPlayerMovement for traversal checks");
+            }
+        }
+
+        if (Object.FindFirstObjectByType<ArenaBounds>() != null || GameObject.Find("ArenaBounds") != null)
+        {
+            pass("Playable bounds source available for jump/pounce/blink/pads");
+        }
+        else
+        {
+            info("ArenaBounds may bootstrap at runtime — PlayableBoundsHelper fallback still applies");
+        }
+
+        if (gameUi != null)
+        {
+            if (!gameUi.showJumpButton || gameUi.survivorJumpButton == null)
+            {
+                info("Survivor jump UI button optional — keyboard Space still works");
+            }
+
+            if (!gameUi.showPredatorPounceButton || gameUi.predatorPounceButton == null)
+            {
+                info("Predator pounce UI button optional — keyboard Q / Shift+Space still works");
+            }
         }
     }
 

@@ -47,7 +47,7 @@ public class AbilityController : MonoBehaviour
     public float survivorSlot4Cooldown = 28f;
 
     [Header("Predator Slot Cooldowns")]
-    public float predatorSlot1Cooldown = 3.75f;
+    public float predatorSlot1Cooldown = 2.5f;
     public float predatorSlot2Cooldown = 10f;
     public float predatorSlot3Cooldown = 14f;
     public float predatorSlot4Cooldown = 35f;
@@ -569,7 +569,7 @@ public class AbilityController : MonoBehaviour
             if (!PredatorClassManager.IsPlayablePrototypeClass(predatorClassManager.GetCurrentPredatorClass()))
             {
                 Debug.LogWarning("[AbilityController] Predator class '" + predatorClassManager.GetCurrentPredatorClass()
-                    + "' is not enabled for the prototype. Use Relentless Hook, Swarm Overlord, or Dragon Juggernaut.");
+                    + "' is not enabled for the prototype. Use one of the six playable predator classes.");
                 return false;
             }
 

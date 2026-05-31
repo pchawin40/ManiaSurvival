@@ -249,6 +249,28 @@ public class LocalRoleController : MonoBehaviour
         }
     }
 
+    public void PressJump()
+    {
+        if (controlMode == PlayerControlMode.SurvivorControlled && survivorMovement != null)
+        {
+            survivorMovement.TryJump();
+            return;
+        }
+
+        if (controlMode == PlayerControlMode.MonsterControlled && monsterMovement != null)
+        {
+            monsterMovement.TryJump();
+        }
+    }
+
+    public void PressPounce()
+    {
+        if (controlMode == PlayerControlMode.MonsterControlled && monsterMovement != null)
+        {
+            monsterMovement.TryPounce();
+        }
+    }
+
     public void PressSurvivorPrimary()
     {
         UseSurvivorAbilitySlot(1);

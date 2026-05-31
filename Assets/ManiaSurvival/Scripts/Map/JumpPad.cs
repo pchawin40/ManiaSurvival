@@ -63,7 +63,24 @@ public class JumpPad : MonoBehaviour
         }
 
         launchDir.Normalize();
-        StartCoroutine(LaunchUnitRoutine(unit, launchDir));
+        float forwardForce = launchForwardForce;
+        Vector3 start = unit.transform.position;
+        Vector3 predictedEnd = start + launchDir * forwardForce;
+        if (!PlayableBoundsHelper.IsPositionInsidePlayableBounds(predictedEnd))
+        {
+            forwardForce *= 0.55f;
+            predictedEnd = start + launchDir * forwardForce;
+            if (!PlayableBoundsHelper.IsPositionInsidePlayableBounds(predictedEnd))
+            {
+                forwardForce *= 0.5f;
+                if (enableDebugLogs)
+                {
+                    Debug.Log("[JumpPad] Launch force reduced — destination near arena edge");
+                }
+            }
+        }
+
+        StartCoroutine(LaunchUnitRoutine(unit, launchDir, forwardForce));
 
         SpawnUsePulse();
         if (enableDebugLogs)
@@ -87,7 +104,7 @@ public class JumpPad : MonoBehaviour
         return false;
     }
 
-    private IEnumerator LaunchUnitRoutine(UnitHealth unit, Vector3 direction)
+    private IEnumerator LaunchUnitRoutine(UnitHealth unit, Vector3 direction, float forwardForce)
     {
         if (unit == null)
         {
@@ -122,14 +139,11 @@ public class JumpPad : MonoBehaviour
             elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(elapsed / duration);
             float arc = Mathf.Sin(t * Mathf.PI) * launchUpForce;
-            Vector3 flat = start + direction * (launchForwardForce * t);
+            Vector3 flat = start + direction * (forwardForce * t);
             Vector3 target = flat;
             target.y = start.y + arc;
 
-            if (ArenaBounds.Instance != null)
-            {
-                target = ArenaBounds.Instance.ClampPosition(target);
-            }
+            target = PlayableBoundsHelper.ClampToPlayableBounds(target);
 
             if (controller != null && controllerWasEnabled && controller.enabled)
             {

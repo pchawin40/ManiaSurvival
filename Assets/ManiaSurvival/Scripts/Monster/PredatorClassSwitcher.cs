@@ -1,17 +1,22 @@
 using UnityEngine;
 
 /// <summary>
-/// Editor/dev hotkeys to cycle the three playable predator prototype classes.
+/// Editor/dev hotkeys to switch between the six playable predator prototype classes.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PredatorClassManager))]
 public class PredatorClassSwitcher : MonoBehaviour
 {
     [Header("Dev Hotkeys")]
+    public bool enablePredatorClassDebugHotkeys = true;
+    [Tooltip("Legacy alias for enablePredatorClassDebugHotkeys.")]
     public bool enableHotkeys = true;
     public KeyCode relentlessHookKey = KeyCode.F1;
     public KeyCode swarmOverlordKey = KeyCode.F2;
     public KeyCode dragonJuggernautKey = KeyCode.F3;
+    public KeyCode shadowStalkerKey = KeyCode.F4;
+    public KeyCode ironColossusKey = KeyCode.F5;
+    public KeyCode plagueGardenerKey = KeyCode.F6;
 
     private PredatorClassManager classManager;
 
@@ -23,7 +28,7 @@ public class PredatorClassSwitcher : MonoBehaviour
     private void Update()
     {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        if (!enableHotkeys || classManager == null)
+        if (!AreHotkeysEnabled() || classManager == null)
         {
             return;
         }
@@ -40,6 +45,23 @@ public class PredatorClassSwitcher : MonoBehaviour
         {
             classManager.SetPredatorClass(PredatorClass.Juggernaut);
         }
+        else if (Input.GetKeyDown(shadowStalkerKey))
+        {
+            classManager.SetPredatorClass(PredatorClass.ShadowStalker);
+        }
+        else if (Input.GetKeyDown(ironColossusKey))
+        {
+            classManager.SetPredatorClass(PredatorClass.IronColossus);
+        }
+        else if (Input.GetKeyDown(plagueGardenerKey))
+        {
+            classManager.SetPredatorClass(PredatorClass.PlagueGardener);
+        }
 #endif
+    }
+
+    private bool AreHotkeysEnabled()
+    {
+        return enablePredatorClassDebugHotkeys && enableHotkeys;
     }
 }

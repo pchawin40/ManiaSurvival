@@ -196,6 +196,12 @@ public class SurvivorBlinkAbility : MonoBehaviour
     {
         failReason = string.Empty;
 
+        if (!PlayableBoundsHelper.IsPositionInsidePlayableBounds(destination))
+        {
+            failReason = "Blink landing blocked: out of arena bounds";
+            return false;
+        }
+
         if (hazardLayers.value != 0 &&
             Physics.CheckSphere(destination, radius, hazardLayers, QueryTriggerInteraction.Collide))
         {

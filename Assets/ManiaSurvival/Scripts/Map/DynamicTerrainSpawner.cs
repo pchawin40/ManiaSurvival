@@ -419,6 +419,27 @@ public class DynamicTerrainSpawner : MonoBehaviour
     private bool TryPrepareSpawn(Vector3 position, DynamicTerrainPropType type, out Vector3 safePosition)
     {
         safePosition = SnapToGround(position);
+
+        if (PlayableBoundsHelper.IsForbiddenSpawnPosition(safePosition, 1.25f))
+        {
+            if (enableDebugLogs)
+            {
+                Debug.Log("[Terrain] Blocked spawn: forbidden zone at " + safePosition.ToString("F1"));
+            }
+
+            return false;
+        }
+
+        if (!PlayableBoundsHelper.IsPositionInsidePlayableBounds(safePosition))
+        {
+            if (enableDebugLogs)
+            {
+                Debug.Log("[Terrain] Blocked spawn: outside playable bounds at " + safePosition.ToString("F1"));
+            }
+
+            return false;
+        }
+
         if (ArenaBounds.Instance != null)
         {
             safePosition = ArenaBounds.Instance.ClampPosition(safePosition);
@@ -597,13 +618,39 @@ public class DynamicTerrainSpawner : MonoBehaviour
 
     private static Vector3 SnapToGround(Vector3 worldPosition)
     {
-        Vector3 rayStart = worldPosition + Vector3.up * 8f;
-        if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit hit, 20f, ~0, QueryTriggerInteraction.Ignore))
+        Vector3 rayStart = worldPosition + Vector3.up * 100f;
+        RaycastHit[] hits = Physics.RaycastAll(rayStart, Vector3.down, 250f, ~0, QueryTriggerInteraction.Ignore);
+        if (hits == null || hits.Length == 0)
         {
-            return hit.point;
+            if (Instance != null && Instance.enableDebugLogs)
+            {
+                Debug.Log("[Terrain] Ground raycast failed at " + worldPosition.ToString("F1") + ", using raw position");
+            }
+
+            return worldPosition;
         }
 
-        return worldPosition;
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider col = hits[i].collider;
+            if (col == null || col.isTrigger)
+            {
+                continue;
+            }
+
+            string lower = col.gameObject.name.ToLowerInvariant();
+            if (lower.Contains("water") || lower.Contains("hell") || lower.Contains("lava")
+                || lower.Contains("portal") || lower.Contains("heaven"))
+            {
+                continue;
+            }
+
+            return hits[i].point;
+        }
+
+        return hits[0].point;
     }
 
     private bool IsTooCloseToAnyPlayer(Vector3 pos)

@@ -92,9 +92,7 @@ public partial class PredatorClassManager
 
     public static bool IsPlayablePrototypeClass(PredatorClass predatorClass)
     {
-        return predatorClass == PredatorClass.RelentlessHook
-            || predatorClass == PredatorClass.SwarmOverlord
-            || predatorClass == PredatorClass.Juggernaut;
+        return PredatorClassCatalog.IsPlayableClass(predatorClass);
     }
 
     public PredatorClass GetCurrentPredatorClass()
@@ -113,7 +111,18 @@ public partial class PredatorClassManager
         activeClass = newClass;
         Debug.Log("[PredatorClass] Switched to " + GetClassDisplayName());
 
+        if (monsterMovement == null)
+        {
+            monsterMovement = GetComponent<MonsterPlayerMovement>();
+        }
+
+        if (monsterMovement != null)
+        {
+            monsterMovement.ApplyPredatorMovementProfile(activeClass);
+        }
+
         EnsurePrototypeAbilityDetails();
+        ApplyPredatorClassThemeColor(newClass);
         RefreshPredatorAbilityUi();
     }
 
@@ -137,6 +146,15 @@ public partial class PredatorClassManager
             case PredatorClass.RelentlessHook:
                 EnsureRelentlessAbilityDetails();
                 return GetRelentlessSlotDetail(clamped);
+            case PredatorClass.ShadowStalker:
+                EnsureShadowAbilityDetails();
+                return GetShadowSlotDetail(clamped);
+            case PredatorClass.IronColossus:
+                EnsureIronAbilityDetails();
+                return GetIronSlotDetail(clamped);
+            case PredatorClass.PlagueGardener:
+                EnsurePlagueAbilityDetails();
+                return GetPlagueSlotDetail(clamped);
             default:
                 return AbilityDetail.CreateFallback(clamped, GetClassDisplayName());
         }
@@ -160,6 +178,12 @@ public partial class PredatorClassManager
 
     public string GetClassDisplayName()
     {
+        PredatorClassDetail catalogDetail = PredatorClassCatalog.GetDetail(activeClass);
+        if (catalogDetail != null && !string.IsNullOrWhiteSpace(catalogDetail.displayName))
+        {
+            return catalogDetail.displayName;
+        }
+
         switch (activeClass)
         {
             case PredatorClass.RelentlessHook:
@@ -183,9 +207,25 @@ public partial class PredatorClassManager
                 return swarmOverlordClassSummary;
             case PredatorClass.Juggernaut:
                 return dragonJuggernautClassSummary;
+            case PredatorClass.ShadowStalker:
+                return shadowStalkerClassSummary;
+            case PredatorClass.IronColossus:
+                return ironColossusClassSummary;
+            case PredatorClass.PlagueGardener:
+                return plagueGardenerClassSummary;
             default:
                 return GetClassDisplayName();
         }
+    }
+
+    public PredatorClassDetail GetPredatorClassDetail()
+    {
+        return PredatorClassCatalog.GetDetail(activeClass);
+    }
+
+    public Color GetClassThemeColor()
+    {
+        return PredatorClassCatalog.GetDetail(activeClass).themeColor;
     }
 
     public void RegisterBroodling(BroodlingMinion broodling)
@@ -247,6 +287,10 @@ public partial class PredatorClassManager
         }
 
         activeBroodlings.Clear();
+
+        StopShadowClassState("class-switch");
+        StopIronClassState("class-switch");
+        StopPlagueClassState("class-switch");
     }
 
     private void RefreshPredatorAbilityUi()
@@ -264,6 +308,9 @@ public partial class PredatorClassManager
         EnsureRelentlessAbilityDetails();
         EnsureSwarmAbilityDetails();
         EnsureJuggernautAbilityDetails();
+        EnsureShadowAbilityDetails();
+        EnsureIronAbilityDetails();
+        EnsurePlagueAbilityDetails();
     }
 
     private void EnsureSwarmAbilityDetails()
@@ -597,6 +644,86 @@ public partial class PredatorClassManager
             float angle = i * 90f + Random.Range(-15f, 15f);
             Vector3 dir = Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
             spawner.SpawnRockObstacle(center + dir * (radius * 0.55f), 6f);
+        }
+    }
+
+    [Header("Class Theme")]
+    [Tooltip("Optional body renderer to tint when class is selected. Falls back to all child renderers.")]
+    public Renderer predatorThemeRenderer;
+
+    private readonly System.Collections.Generic.List<Renderer> themedRenderers = new System.Collections.Generic.List<Renderer>();
+    private readonly System.Collections.Generic.List<Color> themedRendererBaseColors = new System.Collections.Generic.List<Color>();
+
+    internal void ApplyPredatorClassThemeColor(PredatorClass predatorClass)
+    {
+        CacheThemedRenderersIfNeeded();
+        Color theme = PredatorClassCatalog.GetDetail(predatorClass).themeColor;
+        Color tint = Color.Lerp(Color.white, theme, 0.55f);
+
+        for (int i = 0; i < themedRenderers.Count; i++)
+        {
+            Renderer renderer = themedRenderers[i];
+            if (renderer == null)
+            {
+                continue;
+            }
+
+            Color baseColor = i < themedRendererBaseColors.Count ? themedRendererBaseColors[i] : Color.white;
+            if (renderer.material != null && renderer.material.HasProperty("_Color"))
+            {
+                renderer.material.color = Color.Lerp(baseColor, tint, 0.65f);
+            }
+            else if (renderer.material != null && renderer.material.HasProperty("_BaseColor"))
+            {
+                renderer.material.SetColor("_BaseColor", Color.Lerp(baseColor, tint, 0.65f));
+            }
+        }
+    }
+
+    private void CacheThemedRenderersIfNeeded()
+    {
+        if (themedRenderers.Count > 0)
+        {
+            return;
+        }
+
+        if (predatorThemeRenderer != null)
+        {
+            themedRenderers.Add(predatorThemeRenderer);
+        }
+        else
+        {
+            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                string name = renderers[i].name;
+                if (name.Contains("VFX") || name.Contains("Mark") || name.Contains("UI"))
+                {
+                    continue;
+                }
+
+                themedRenderers.Add(renderers[i]);
+            }
+        }
+
+        themedRendererBaseColors.Clear();
+        for (int i = 0; i < themedRenderers.Count; i++)
+        {
+            Renderer renderer = themedRenderers[i];
+            Color baseColor = Color.white;
+            if (renderer != null && renderer.sharedMaterial != null)
+            {
+                if (renderer.sharedMaterial.HasProperty("_Color"))
+                {
+                    baseColor = renderer.sharedMaterial.color;
+                }
+                else if (renderer.sharedMaterial.HasProperty("_BaseColor"))
+                {
+                    baseColor = renderer.sharedMaterial.GetColor("_BaseColor");
+                }
+            }
+
+            themedRendererBaseColors.Add(baseColor);
         }
     }
 }

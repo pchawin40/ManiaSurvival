@@ -6,6 +6,9 @@ using TMPro;
 
 public class ManiaGameUI : MonoBehaviour
 {
+    [Header("Predator Class Select")]
+    public PredatorClassSelectPanel predatorClassSelectPanel;
+
     [Header("Text")]
     public TMP_Text timerText;
     public TMP_Text roleText;
@@ -86,8 +89,14 @@ public class ManiaGameUI : MonoBehaviour
 
     [Header("Survivor Utility Buttons")]
     public Button survivorSprintButton;
+    public Button survivorJumpButton;
     public Button survivorPickupButton;
     public Button survivorDropButton;
+    public bool showJumpButton = false;
+
+    [Header("Predator Utility Buttons")]
+    public Button predatorPounceButton;
+    public bool showPredatorPounceButton;
 
     [Header("Mobile Ability Layout")]
     [Tooltip("Distance from the right screen edge to the ability grid.")]
@@ -279,6 +288,7 @@ public class ManiaGameUI : MonoBehaviour
         ConfigureRoleHudPanels(insetRight, insetBottom);
         ConfigureSurvivorAbilityLayout(insetRight, insetBottom);
         ConfigurePredatorAbilityLayout(insetRight, insetBottom);
+        ConfigurePredatorUtilityButtons();
         ConfigureTooltipLayout(insetRight, insetBottom);
     }
 
@@ -330,8 +340,17 @@ public class ManiaGameUI : MonoBehaviour
         Transform utilityParent = gridRect != null ? gridRect.parent : survivorPanel != null ? survivorPanel.transform : transform;
 
         RelocateUtilityButton(survivorSprintButton, utilityParent, insetLeft, insetBottom, 0);
-        RelocateUtilityButton(survivorPickupButton, utilityParent, insetLeft, insetBottom, 1);
-        RelocateUtilityButton(survivorDropButton, utilityParent, insetLeft, insetBottom, 1);
+        if (showJumpButton)
+        {
+            RelocateUtilityButton(survivorJumpButton, utilityParent, insetLeft, insetBottom, 1);
+            RelocateUtilityButton(survivorPickupButton, utilityParent, insetLeft, insetBottom, 2);
+            RelocateUtilityButton(survivorDropButton, utilityParent, insetLeft, insetBottom, 2);
+        }
+        else
+        {
+            RelocateUtilityButton(survivorPickupButton, utilityParent, insetLeft, insetBottom, 1);
+            RelocateUtilityButton(survivorDropButton, utilityParent, insetLeft, insetBottom, 1);
+        }
         ConfigureSurvivorUtilityPanel(insetLeft, insetBottom);
     }
 
@@ -354,6 +373,51 @@ public class ManiaGameUI : MonoBehaviour
         if (survivorSprintButton == null)
         {
             survivorSprintButton = FindSurvivorUtilityButton("Sprint");
+        }
+
+        if (showJumpButton && survivorJumpButton == null)
+        {
+            survivorJumpButton = FindSurvivorUtilityButton("Jump");
+        }
+
+        WireSurvivorJumpButton();
+    }
+
+    private void WireSurvivorJumpButton()
+    {
+        if (!showJumpButton || survivorJumpButton == null)
+        {
+            return;
+        }
+
+        survivorJumpButton.onClick.RemoveListener(PressMobileJump);
+        survivorJumpButton.onClick.AddListener(PressMobileJump);
+    }
+
+    private void ConfigurePredatorUtilityButtons()
+    {
+        if (showPredatorPounceButton && predatorPounceButton == null && monsterPanel != null)
+        {
+            Button[] buttons = monsterPanel.GetComponentsInChildren<Button>(true);
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                Button button = buttons[i];
+                if (button != null && button.gameObject.name.Contains("Pounce"))
+                {
+                    predatorPounceButton = button;
+                    break;
+                }
+            }
+        }
+
+        if (predatorPounceButton != null)
+        {
+            predatorPounceButton.gameObject.SetActive(showPredatorPounceButton);
+            predatorPounceButton.onClick.RemoveListener(PressMobilePounce);
+            if (showPredatorPounceButton)
+            {
+                predatorPounceButton.onClick.AddListener(PressMobilePounce);
+            }
         }
     }
 
@@ -1121,6 +1185,28 @@ public class ManiaGameUI : MonoBehaviour
         }
     }
 
+    public void PressMobileJump()
+    {
+        if (localRoleController != null)
+        {
+            localRoleController.PressJump();
+            return;
+        }
+
+        if (localSurvivorMovement != null)
+        {
+            localSurvivorMovement.TryJump();
+        }
+    }
+
+    public void PressMobilePounce()
+    {
+        if (localRoleController != null)
+        {
+            localRoleController.PressPounce();
+        }
+    }
+
     private void UpdateSimpleMobileJoystick()
     {
         if (joystickArea == null || (localRoleController == null && localSurvivorMovement == null))
@@ -1283,7 +1369,68 @@ public class ManiaGameUI : MonoBehaviour
 
     public void StartAsMonster()
     {
+        EnsurePredatorClassSelectPanel();
+        if (predatorClassSelectPanel != null)
+        {
+            predatorClassSelectPanel.Show(this);
+            return;
+        }
+
         StartGameWithMode(PlayerControlMode.MonsterControlled);
+    }
+
+    public void ConfirmPredatorClassAndStart(PredatorClass selectedClass)
+    {
+        ApplySelectedPredatorClass(selectedClass);
+
+        if (predatorClassSelectPanel != null)
+        {
+            predatorClassSelectPanel.Hide();
+        }
+
+        StartGameWithMode(PlayerControlMode.MonsterControlled);
+    }
+
+    private void EnsurePredatorClassSelectPanel()
+    {
+        if (predatorClassSelectPanel != null)
+        {
+            return;
+        }
+
+        predatorClassSelectPanel = GetComponent<PredatorClassSelectPanel>();
+        if (predatorClassSelectPanel == null)
+        {
+            GameObject host = startScreen != null ? startScreen : gameObject;
+            predatorClassSelectPanel = host.GetComponent<PredatorClassSelectPanel>();
+            if (predatorClassSelectPanel == null)
+            {
+                predatorClassSelectPanel = host.AddComponent<PredatorClassSelectPanel>();
+            }
+        }
+    }
+
+    private void ApplySelectedPredatorClass(PredatorClass selectedClass)
+    {
+        if (localRoleController == null)
+        {
+            localRoleController = FindFirstObjectByType<LocalRoleController>();
+        }
+
+        PredatorClassManager classManager = null;
+        if (localRoleController != null && localRoleController.predatorClassManager != null)
+        {
+            classManager = localRoleController.predatorClassManager;
+        }
+        else if (predatorAbilityController != null)
+        {
+            classManager = predatorAbilityController.GetComponent<PredatorClassManager>();
+        }
+
+        if (classManager != null)
+        {
+            classManager.SetPredatorClass(selectedClass);
+        }
     }
 
     public void OnSurvivorPrimaryPressed()
