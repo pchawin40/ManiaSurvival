@@ -532,6 +532,10 @@ public static class SampleSceneQaValidator
         }
 
         ValidatePredatorClassCatalogPortraits(info, warn);
+        ValidatePredatorClassTabLabels(pass, warn);
+        ValidateSwarmBroodTuning(manager, pass, warn, fail);
+        ValidateBioticAntiSummon(FindMainSurvivor(), pass, warn, fail);
+        ValidatePredatorClassSelectUi(pass, info);
 
         PredatorClassSwitcher switcher = monster.GetComponent<PredatorClassSwitcher>();
         if (switcher == null)
@@ -578,6 +582,171 @@ public static class SampleSceneQaValidator
         if (missingPortraitCount == playable.Count)
         {
             info("No predator class portraits assigned yet — UI uses theme colors instead");
+        }
+    }
+
+    private static void ValidatePredatorClassTabLabels(
+        System.Action<string> pass,
+        System.Action<string> warn)
+    {
+        IReadOnlyList<PredatorClass> playable = PredatorClassCatalog.GetPlayableClasses();
+        for (int i = 0; i < playable.Count; i++)
+        {
+            PredatorClassDetail detail = PredatorClassCatalog.GetDetail(playable[i]);
+            if (string.IsNullOrWhiteSpace(detail.tabShortName))
+            {
+                warn("Predator class tab label missing: " + detail.displayName);
+                continue;
+            }
+
+            pass("Predator class tab label configured: " + detail.tabShortName);
+        }
+    }
+
+    private static void ValidateSwarmBroodTuning(
+        PredatorClassManager manager,
+        System.Action<string> pass,
+        System.Action<string> warn,
+        System.Action<string> fail)
+    {
+        if (manager.broodlingDamage > 2)
+        {
+            warn("Broodling damage is high for chip-pressure tuning: " + manager.broodlingDamage);
+        }
+        else
+        {
+            pass("Broodling damage tuned low: " + manager.broodlingDamage);
+        }
+
+        if (manager.broodlingLifetime <= 0f)
+        {
+            fail("Broodling lifetime must be > 0 so summons despawn");
+        }
+        else
+        {
+            pass("Broodling lifetime configured: " + manager.broodlingLifetime.ToString("0.0") + "s");
+        }
+
+        if (manager.broodlingContactInterval < 0.9f)
+        {
+            warn("Broodling bite interval is fast: " + manager.broodlingContactInterval.ToString("0.0") + "s");
+        }
+        else
+        {
+            pass("Broodling bite interval configured: " + manager.broodlingContactInterval.ToString("0.0") + "s");
+        }
+
+        if (manager.swarmBroodManaCost < 40f || manager.swarmBroodManaCost > 50f)
+        {
+            warn("Swarm Brood mana cost outside expected ~45 range: " + manager.swarmBroodManaCost.ToString("0"));
+        }
+        else
+        {
+            pass("Swarm Brood mana cost configured: " + manager.swarmBroodManaCost.ToString("0"));
+        }
+
+        if (manager.maxActiveBroodlings > 8)
+        {
+            warn("Active brood cap is high: " + manager.maxActiveBroodlings);
+        }
+        else
+        {
+            pass("Active brood cap configured: " + manager.maxActiveBroodlings);
+        }
+
+        if (manager.swarmBroodSpawnCount > 4)
+        {
+            warn("Brood spawn count is high: " + manager.swarmBroodSpawnCount);
+        }
+        else
+        {
+            pass("Brood spawn count configured: " + manager.swarmBroodSpawnCount);
+        }
+
+        if (manager.swarmHiveBroodSpawnCount > 2)
+        {
+            warn("Hive brood spawn count is high: " + manager.swarmHiveBroodSpawnCount);
+        }
+        else
+        {
+            pass("Hive brood spawn count configured: " + manager.swarmHiveBroodSpawnCount);
+        }
+
+        if (manager.broodlingMaxHealth <= 0)
+        {
+            fail("Broodling max health must be > 0 so survivors can kill summons");
+        }
+        else
+        {
+            pass("Broodling max health configured: " + manager.broodlingMaxHealth);
+        }
+
+        if (typeof(MiniWorldHealthBarBuilder).GetMethod("Attach") != null)
+        {
+            pass("Broodling health bar builder available for runtime summons");
+        }
+        else
+        {
+            warn("Broodling health bar builder missing");
+        }
+    }
+
+    private static void ValidateBioticAntiSummon(
+        GameObject survivor,
+        System.Action<string> pass,
+        System.Action<string> warn,
+        System.Action<string> fail)
+    {
+        if (survivor == null)
+        {
+            warn("Main survivor missing for Biotic anti-summon validation");
+            return;
+        }
+
+        SurvivorClassManager manager = survivor.GetComponent<SurvivorClassManager>();
+        if (manager == null)
+        {
+            fail("Survivor missing SurvivorClassManager for Biotic validation");
+            return;
+        }
+
+        if (manager.bioticDartSummonDamage <= 0)
+        {
+            fail("Biotic anti-broodling damage must be > 0");
+        }
+        else
+        {
+            pass("Biotic anti-broodling damage configured: " + manager.bioticDartSummonDamage);
+        }
+
+        if (manager.bioticDartMaxEnemyHits < 2)
+        {
+            warn("Biotic max enemy hits is low: " + manager.bioticDartMaxEnemyHits);
+        }
+        else
+        {
+            pass("Biotic max enemy hits configured: " + manager.bioticDartMaxEnemyHits);
+        }
+    }
+
+    private static void ValidatePredatorClassSelectUi(
+        System.Action<string> pass,
+        System.Action<string> info)
+    {
+        PredatorClassSelectPanel selectPanel = Object.FindFirstObjectByType<PredatorClassSelectPanel>();
+        if (selectPanel == null)
+        {
+            info("PredatorClassSelectPanel builds at runtime on Hunt — tab labels validated via catalog");
+            return;
+        }
+
+        if (selectPanel.HasReadableTabLabels())
+        {
+            pass("Predator class select panel has readable tab TMP labels");
+        }
+        else
+        {
+            info("PredatorClassSelectPanel exists but tab labels are not built until Play Mode Show()");
         }
     }
 

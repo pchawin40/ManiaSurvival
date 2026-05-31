@@ -64,7 +64,9 @@ public static class PredatorClassCatalog
         {
             classId = PredatorClass.RelentlessHook,
             displayName = "Relentless Hook",
+            tabShortName = "Hook",
             shortRole = "Catch Predator",
+            styleLine = "Pull survivors out of position and punish bad spacing.",
             tagline = "Pull survivors out of safety.",
             difficulty = "Medium",
             themeColor = new Color(0.95f, 0.45f, 0.18f, 1f),
@@ -82,7 +84,9 @@ public static class PredatorClassCatalog
         {
             classId = PredatorClass.SwarmOverlord,
             displayName = "Swarm Overlord",
+            tabShortName = "Swarm",
             shortRole = "Summoner Predator",
+            styleLine = "Wins by corruption, brood pressure, and area denial.",
             tagline = "Own space with brood and corruption.",
             difficulty = "Easy",
             themeColor = new Color(0.45f, 0.92f, 0.28f, 1f),
@@ -90,7 +94,7 @@ public static class PredatorClassCatalog
             abilityShortDescriptions = new[]
             {
                 "Lobbed infection glob — splat, slow, and corrupt.",
-                "Hatch two broodlings (45 mana, cap 4).",
+                "Hatch four weak broodlings (45 mana, cap 8).",
                 "Seed a warning zone, then bloom corruption DOT.",
                 "Telegraphed hive pulse plus a small brood wave."
             }
@@ -100,7 +104,9 @@ public static class PredatorClassCatalog
         {
             classId = PredatorClass.Juggernaut,
             displayName = "Dragon Juggernaut",
+            tabShortName = "Dragon",
             shortRole = "Bruiser Predator",
+            styleLine = "Announce impact, then crash through survivors.",
             tagline = "Announce impact, then crash through it.",
             difficulty = "Medium",
             themeColor = new Color(1f, 0.42f, 0.12f, 1f),
@@ -118,7 +124,9 @@ public static class PredatorClassCatalog
         {
             classId = PredatorClass.ShadowStalker,
             displayName = "Shadow Stalker",
-            shortRole = "Stealth / Pick",
+            tabShortName = "Shadow",
+            shortRole = "Assassin Predator",
+            styleLine = "Strike from the dark, vanish, and pick off stragglers.",
             tagline = "Slash from the dark, vanish, mark prey, then bring night.",
             difficulty = "Hard",
             themeColor = new Color(0.52f, 0.28f, 0.82f, 1f),
@@ -136,7 +144,9 @@ public static class PredatorClassCatalog
         {
             classId = PredatorClass.IronColossus,
             displayName = "Iron Colossus",
-            shortRole = "Tank / Frontline",
+            tabShortName = "Iron",
+            shortRole = "Tank Predator",
+            styleLine = "Frontline bruiser that controls space with heavy slams.",
             tagline = "Crush, guard, quake, then fortify the arena.",
             difficulty = "Easy",
             themeColor = new Color(0.55f, 0.62f, 0.78f, 1f),
@@ -154,7 +164,9 @@ public static class PredatorClassCatalog
         {
             classId = PredatorClass.PlagueGardener,
             displayName = "Plague Gardener",
-            shortRole = "Zone / Control",
+            tabShortName = "Plague",
+            shortRole = "Controller Predator",
+            styleLine = "Root, poison, and overgrow the map into a hazard garden.",
             tagline = "Thorn, root, spore, then bloom the garden.",
             difficulty = "Medium",
             themeColor = new Color(0.38f, 0.78f, 0.32f, 1f),
@@ -177,7 +189,9 @@ public static class PredatorClassCatalog
         {
             classId = predatorClass,
             displayName = predatorClass.ToString(),
+            tabShortName = predatorClass.ToString(),
             shortRole = "Predator",
+            styleLine = predatorClass.ToString(),
             tagline = predatorClass.ToString(),
             difficulty = "Unknown",
             themeColor = Color.gray,

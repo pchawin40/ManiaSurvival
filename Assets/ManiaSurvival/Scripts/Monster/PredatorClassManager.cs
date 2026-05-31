@@ -2916,15 +2916,22 @@ public class TrackingMinion : MonoBehaviour
     private LayerMask targetLayers;
     private string survivorTag;
     private float life = 8f;
+    private bool isArmed;
 
     public void Initialize(LayerMask layers, string tag)
     {
         targetLayers = layers;
         survivorTag = tag;
+        isArmed = true;
     }
 
     private void Update()
     {
+        if (!isArmed)
+        {
+            return;
+        }
+
         life -= Time.deltaTime;
         if (life <= 0f)
         {

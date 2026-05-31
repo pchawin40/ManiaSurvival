@@ -26,6 +26,7 @@ public partial class PredatorClassManager
         int available = Mathf.Max(0, maxActiveBroodlings - activeBroodlings.Count);
         if (available <= 0)
         {
+            Debug.Log("[AbilityBlock] Brood blocked: active brood cap reached");
             LogPredatorAbility("Brood rejected: max broodlings active.");
             return false;
         }
@@ -33,7 +34,7 @@ public partial class PredatorClassManager
         int toSpawn = Mathf.Min(spawnCount, available);
         for (int i = 0; i < toSpawn; i++)
         {
-            SpawnBroodlingAtIndex(i, toSpawn);
+            SpawnSafeBroodling(i, toSpawn, "Brood");
         }
 
         LogPredatorAbility("Brood spawned " + toSpawn + " broodlings (cap " + maxActiveBroodlings + ", cost " + swarmBroodManaCost.ToString("0") + " mana)");
@@ -258,7 +259,7 @@ public partial class PredatorClassManager
                 break;
             }
 
-            SpawnBroodlingAtIndex(i, broodToSpawn);
+            SpawnSafeBroodling(i, broodToSpawn, "Hive");
         }
 
         isSwarmHiveActive = false;
@@ -291,25 +292,34 @@ public partial class PredatorClassManager
         LogPredatorAbility("Swarm Hive pulse hit " + hits.Length);
     }
 
-    private void SpawnBroodlingAtIndex(int index, int total)
+    private void SpawnSafeBroodling(int index, int total, string sourceAbility)
     {
         float angleStep = total <= 1 ? 0f : 360f / total;
         float yaw = angleStep * index + Random.Range(-12f, 12f);
         Vector3 offset = Quaternion.Euler(0f, yaw, 0f) * GetFlatForward() * broodSpawnOffsetRadius;
         Vector3 spawnPos = ResolveBroodSpawnPosition(transform.position + offset);
 
-        GameObject prefab = broodlingPrefab != null ? broodlingPrefab : minionPrefab;
-        GameObject minionObj;
-        if (prefab != null)
+        if (enableAbilityFeel)
         {
-            minionObj = Instantiate(prefab, spawnPos, Quaternion.identity);
+            PredatorAbilityFeelVfx.SpawnWarningCircle(
+                spawnPos,
+                0.85f,
+                broodlingHatchDuration,
+                new Color(0.45f, 0.95f, 0.25f, 0.5f));
         }
-        else
+
+        GameObject minionObj;
+        bool usedPrefab = TryInstantiateSafeBroodlingPrefab(spawnPos, out minionObj);
+        if (!usedPrefab)
         {
             minionObj = BroodlingMinion.SpawnRuntimeCapsule(spawnPos, new Color(0.4f, 0.9f, 0.25f, 1f), broodlingScale);
         }
 
-        minionObj.transform.localScale = Vector3.one * Mathf.Clamp(broodlingScale, 0.45f, 0.85f);
+        minionObj.SetActive(false);
+        BroodlingMinion.SanitizeLegacyComponents(minionObj);
+        BroodlingMinion.EnsureBroodlingPhysics(minionObj);
+
+        minionObj.transform.localScale = Vector3.one * Mathf.Clamp(broodlingScale, 0.45f, 0.55f);
 
         BroodlingMinion broodling = minionObj.GetComponent<BroodlingMinion>();
         if (broodling == null)
@@ -325,8 +335,63 @@ public partial class PredatorClassManager
             broodlingDamage,
             broodlingMoveSpeed,
             broodlingHatchDuration,
-            broodlingContactInterval);
+            broodlingContactInterval,
+            broodlingMaxHealth,
+            broodlingFadeOutDuration,
+            index + 1,
+            broodlingPostHatchBiteDelay);
+
+        BroodlingMinion.LogSpawnDiagnostics(minionObj, broodling, sourceAbility, usedPrefab);
+        minionObj.SetActive(true);
         SpawnSwarmBroodNest(spawnPos);
+    }
+
+    private bool TryInstantiateSafeBroodlingPrefab(Vector3 spawnPos, out GameObject minionObj)
+    {
+        minionObj = null;
+        if (!IsSafeBroodlingPrefab(broodlingPrefab))
+        {
+            if (broodlingPrefab != null)
+            {
+                Debug.LogWarning("[SwarmDebug] Rejected unsafe broodlingPrefab '" + broodlingPrefab.name
+                    + "'. Using runtime broodling capsule instead.");
+            }
+
+            return false;
+        }
+
+        minionObj = Instantiate(broodlingPrefab, spawnPos, Quaternion.identity);
+        return true;
+    }
+
+    private bool IsSafeBroodlingPrefab(GameObject prefab)
+    {
+        if (prefab == null)
+        {
+            return false;
+        }
+
+        if (minionPrefab != null && prefab == minionPrefab)
+        {
+            return false;
+        }
+
+        if (prefab.name.IndexOf("TrackingMinion", System.StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return false;
+        }
+
+        if (prefab.GetComponentInChildren<TrackingMinion>(true) != null)
+        {
+            return false;
+        }
+
+        if (prefab.GetComponentInChildren<MonsterAttack>(true) != null)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private Vector3 ResolveBroodSpawnPosition(Vector3 desired)

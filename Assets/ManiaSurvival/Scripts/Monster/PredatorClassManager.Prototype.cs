@@ -36,14 +36,17 @@ public partial class PredatorClassManager
     [Header("Swarm Overlord - Brood")]
     public GameObject broodlingPrefab;
     public float swarmBroodManaCost = 45f;
-    public int swarmBroodSpawnCount = 2;
-    public int maxActiveBroodlings = 4;
+    public int swarmBroodSpawnCount = 4;
+    public int maxActiveBroodlings = 8;
     public float broodlingLifetime = 9f;
     public int broodlingDamage = 2;
-    public float broodlingMoveSpeed = 4.2f;
-    public float broodlingScale = 0.6f;
-    public float broodlingHatchDuration = 0.75f;
-    public float broodlingContactInterval = 0.85f;
+    public int broodlingMaxHealth = 5;
+    public float broodlingMoveSpeed = 3f;
+    public float broodlingScale = 0.5f;
+    public float broodlingHatchDuration = 0.7f;
+    public float broodlingContactInterval = 1.5f;
+    public float broodlingPostHatchBiteDelay = 0.2f;
+    public float broodlingFadeOutDuration = 0.35f;
     public float broodSpawnOffsetRadius = 2.2f;
 
     [Header("Swarm Overlord - Infest")]
@@ -60,7 +63,7 @@ public partial class PredatorClassManager
     public int swarmHivePulseDamage = 4;
     public float swarmHivePulseInterval = 1.1f;
     public int swarmHivePulseCount = 2;
-    public int swarmHiveBroodSpawnCount = 1;
+    public int swarmHiveBroodSpawnCount = 2;
 
     [Header("Dragon Juggernaut - Flame")]
     public float juggernautFlameRange = 8f;

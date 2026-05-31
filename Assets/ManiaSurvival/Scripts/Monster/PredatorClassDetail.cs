@@ -6,7 +6,9 @@ public class PredatorClassDetail
 {
     public PredatorClass classId = PredatorClass.RelentlessHook;
     public string displayName = "Predator";
+    public string tabShortName = "Predator";
     public string shortRole = "Hunter";
+    public string styleLine = "";
     [TextArea(1, 2)] public string tagline = "";
     public string difficulty = "Normal";
     public Color themeColor = new Color(0.85f, 0.35f, 0.2f, 1f);

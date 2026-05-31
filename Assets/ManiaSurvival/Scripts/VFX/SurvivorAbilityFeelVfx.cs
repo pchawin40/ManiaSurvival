@@ -20,6 +20,57 @@ public static class SurvivorAbilityFeelVfx
         Object.Destroy(flash, lifetime);
     }
 
+    public static void SpawnBioticDartConeFlash(
+        Vector3 origin,
+        Vector3 forward,
+        float range,
+        float halfAngleDegrees,
+        float lifetime = 0.22f)
+    {
+        forward.y = 0f;
+        if (forward.sqrMagnitude <= 0.001f)
+        {
+            forward = Vector3.forward;
+        }
+
+        forward.Normalize();
+        origin += Vector3.up * 0.9f;
+
+        GameObject line = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        line.name = "BioticDartConeLineVFX";
+        RemoveCollider(line);
+        line.transform.position = origin + forward * (range * 0.45f);
+        line.transform.rotation = Quaternion.LookRotation(forward, Vector3.up);
+        line.transform.localScale = new Vector3(0.18f, 0.08f, Mathf.Max(1f, range * 0.9f));
+        ApplyColor(line, new Color(0.35f, 0.95f, 0.55f, 0.55f));
+        Object.Destroy(line, lifetime);
+
+        float spread = Mathf.Clamp(halfAngleDegrees, 10f, 45f);
+        for (int i = -1; i <= 1; i++)
+        {
+            Vector3 dir = Quaternion.Euler(0f, spread * i, 0f) * forward;
+            GameObject streak = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            streak.name = "BioticDartConeStreakVFX";
+            RemoveCollider(streak);
+            streak.transform.position = origin + dir * (range * 0.35f);
+            streak.transform.rotation = Quaternion.LookRotation(dir, Vector3.up);
+            streak.transform.localScale = new Vector3(0.12f, 0.06f, range * 0.55f);
+            ApplyColor(streak, new Color(0.45f, 1f, 0.65f, 0.45f));
+            Object.Destroy(streak, lifetime * 0.85f);
+        }
+    }
+
+    public static void SpawnBroodlingDeathPop(Vector3 position, float lifetime = 0.28f)
+    {
+        GameObject pop = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        pop.name = "BroodlingDeathPopVFX";
+        RemoveCollider(pop);
+        pop.transform.position = position + Vector3.up * 0.45f;
+        pop.transform.localScale = Vector3.one * 0.42f;
+        ApplyColor(pop, new Color(0.45f, 0.95f, 0.25f, 0.75f));
+        Object.Destroy(pop, lifetime);
+    }
+
     public static void SpawnHealPulseRing(Vector3 center, float radius, float lifetime = 0.45f)
     {
         GameObject ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);

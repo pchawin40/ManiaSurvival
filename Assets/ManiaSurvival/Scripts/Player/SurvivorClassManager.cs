@@ -48,6 +48,14 @@ public class SurvivorClassManager : MonoBehaviour
     public int bioticDartPredatorDamage = 6;
     [Tooltip("Knockback when Biotic Dart hits a monster.")]
     public float bioticDartPredatorKnockback = 5f;
+    [Tooltip("Damage when Biotic Dart hits a broodling/summon.")]
+    public int bioticDartSummonDamage = 4;
+    [Tooltip("Knockback when Biotic Dart hits a broodling/summon.")]
+    public float bioticDartSummonKnockback = 7f;
+    [Tooltip("Max enemy units Biotic can hit per offensive cast.")]
+    public int bioticDartMaxEnemyHits = 3;
+    [Tooltip("Cone half-angle for Biotic offensive multi-hit.")]
+    public float bioticDartOffensiveConeHalfAngle = 30f;
     [Tooltip("Sphere cast radius — wider = easier to hit nearby allies.")]
     public float bioticDartSphereCastRadius = 0.65f;
     [Tooltip("Aim cone half-angle when no direct line hit (degrees).")]
@@ -250,7 +258,7 @@ public class SurvivorClassManager : MonoBehaviour
         {
             displayName = "Biotic Dart",
             buttonLabel = "Biotic",
-            shortDescription = "Heal an ally or knock the predator back.",
+            shortDescription = "Heal ally. Blast enemies in front. Strong vs broodlings.",
             flavorText = "A quick shot that saves friends or creates breathing room.",
             roleTag = "Heal / Peel",
             themeColor = new Color(0.35f, 0.95f, 0.55f, 1f)
@@ -531,21 +539,6 @@ public class SurvivorClassManager : MonoBehaviour
             return false;
         }
 
-        if (healTarget)
-        {
-            if (target.currentHealth >= target.maxHealth)
-            {
-                Debug.Log("[AbilityBlock] Biotic Dart blocked: ally already full HP");
-                return false;
-            }
-        }
-
-        if (!IsUnitWithinFlatRange(target, transform.position, bioticDartRange))
-        {
-            Debug.Log("[AbilityBlock] Biotic Dart blocked: target outside range");
-            return false;
-        }
-
         Vector3 direction = NormalizeFlatDirection(aimDirection);
         Vector3 toTarget = target.transform.position - transform.position;
         toTarget.y = 0f;
@@ -557,15 +550,47 @@ public class SurvivorClassManager : MonoBehaviour
         Vector3 spawn = GetProjectileSpawnPosition(direction);
         SurvivorAbilityFeelVfx.SpawnBioticDartMuzzleFlash(spawn, direction);
 
+        if (healTarget)
+        {
+            if (target.currentHealth >= target.maxHealth)
+            {
+                Debug.Log("[AbilityBlock] Biotic Dart blocked: ally already full HP");
+                return false;
+            }
+
+            if (!IsUnitWithinFlatRange(target, transform.position, bioticDartRange))
+            {
+                Debug.Log("[AbilityBlock] Biotic Dart blocked: target outside range");
+                return false;
+            }
+
+            if (bioticDartCastWindup > 0f)
+            {
+                StartCoroutine(ApplyBioticDartHealAfterWindup(target, bioticDartCastWindup));
+            }
+            else
+            {
+                ApplyBioticDartHeal(target);
+            }
+
+            return true;
+        }
+
+        if (!HasBioticOffensiveTargetsInCone(direction))
+        {
+            Debug.Log("[AbilityBlock] Biotic Dart blocked: no enemies in cone");
+            return false;
+        }
+
         if (IsUnitWithinFlatRange(target, transform.position, bioticDartCloseRangeInstant))
         {
             if (bioticDartCastWindup > 0f)
             {
-                StartCoroutine(ApplyBioticDartAfterWindup(target, bioticDartCastWindup));
+                StartCoroutine(ApplyBioticDartOffensiveAfterWindup(direction, bioticDartCastWindup));
             }
             else
             {
-                ApplyBioticDartEffect(target);
+                ApplyBioticDartOffensiveCone(direction);
             }
 
             return true;
@@ -573,45 +598,49 @@ public class SurvivorClassManager : MonoBehaviour
 
         if (bioticDartProjectilePrefab != null)
         {
-            StartCoroutine(SpawnBioticDartProjectileAfterWindup(spawn, direction, target));
+            StartCoroutine(SpawnBioticDartProjectileAfterWindup(spawn, direction));
             return true;
         }
 
         if (bioticDartCastWindup > 0f)
         {
-            StartCoroutine(ApplyBioticDartAfterWindup(target, bioticDartCastWindup));
+            StartCoroutine(ApplyBioticDartOffensiveAfterWindup(direction, bioticDartCastWindup));
         }
         else
         {
-            ApplyBioticDartEffect(target);
+            ApplyBioticDartOffensiveCone(direction);
         }
 
         return true;
     }
 
-    private IEnumerator ApplyBioticDartAfterWindup(UnitHealth target, float windup)
+    private IEnumerator ApplyBioticDartHealAfterWindup(UnitHealth target, float windup)
     {
         if (windup > 0f)
         {
             yield return new WaitForSeconds(windup);
         }
 
-        ApplyBioticDartEffect(target);
+        ApplyBioticDartHeal(target);
+    }
+
+    private IEnumerator ApplyBioticDartOffensiveAfterWindup(Vector3 direction, float windup)
+    {
+        if (windup > 0f)
+        {
+            yield return new WaitForSeconds(windup);
+        }
+
+        ApplyBioticDartOffensiveCone(direction);
     }
 
     private IEnumerator SpawnBioticDartProjectileAfterWindup(
         Vector3 spawn,
-        Vector3 direction,
-        UnitHealth target)
+        Vector3 direction)
     {
         if (bioticDartCastWindup > 0f)
         {
             yield return new WaitForSeconds(bioticDartCastWindup);
-        }
-
-        if (target == null || target.IsDead)
-        {
-            yield break;
         }
 
         GameObject obj = Instantiate(bioticDartProjectilePrefab, spawn, Quaternion.LookRotation(direction));
@@ -622,7 +651,7 @@ public class SurvivorClassManager : MonoBehaviour
             projectile = obj.AddComponent<BioticDartProjectile>();
         }
 
-        projectile.Initialize(this, direction, bioticDartSpeed, bioticDartLifetime, bioticDartRange, target);
+        projectile.Initialize(this, direction, bioticDartSpeed, bioticDartLifetime, bioticDartRange);
     }
 
     private bool ExecuteMedicHealPulse()
@@ -796,34 +825,163 @@ public class SurvivorClassManager : MonoBehaviour
         return true;
     }
 
-    private void ApplyBioticDartEffect(UnitHealth target)
+    private void ApplyBioticDartHeal(UnitHealth target)
     {
-        if (target == null || target.IsDead)
+        if (target == null || target.IsDead || !IsAlly(target))
         {
             return;
         }
 
-        if (IsAlly(target))
+        if (target.currentHealth >= target.maxHealth)
         {
-            if (target.currentHealth >= target.maxHealth)
-            {
-                Debug.Log("[AbilityBlock] Heal blocked: target already full HP");
-                return;
-            }
-
-            if (!IsUnitWithinFlatRange(target, transform.position, bioticDartRange))
-            {
-                Debug.Log("[AbilityBlock] Heal blocked: target outside heal range");
-                return;
-            }
-
-            int healed = target.Heal(healDartAmount);
-            if (healed > 0 && showDebugLogs)
-            {
-                Debug.Log("[SurvivorAbility] Biotic Dart healed " + target.name + " for " + healed);
-            }
-
+            Debug.Log("[AbilityBlock] Heal blocked: target already full HP");
             return;
+        }
+
+        if (!IsUnitWithinFlatRange(target, transform.position, bioticDartRange))
+        {
+            Debug.Log("[AbilityBlock] Heal blocked: target outside heal range");
+            return;
+        }
+
+        int healed = target.Heal(healDartAmount);
+        if (healed > 0)
+        {
+            Debug.Log("[Biotic] Healed ally " + target.name + " for " + healed + " HP.");
+        }
+    }
+
+    private void ApplyBioticDartOffensiveCone(Vector3 direction)
+    {
+        direction = NormalizeFlatDirection(direction);
+        List<UnitHealth> targets = CollectBioticOffensiveTargets(direction);
+        if (targets.Count == 0)
+        {
+            return;
+        }
+
+        SurvivorAbilityFeelVfx.SpawnBioticDartConeFlash(
+            transform.position,
+            direction,
+            bioticDartRange,
+            bioticDartOffensiveConeHalfAngle);
+
+        int maxHits = Mathf.Max(1, bioticDartMaxEnemyHits);
+        int applied = 0;
+        for (int i = 0; i < targets.Count && applied < maxHits; i++)
+        {
+            if (ApplyBioticDartOffensiveHit(targets[i]))
+            {
+                applied++;
+            }
+        }
+
+        Debug.Log("[Biotic] Offensive cast hit " + applied + " enemy units.");
+    }
+
+    private bool HasBioticOffensiveTargetsInCone(Vector3 direction)
+    {
+        return CollectBioticOffensiveTargets(direction).Count > 0;
+    }
+
+    private List<UnitHealth> CollectBioticOffensiveTargets(Vector3 direction)
+    {
+        var results = new List<UnitHealth>();
+        var seen = new HashSet<UnitHealth>();
+        var candidates = new List<(UnitHealth health, float angle, float distance)>();
+
+        direction = NormalizeFlatDirection(direction);
+        float halfAngle = Mathf.Clamp(bioticDartOffensiveConeHalfAngle, 20f, 40f);
+
+        Collider[] hits = Physics.OverlapSphere(transform.position, bioticDartRange, targetLayers, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < hits.Length; i++)
+        {
+            UnitHealth health = hits[i].GetComponentInParent<UnitHealth>();
+            if (!IsBioticOffensiveTarget(health))
+            {
+                continue;
+            }
+
+            if (!IsUnitWithinFlatRange(health, transform.position, bioticDartRange))
+            {
+                continue;
+            }
+
+            Vector3 toTarget = health.transform.position - transform.position;
+            toTarget.y = 0f;
+            float distance = toTarget.magnitude;
+            if (distance <= 0.05f)
+            {
+                candidates.Add((health, 0f, distance));
+                continue;
+            }
+
+            float angle = Vector3.Angle(direction, toTarget / distance);
+            if (angle > halfAngle)
+            {
+                continue;
+            }
+
+            candidates.Add((health, angle, distance));
+        }
+
+        candidates.Sort((a, b) =>
+        {
+            int angleCompare = a.angle.CompareTo(b.angle);
+            return angleCompare != 0 ? angleCompare : a.distance.CompareTo(b.distance);
+        });
+
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            UnitHealth health = candidates[i].health;
+            if (health == null || seen.Contains(health))
+            {
+                continue;
+            }
+
+            seen.Add(health);
+            results.Add(health);
+        }
+
+        return results;
+    }
+
+    private bool IsBioticOffensiveTarget(UnitHealth health)
+    {
+        if (health == null || health.IsDead || health == unitHealth || IsAlly(health))
+        {
+            return false;
+        }
+
+        return IsEnemySummon(health) || IsPredator(health);
+    }
+
+    private bool ApplyBioticDartOffensiveHit(UnitHealth target)
+    {
+        if (!IsBioticOffensiveTarget(target))
+        {
+            return false;
+        }
+
+        if (IsEnemySummon(target))
+        {
+            target.TakeDamage(bioticDartSummonDamage, gameObject);
+            Vector3 summonKnockDir = target.transform.position - transform.position;
+            summonKnockDir.y = 0f;
+            if (summonKnockDir.sqrMagnitude <= 0.001f)
+            {
+                summonKnockDir = GetForwardDirection();
+            }
+
+            ApplyKnockback(target, summonKnockDir.normalized, bioticDartSummonKnockback);
+            Debug.Log("[Biotic] Hit " + target.name + " for " + bioticDartSummonDamage
+                + " damage. HP: " + target.currentHealth + "/" + target.maxHealth + ".");
+            if (target.IsDead)
+            {
+                Debug.Log("[SwarmBrood] " + target.name + " destroyed by Biotic.");
+            }
+
+            return true;
         }
 
         if (IsPredator(target))
@@ -837,11 +995,35 @@ public class SurvivorClassManager : MonoBehaviour
             }
 
             ApplyKnockback(target, knockDir.normalized, bioticDartPredatorKnockback);
-            if (showDebugLogs)
-            {
-                Debug.Log("[SurvivorAbility] Biotic Dart hit " + target.name + " for " + bioticDartPredatorDamage + " damage");
-            }
+            Debug.Log("[Biotic] Hit Predator for " + bioticDartPredatorDamage + " damage and "
+                + bioticDartPredatorKnockback.ToString("0.0") + " knockback.");
+            return true;
         }
+
+        return false;
+    }
+
+    private void ApplyBioticDartEffect(UnitHealth target)
+    {
+        if (target == null || target.IsDead)
+        {
+            return;
+        }
+
+        if (IsAlly(target))
+        {
+            ApplyBioticDartHeal(target);
+            return;
+        }
+
+        Vector3 direction = target.transform.position - transform.position;
+        direction.y = 0f;
+        if (direction.sqrMagnitude <= 0.001f)
+        {
+            direction = GetForwardDirection();
+        }
+
+        ApplyBioticDartOffensiveHit(target);
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -1301,6 +1483,13 @@ public class SurvivorClassManager : MonoBehaviour
                 return true;
             }
 
+            if (IsEnemySummon(health))
+            {
+                target = health;
+                healTarget = false;
+                return true;
+            }
+
             if (IsPredator(health))
             {
                 target = health;
@@ -1366,6 +1555,10 @@ public class SurvivorClassManager : MonoBehaviour
             if (IsAlly(health))
             {
                 ConsiderTarget(health, true);
+            }
+            else if (IsEnemySummon(health))
+            {
+                ConsiderTarget(health, false);
             }
             else if (IsPredator(health))
             {
@@ -1539,6 +1732,11 @@ public class SurvivorClassManager : MonoBehaviour
         return false;
     }
 
+    private bool IsEnemySummon(UnitHealth health)
+    {
+        return BroodlingMinion.IsBroodlingUnit(health);
+    }
+
     private void ApplyKnockback(UnitHealth target, Vector3 direction, float distance)
     {
         if (target == null || direction.sqrMagnitude <= 0.001f || distance <= 0f)
@@ -1604,15 +1802,13 @@ public class SurvivorClassManager : MonoBehaviour
         private float lifetime;
         private float range;
         private float distanceTravelled;
-        private UnitHealth homingTarget;
 
         public void Initialize(
             SurvivorClassManager manager,
             Vector3 dir,
             float moveSpeed,
             float life,
-            float maxRange,
-            UnitHealth target)
+            float maxRange)
         {
             owner = manager;
             direction = dir.normalized;
@@ -1620,7 +1816,6 @@ public class SurvivorClassManager : MonoBehaviour
             lifetime = Mathf.Max(0.1f, life);
             range = Mathf.Max(1f, maxRange);
             distanceTravelled = 0f;
-            homingTarget = target;
         }
 
         private void Update()
@@ -1631,31 +1826,13 @@ public class SurvivorClassManager : MonoBehaviour
                 return;
             }
 
-            if (homingTarget != null && !homingTarget.IsDead)
-            {
-                Vector3 toTarget = homingTarget.transform.position + Vector3.up * 1f - transform.position;
-                toTarget.y = 0f;
-                if (toTarget.sqrMagnitude <= 0.64f)
-                {
-                    owner.ApplyBioticDartEffect(homingTarget);
-                    Destroy(gameObject);
-                    return;
-                }
-
-                if (toTarget.sqrMagnitude > 0.01f)
-                {
-                    direction = Vector3.Slerp(direction, toTarget.normalized, 14f * Time.deltaTime).normalized;
-                }
-            }
-
             float step = speed * Time.deltaTime;
             Vector3 start = transform.position;
             Vector3 end = start + direction * step;
 
             if (Physics.Linecast(start, end, out RaycastHit hit, owner.targetLayers, QueryTriggerInteraction.Ignore))
             {
-                UnitHealth hitUnit = hit.collider.GetComponentInParent<UnitHealth>();
-                owner.ApplyBioticDartEffect(hitUnit != null ? hitUnit : homingTarget);
+                owner.ApplyBioticDartOffensiveCone(direction);
                 Destroy(gameObject);
                 return;
             }
@@ -1666,11 +1843,7 @@ public class SurvivorClassManager : MonoBehaviour
 
             if (lifetime <= 0f || distanceTravelled >= range)
             {
-                if (homingTarget != null && !homingTarget.IsDead)
-                {
-                    owner.ApplyBioticDartEffect(homingTarget);
-                }
-
+                owner.ApplyBioticDartOffensiveCone(direction);
                 Destroy(gameObject);
             }
         }

@@ -146,7 +146,7 @@ public static class AbilityPresentationFallback
                 {
                     displayName = "Biotic Dart",
                     buttonLabel = "Biotic",
-                    shortDescription = "Heal an ally or knock the predator back.",
+                    shortDescription = "Heal ally. Blast enemies in front. Strong vs broodlings.",
                     roleTag = "Heal / Peel",
                     themeColor = new Color(0.35f, 0.95f, 0.55f, 1f)
                 };
@@ -198,7 +198,7 @@ public static class AbilityPresentationFallback
                 {
                     displayName = "Brood Hatch",
                     buttonLabel = "Brood",
-                    shortDescription = "Hatch two broodlings (45 mana). Small helpers, not finishers.",
+                    shortDescription = "Hatch four weak broodlings (45 mana, cap 8). Survivors can kill them.",
                     roleTag = "Summon",
                     themeColor = new Color(0.55f, 0.85f, 0.35f, 1f)
                 };
