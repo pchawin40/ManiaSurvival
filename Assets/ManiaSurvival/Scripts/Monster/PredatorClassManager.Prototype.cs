@@ -21,36 +21,46 @@ public partial class PredatorClassManager
     public AbilityDetail juggernautSlot4Detail;
 
     [Header("Swarm Overlord - Spit")]
-    public float swarmSpitRange = 12f;
-    public float swarmSpitHalfAngle = 38f;
-    public int swarmSpitDamage = 10;
+    public float swarmSpitRange = 11f;
+    public float swarmSpitWindUp = 0.28f;
+    public float swarmSpitLobHeight = 2.4f;
+    public float swarmSpitTravelTime = 0.42f;
+    public float swarmSpitImpactRadius = 2.2f;
+    public int swarmSpitDamage = 4;
     public bool swarmSpitAppliesSlow = true;
-    public float swarmSpitSlowMultiplier = 0.75f;
-    public float swarmSpitSlowDuration = 1f;
+    public float swarmSpitSlowMultiplier = 0.72f;
+    public float swarmSpitSlowDuration = 1.2f;
+    public float swarmSpitPuddleDuration = 2.5f;
+    public float swarmSpitPuddleDps = 1.5f;
 
     [Header("Swarm Overlord - Brood")]
     public GameObject broodlingPrefab;
+    public float swarmBroodManaCost = 45f;
     public int swarmBroodSpawnCount = 2;
-    public int maxActiveBroodlings = 6;
-    public float broodlingLifetime = 12f;
-    public int broodlingDamage = 5;
-    public float broodlingMoveSpeed = 5.5f;
+    public int maxActiveBroodlings = 4;
+    public float broodlingLifetime = 9f;
+    public int broodlingDamage = 2;
+    public float broodlingMoveSpeed = 4.2f;
+    public float broodlingScale = 0.6f;
+    public float broodlingHatchDuration = 0.75f;
+    public float broodlingContactInterval = 0.85f;
     public float broodSpawnOffsetRadius = 2.2f;
 
     [Header("Swarm Overlord - Infest")]
-    public float swarmInfestRadius = 4.5f;
+    public float swarmInfestRadius = 4f;
     public float swarmInfestDuration = 5f;
-    public float swarmInfestDps = 4f;
-    public float swarmInfestSlowMultiplier = 0.65f;
+    public float swarmInfestDps = 2.5f;
+    public float swarmInfestSlowMultiplier = 0.68f;
     public float swarmInfestPlacementDistance = 5f;
+    public float swarmInfestWarningDuration = 0.65f;
 
     [Header("Swarm Overlord - Hive")]
-    public float swarmHiveWarningDuration = 0.8f;
-    public float swarmHiveRadius = 6f;
-    public int swarmHivePulseDamage = 7;
-    public float swarmHivePulseInterval = 1f;
-    public int swarmHivePulseCount = 3;
-    public int swarmHiveBroodSpawnCount = 3;
+    public float swarmHiveWarningDuration = 0.95f;
+    public float swarmHiveRadius = 5.5f;
+    public int swarmHivePulseDamage = 4;
+    public float swarmHivePulseInterval = 1.1f;
+    public int swarmHivePulseCount = 2;
+    public int swarmHiveBroodSpawnCount = 1;
 
     [Header("Dragon Juggernaut - Flame")]
     public float juggernautFlameRange = 8f;
@@ -62,10 +72,12 @@ public partial class PredatorClassManager
 
     [Header("Dragon Juggernaut - Leap")]
     public float juggernautLeapDistance = 8f;
-    public float juggernautLeapDuration = 0.35f;
-    public float juggernautLeapImpactRadius = 3.5f;
-    public int juggernautLeapDamage = 15;
-    public float juggernautLeapKnockback = 4f;
+    public float juggernautLeapWindUp = 0.52f;
+    public float juggernautLeapDuration = 0.22f;
+    public float juggernautLeapRecoveryDuration = 0.38f;
+    public float juggernautLeapImpactRadius = 3.2f;
+    public int juggernautLeapDamage = 10;
+    public float juggernautLeapKnockback = 3.5f;
 
     [Header("Dragon Juggernaut - Roar")]
     public float juggernautRoarRadius = 5f;
@@ -300,7 +312,21 @@ public partial class PredatorClassManager
         {
             gameUi.RefreshAbilityLabels(force: true);
             gameUi.RefreshAbilityInfo(force: true);
+            gameUi.RefreshRoleLabel();
         }
+    }
+
+    /// <summary>
+    /// Returns a slot mana override when >= 0; otherwise AbilityController defaults apply.
+    /// </summary>
+    public float GetPredatorSlotManaCostOverride(int slotNumber)
+    {
+        if (activeClass == PredatorClass.SwarmOverlord && slotNumber == 2)
+        {
+            return swarmBroodManaCost;
+        }
+
+        return -1f;
     }
 
     private void EnsurePrototypeAbilityDetails()

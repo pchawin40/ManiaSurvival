@@ -64,8 +64,8 @@ public static class PredatorClassCatalog
         {
             classId = PredatorClass.RelentlessHook,
             displayName = "Relentless Hook",
-            shortRole = "Catch / Control",
-            tagline = "Pull survivors out of position and punish bad spacing.",
+            shortRole = "Catch Predator",
+            tagline = "Pull survivors out of safety.",
             difficulty = "Medium",
             themeColor = new Color(0.95f, 0.45f, 0.18f, 1f),
             abilityNames = new[] { "Spray", "Hook", "Tonic", "Barrage" },
@@ -82,17 +82,17 @@ public static class PredatorClassCatalog
         {
             classId = PredatorClass.SwarmOverlord,
             displayName = "Swarm Overlord",
-            shortRole = "Zone / Summon",
-            tagline = "Spit, brood, infest, then call the hive.",
+            shortRole = "Summoner Predator",
+            tagline = "Own space with brood and corruption.",
             difficulty = "Easy",
             themeColor = new Color(0.45f, 0.92f, 0.28f, 1f),
             abilityNames = new[] { "Spit", "Brood", "Infest", "Hive" },
             abilityShortDescriptions = new[]
             {
-                "Acid cone that chips and slows survivors.",
-                "Spawn broodlings that chase and harass.",
-                "Drop a toxic zone that damages over time.",
-                "Warn, pulse damage, then summon more brood."
+                "Lobbed infection glob — splat, slow, and corrupt.",
+                "Hatch two broodlings (45 mana, cap 4).",
+                "Seed a warning zone, then bloom corruption DOT.",
+                "Telegraphed hive pulse plus a small brood wave."
             }
         };
 
@@ -100,15 +100,15 @@ public static class PredatorClassCatalog
         {
             classId = PredatorClass.Juggernaut,
             displayName = "Dragon Juggernaut",
-            shortRole = "Burst / AoE",
-            tagline = "Flame breath, leap, roar, then meteor.",
+            shortRole = "Bruiser Predator",
+            tagline = "Announce impact, then crash through it.",
             difficulty = "Medium",
             themeColor = new Color(1f, 0.42f, 0.12f, 1f),
             abilityNames = new[] { "Flame", "Leap", "Roar", "Meteor" },
             abilityShortDescriptions = new[]
             {
                 "Cone fire that burns survivors in front of you.",
-                "Leap forward and slam the landing zone.",
+                "Roar, mark landing, then leap — readable but heavy.",
                 "Knock survivors back and slow them.",
                 "Warn, then crash down with fire aftermath."
             }

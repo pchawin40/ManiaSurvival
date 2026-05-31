@@ -6,16 +6,23 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class BroodlingMinion : MonoBehaviour
 {
-    public float moveSpeed = 5.5f;
-    public float contactRadius = 1.1f;
-    public int contactDamage = 5;
-    public float lifetime = 12f;
+    public float moveSpeed = 4.2f;
+    public float contactRadius = 1f;
+    public int contactDamage = 2;
+    public float lifetime = 9f;
+    public float hatchDuration = 0.75f;
+    public float contactInterval = 0.85f;
 
     private PredatorClassManager owner;
     private LayerMask targetLayers;
     private string survivorTag;
     private float lifeRemaining;
     private float nextContactTime;
+    private float hatchRemaining;
+    private bool isHatched;
+    private Renderer cachedRenderer;
+    private Color activeTint = new Color(0.4f, 0.9f, 0.25f, 1f);
+    private Color hatchTint = new Color(0.25f, 0.45f, 0.18f, 1f);
 
     public void Initialize(
         PredatorClassManager predatorOwner,
@@ -23,7 +30,9 @@ public class BroodlingMinion : MonoBehaviour
         string tag,
         float lifeSeconds,
         int damage,
-        float speed)
+        float speed,
+        float hatchSeconds,
+        float contactCooldown)
     {
         owner = predatorOwner;
         targetLayers = layers;
@@ -32,7 +41,12 @@ public class BroodlingMinion : MonoBehaviour
         lifeRemaining = lifetime;
         contactDamage = Mathf.Max(1, damage);
         moveSpeed = Mathf.Max(1f, speed);
-        owner?.RegisterBroodling(this);
+        hatchDuration = Mathf.Max(0f, hatchSeconds);
+        hatchRemaining = hatchDuration;
+        contactInterval = Mathf.Clamp(contactCooldown, 0.35f, 2f);
+        isHatched = hatchDuration <= 0f;
+        cachedRenderer = GetComponentInChildren<Renderer>();
+        ApplyHatchVisual();
     }
 
     private void OnDestroy()
@@ -46,6 +60,18 @@ public class BroodlingMinion : MonoBehaviour
         if (lifeRemaining <= 0f)
         {
             Destroy(gameObject);
+            return;
+        }
+
+        if (!isHatched)
+        {
+            hatchRemaining -= Time.deltaTime;
+            if (hatchRemaining <= 0f)
+            {
+                isHatched = true;
+                ApplyHatchVisual();
+            }
+
             return;
         }
 
@@ -64,15 +90,26 @@ public class BroodlingMinion : MonoBehaviour
 
         if (dir.sqrMagnitude <= contactRadius * contactRadius && Time.time >= nextContactTime)
         {
-            nextContactTime = Time.time + 0.5f;
+            nextContactTime = Time.time + contactInterval;
             GameObject source = owner != null ? owner.gameObject : gameObject;
             target.TakeDamage(contactDamage, source);
         }
     }
 
+    private void ApplyHatchVisual()
+    {
+        if (cachedRenderer == null)
+        {
+            return;
+        }
+
+        Material mat = cachedRenderer.material;
+        mat.color = isHatched ? activeTint : hatchTint;
+    }
+
     private UnitHealth FindClosestSurvivor()
     {
-        Collider[] hits = Physics.OverlapSphere(transform.position, 12f, targetLayers, QueryTriggerInteraction.Ignore);
+        Collider[] hits = Physics.OverlapSphere(transform.position, 10f, targetLayers, QueryTriggerInteraction.Ignore);
         UnitHealth best = null;
         float bestSqr = float.MaxValue;
 
@@ -100,12 +137,13 @@ public class BroodlingMinion : MonoBehaviour
         return best;
     }
 
-    public static GameObject SpawnRuntimeCapsule(Vector3 position, Color tint)
+    public static GameObject SpawnRuntimeCapsule(Vector3 position, Color tint, float scale)
     {
         GameObject minion = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         minion.name = "Broodling_Runtime";
         minion.transform.position = position;
-        minion.transform.localScale = new Vector3(0.55f, 0.55f, 0.55f);
+        float safeScale = Mathf.Clamp(scale, 0.45f, 0.85f);
+        minion.transform.localScale = new Vector3(safeScale, safeScale, safeScale);
 
         Collider col = minion.GetComponent<Collider>();
         if (col != null)

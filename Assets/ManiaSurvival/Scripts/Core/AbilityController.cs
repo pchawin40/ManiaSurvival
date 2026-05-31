@@ -495,6 +495,20 @@ public class AbilityController : MonoBehaviour
     {
         if (controlsPredator)
         {
+            if (predatorClassManager == null)
+            {
+                predatorClassManager = GetComponent<PredatorClassManager>();
+            }
+
+            if (predatorClassManager != null)
+            {
+                float classOverride = predatorClassManager.GetPredatorSlotManaCostOverride(slotNumber);
+                if (classOverride >= 0f)
+                {
+                    return classOverride;
+                }
+            }
+
             switch (slotNumber)
             {
                 case 1: return Mathf.Max(0f, predatorSlot1ManaCost);

@@ -187,18 +187,18 @@ public static class AbilityPresentationFallback
             case 1:
                 return new AbilityDetail
                 {
-                    displayName = "Acid Spit",
+                    displayName = "Infection Spit",
                     buttonLabel = "Spit",
-                    shortDescription = "Cone spit that damages and can slow survivors.",
-                    roleTag = "Cone / Poke",
+                    shortDescription = "Lob a bio-glob — splat, slow, and leave a corruption puddle.",
+                    roleTag = "Lob / Poke",
                     themeColor = new Color(0.45f, 0.95f, 0.3f, 1f)
                 };
             case 2:
                 return new AbilityDetail
                 {
-                    displayName = "Brood Spawn",
+                    displayName = "Brood Hatch",
                     buttonLabel = "Brood",
-                    shortDescription = "Spawn broodlings that chase and chip survivors.",
+                    shortDescription = "Hatch two broodlings (45 mana). Small helpers, not finishers.",
                     roleTag = "Summon",
                     themeColor = new Color(0.55f, 0.85f, 0.35f, 1f)
                 };
@@ -207,8 +207,8 @@ public static class AbilityPresentationFallback
                 {
                     displayName = "Infest",
                     buttonLabel = "Infest",
-                    shortDescription = "Drop a toxic zone that damages and slows.",
-                    roleTag = "Zone / Control",
+                    shortDescription = "Plant a seed marker, then bloom a corruption DOT zone.",
+                    roleTag = "Zone / Attrition",
                     themeColor = new Color(0.35f, 0.8f, 0.25f, 1f)
                 };
             default:
@@ -241,8 +241,8 @@ public static class AbilityPresentationFallback
                 {
                     displayName = "Dragon Leap",
                     buttonLabel = "Leap",
-                    shortDescription = "Leap forward and slam the landing zone.",
-                    roleTag = "Mobility / Burst",
+                    shortDescription = "Roar, mark landing, then leap — heavy but telegraphed.",
+                    roleTag = "Mobility / Commit",
                     themeColor = new Color(1f, 0.55f, 0.2f, 1f)
                 };
             case 3:

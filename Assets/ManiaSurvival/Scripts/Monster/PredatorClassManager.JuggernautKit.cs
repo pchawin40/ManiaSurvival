@@ -146,7 +146,8 @@ public partial class PredatorClassManager
 
         if (enableAbilityFeel)
         {
-            PredatorAbilityFeelVfx.SpawnWarningCircle(destination, juggernautLeapImpactRadius, juggernautLeapDuration, new Color(1f, 0.5f, 0.1f, 0.5f));
+            float telegraph = Mathf.Max(0.05f, juggernautLeapWindUp) + Mathf.Max(0.05f, juggernautLeapDuration);
+            PredatorAbilityFeelVfx.SpawnWarningCircle(destination, juggernautLeapImpactRadius, telegraph, new Color(1f, 0.5f, 0.1f, 0.55f));
         }
 
         isJuggernautLeaping = true;
@@ -156,13 +157,22 @@ public partial class PredatorClassManager
     private IEnumerator DragonLeapRoutine(Vector3 destination)
     {
         Vector3 start = transform.position;
-        float duration = Mathf.Max(0.05f, juggernautLeapDuration);
-        float elapsed = 0f;
+        float windUp = Mathf.Max(0.05f, juggernautLeapWindUp);
+        float travel = Mathf.Max(0.05f, juggernautLeapDuration);
+        float recovery = Mathf.Max(0f, juggernautLeapRecoveryDuration);
 
-        while (elapsed < duration)
+        if (enableAbilityFeel)
+        {
+            PredatorAbilityFeelVfx.SpawnShockwaveRing(start, 1.8f, new Color(1f, 0.55f, 0.12f, 0.45f), windUp);
+        }
+
+        yield return new WaitForSeconds(windUp);
+
+        float elapsed = 0f;
+        while (elapsed < travel)
         {
             elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / duration);
+            float t = Mathf.Clamp01(elapsed / travel);
             Vector3 pos = Vector3.Lerp(start, destination, t);
             pos.y = start.y;
             MovePredatorTo(pos);
@@ -170,6 +180,12 @@ public partial class PredatorClassManager
         }
 
         ApplyDragonLeapImpact(destination);
+
+        if (recovery > 0f)
+        {
+            yield return new WaitForSeconds(recovery);
+        }
+
         isJuggernautLeaping = false;
         juggernautLeapRoutine = null;
     }
@@ -183,6 +199,7 @@ public partial class PredatorClassManager
         for (int i = 0; i < hits.Length; i++)
         {
             hits[i].TakeDamage(damage, gameObject);
+            LogPredatorAbility("Dragon Leap impact damaged " + hits[i].name + " for " + damage + " (single impact hit)");
             Vector3 knockDir = hits[i].transform.position - center;
             knockDir.y = 0f;
             ApplyKnockback(hits[i], knockDir.normalized, juggernautLeapKnockback);

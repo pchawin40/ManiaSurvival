@@ -11,7 +11,7 @@ public class PredatorClassSelectPanel : MonoBehaviour
 {
     [Header("Layout")]
     public Vector2 panelSize = new Vector2(920f, 620f);
-    public Vector2 cardSize = new Vector2(280f, 200f);
+    public Vector2 cardSize = new Vector2(280f, 220f);
     public float cardSpacing = 12f;
     public int cardsPerRow = 3;
 
@@ -20,12 +20,16 @@ public class PredatorClassSelectPanel : MonoBehaviour
     public Color cardBackground = new Color(0.14f, 0.16f, 0.22f, 0.95f);
     public Color cardSelectedBackground = new Color(0.2f, 0.24f, 0.32f, 0.98f);
     public Color confirmButtonColor = new Color(0.85f, 0.32f, 0.18f, 1f);
+    public Color defaultBodyTextColor = new Color(0.92f, 0.94f, 0.98f, 1f);
+    public Color mutedBodyTextColor = new Color(0.78f, 0.82f, 0.88f, 1f);
 
     private ManiaGameUI hostUi;
     private GameObject panelRoot;
+    private RectTransform cardGridContent;
     private TMP_Text detailTitleText;
     private TMP_Text detailBodyText;
     private Button huntButton;
+    private TMP_FontAsset resolvedFont;
     private PredatorClass selectedClass = PredatorClass.RelentlessHook;
     private readonly List<CardBinding> cardBindings = new List<CardBinding>();
 
@@ -34,6 +38,9 @@ public class PredatorClassSelectPanel : MonoBehaviour
         public PredatorClass classId;
         public Image background;
         public Image accentBar;
+        public Image selectedOutline;
+        public GameObject checkmark;
+        public TMP_Text nameText;
     }
 
     public void Show(ManiaGameUI ui)
@@ -52,6 +59,7 @@ public class PredatorClassSelectPanel : MonoBehaviour
         }
 
         SelectClass(selectedClass);
+        ForceRefreshLayout();
     }
 
     public void Hide()
@@ -73,6 +81,8 @@ public class PredatorClassSelectPanel : MonoBehaviour
         {
             return;
         }
+
+        resolvedFont = ResolveFont();
 
         Transform parent = hostUi != null && hostUi.startScreen != null
             ? hostUi.startScreen.transform
@@ -103,15 +113,17 @@ public class PredatorClassSelectPanel : MonoBehaviour
         CreateCardGrid(panelRoot.transform);
         CreateDetailSection(panelRoot.transform);
         CreateFooterButtons(panelRoot.transform);
+
+        ForceRefreshLayout();
     }
 
     private void CreateHeader(Transform parent)
     {
-        GameObject header = CreateTextObject(parent, "HeaderTitle", "Choose Your Predator", 34f, FontStyles.Bold);
+        GameObject header = CreateTextObject(parent, "HeaderTitle", "Choose Your Predator", 34f, FontStyles.Bold, defaultBodyTextColor);
         LayoutElement headerLayout = header.AddComponent<LayoutElement>();
         headerLayout.preferredHeight = 48f;
 
-        GameObject subtitle = CreateTextObject(parent, "HeaderSubtitle", "Pick a class, review abilities, then Hunt.", 20f, FontStyles.Italic);
+        GameObject subtitle = CreateTextObject(parent, "HeaderSubtitle", "Pick a class, review abilities, then Hunt.", 20f, FontStyles.Italic, mutedBodyTextColor);
         LayoutElement subtitleLayout = subtitle.AddComponent<LayoutElement>();
         subtitleLayout.preferredHeight = 28f;
     }
@@ -121,7 +133,7 @@ public class PredatorClassSelectPanel : MonoBehaviour
         GameObject scrollHost = new GameObject("CardScroll");
         scrollHost.transform.SetParent(parent, false);
         LayoutElement scrollLayout = scrollHost.AddComponent<LayoutElement>();
-        scrollLayout.preferredHeight = 430f;
+        scrollLayout.preferredHeight = 460f;
         scrollLayout.flexibleHeight = 1f;
 
         ScrollRect scroll = scrollHost.AddComponent<ScrollRect>();
@@ -141,11 +153,11 @@ public class PredatorClassSelectPanel : MonoBehaviour
 
         GameObject content = new GameObject("Content");
         content.transform.SetParent(viewport.transform, false);
-        RectTransform contentRect = content.AddComponent<RectTransform>();
-        contentRect.anchorMin = new Vector2(0f, 1f);
-        contentRect.anchorMax = new Vector2(1f, 1f);
-        contentRect.pivot = new Vector2(0.5f, 1f);
-        contentRect.anchoredPosition = Vector2.zero;
+        cardGridContent = content.AddComponent<RectTransform>();
+        cardGridContent.anchorMin = new Vector2(0f, 1f);
+        cardGridContent.anchorMax = new Vector2(1f, 1f);
+        cardGridContent.pivot = new Vector2(0.5f, 1f);
+        cardGridContent.anchoredPosition = Vector2.zero;
 
         GridLayoutGroup grid = content.AddComponent<GridLayoutGroup>();
         grid.cellSize = cardSize;
@@ -158,7 +170,7 @@ public class PredatorClassSelectPanel : MonoBehaviour
         fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
         scroll.viewport = viewportRect;
-        scroll.content = contentRect;
+        scroll.content = cardGridContent;
 
         cardBindings.Clear();
         IReadOnlyList<PredatorClass> playable = PredatorClassCatalog.GetPlayableClasses();
@@ -182,6 +194,19 @@ public class PredatorClassSelectPanel : MonoBehaviour
         button.targetGraphic = bg;
         button.onClick.AddListener(() => SelectClass(classId));
 
+        GameObject outlineObj = new GameObject("SelectedOutline");
+        outlineObj.transform.SetParent(card.transform, false);
+        Image outline = outlineObj.AddComponent<Image>();
+        outline.color = new Color(detail.themeColor.r, detail.themeColor.g, detail.themeColor.b, 0.95f);
+        outline.raycastTarget = false;
+        RectTransform outlineRect = outlineObj.GetComponent<RectTransform>();
+        outlineRect.anchorMin = Vector2.zero;
+        outlineRect.anchorMax = Vector2.one;
+        outlineRect.offsetMin = new Vector2(-3f, -3f);
+        outlineRect.offsetMax = new Vector2(3f, 3f);
+        outlineObj.transform.SetAsFirstSibling();
+        outline.enabled = false;
+
         VerticalLayoutGroup layout = card.AddComponent<VerticalLayoutGroup>();
         layout.padding = new RectOffset(12, 12, 10, 10);
         layout.spacing = 4f;
@@ -197,29 +222,33 @@ public class PredatorClassSelectPanel : MonoBehaviour
         LayoutElement accentLayout = accent.AddComponent<LayoutElement>();
         accentLayout.preferredHeight = 6f;
 
-        GameObject nameObj = CreateTextObject(card.transform, "Name", detail.displayName, 22f, FontStyles.Bold);
+        GameObject nameObj = CreateTextObject(card.transform, "Name", detail.displayName, 22f, FontStyles.Bold, GetContrastTextColor(cardBackground, detail.themeColor));
         TMP_Text nameText = nameObj.GetComponent<TMP_Text>();
-        nameText.color = detail.themeColor;
 
-        CreateTextObject(card.transform, "Role", detail.shortRole, 16f, FontStyles.Normal);
-        CreateTextObject(card.transform, "Difficulty", detail.difficulty, 15f, FontStyles.Normal);
-        CreateTextObject(card.transform, "Tagline", detail.tagline, 14f, FontStyles.Italic);
+        CreateTextObject(card.transform, "Role", detail.shortRole, 16f, FontStyles.Bold, defaultBodyTextColor);
+        CreateTextObject(card.transform, "Tagline", detail.tagline, 14f, FontStyles.Italic, mutedBodyTextColor);
 
-        GameObject abilityLines = CreateTextObject(card.transform, "Abilities", BuildAbilityLine(detail), 13f, FontStyles.Normal);
+        GameObject abilityLines = CreateTextObject(card.transform, "Abilities", BuildAbilityLine(detail), 13f, FontStyles.Normal, defaultBodyTextColor);
         TMP_Text abilityText = abilityLines.GetComponent<TMP_Text>();
         abilityText.enableWordWrapping = true;
+        LayoutElement abilityLayout = abilityLines.GetComponent<LayoutElement>();
+        abilityLayout.preferredHeight = 36f;
 
-        GameObject selectObj = CreateTextObject(card.transform, "SelectHint", "Select", 16f, FontStyles.Bold);
-        TMP_Text selectText = selectObj.GetComponent<TMP_Text>();
-        selectText.alignment = TextAlignmentOptions.Center;
-        LayoutElement selectLayout = selectObj.AddComponent<LayoutElement>();
-        selectLayout.preferredHeight = 24f;
+        GameObject checkmark = CreateTextObject(card.transform, "Checkmark", "✓ Selected", 15f, FontStyles.Bold, GetContrastTextColor(cardSelectedBackground, detail.themeColor));
+        TMP_Text checkText = checkmark.GetComponent<TMP_Text>();
+        checkText.alignment = TextAlignmentOptions.Center;
+        LayoutElement checkLayout = checkmark.AddComponent<LayoutElement>();
+        checkLayout.preferredHeight = 22f;
+        checkmark.SetActive(false);
 
         cardBindings.Add(new CardBinding
         {
             classId = classId,
             background = bg,
-            accentBar = accentImage
+            accentBar = accentImage,
+            selectedOutline = outline,
+            checkmark = checkmark,
+            nameText = nameText
         });
     }
 
@@ -240,10 +269,10 @@ public class PredatorClassSelectPanel : MonoBehaviour
         detailGroup.childControlHeight = false;
         detailGroup.childForceExpandWidth = true;
 
-        GameObject titleObj = CreateTextObject(detailBox.transform, "DetailTitle", "Relentless Hook", 24f, FontStyles.Bold);
+        GameObject titleObj = CreateTextObject(detailBox.transform, "DetailTitle", "Relentless Hook", 24f, FontStyles.Bold, defaultBodyTextColor);
         detailTitleText = titleObj.GetComponent<TMP_Text>();
 
-        GameObject bodyObj = CreateTextObject(detailBox.transform, "DetailBody", string.Empty, 16f, FontStyles.Normal);
+        GameObject bodyObj = CreateTextObject(detailBox.transform, "DetailBody", string.Empty, 16f, FontStyles.Normal, mutedBodyTextColor);
         detailBodyText = bodyObj.GetComponent<TMP_Text>();
         detailBodyText.enableWordWrapping = true;
     }
@@ -281,7 +310,7 @@ public class PredatorClassSelectPanel : MonoBehaviour
         layout.preferredWidth = 180f;
         layout.preferredHeight = 48f;
 
-        GameObject textObj = CreateTextObject(buttonObj.transform, "Label", label, 22f, FontStyles.Bold);
+        GameObject textObj = CreateTextObject(buttonObj.transform, "Label", label, 22f, FontStyles.Bold, defaultBodyTextColor);
         TMP_Text text = textObj.GetComponent<TMP_Text>();
         text.alignment = TextAlignmentOptions.Center;
         RectTransform textRect = textObj.GetComponent<RectTransform>();
@@ -301,7 +330,7 @@ public class PredatorClassSelectPanel : MonoBehaviour
         if (detailTitleText != null)
         {
             detailTitleText.text = detail.displayName;
-            detailTitleText.color = detail.themeColor;
+            detailTitleText.color = GetContrastTextColor(new Color(0.12f, 0.14f, 0.2f, 0.95f), detail.themeColor);
         }
 
         if (detailBodyText != null)
@@ -315,6 +344,8 @@ public class PredatorClassSelectPanel : MonoBehaviour
         {
             CardBinding binding = cardBindings[i];
             bool selected = binding.classId == classId;
+            PredatorClassDetail cardDetail = PredatorClassCatalog.GetDetail(binding.classId);
+
             if (binding.background != null)
             {
                 binding.background.color = selected ? cardSelectedBackground : cardBackground;
@@ -322,12 +353,28 @@ public class PredatorClassSelectPanel : MonoBehaviour
 
             if (binding.accentBar != null)
             {
-                Color accent = detail.themeColor;
-                binding.accentBar.color = selected
-                    ? accent
-                    : PredatorClassCatalog.GetDetail(binding.classId).themeColor;
+                binding.accentBar.color = cardDetail.themeColor;
+            }
+
+            if (binding.selectedOutline != null)
+            {
+                binding.selectedOutline.enabled = selected;
+                binding.selectedOutline.color = new Color(cardDetail.themeColor.r, cardDetail.themeColor.g, cardDetail.themeColor.b, 0.95f);
+            }
+
+            if (binding.checkmark != null)
+            {
+                binding.checkmark.SetActive(selected);
+            }
+
+            if (binding.nameText != null)
+            {
+                Color nameBg = selected ? cardSelectedBackground : cardBackground;
+                binding.nameText.color = GetContrastTextColor(nameBg, cardDetail.themeColor);
             }
         }
+
+        ForceRefreshLayout();
     }
 
     private void HandleBackPressed()
@@ -344,6 +391,53 @@ public class PredatorClassSelectPanel : MonoBehaviour
         }
 
         Hide();
+    }
+
+    private void ForceRefreshLayout()
+    {
+        if (cardGridContent == null)
+        {
+            return;
+        }
+
+        Canvas.ForceUpdateCanvases();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(cardGridContent);
+    }
+
+    private TMP_FontAsset ResolveFont()
+    {
+        if (resolvedFont != null)
+        {
+            return resolvedFont;
+        }
+
+        if (hostUi != null && hostUi.timerText != null && hostUi.timerText.font != null)
+        {
+            return hostUi.timerText.font;
+        }
+
+        TMP_Text anyText = FindFirstObjectByType<TMP_Text>();
+        if (anyText != null && anyText.font != null)
+        {
+            return anyText.font;
+        }
+
+        return TMP_Settings.defaultFontAsset;
+    }
+
+    private static Color GetContrastTextColor(Color background, Color accent)
+    {
+        float luminance = 0.2126f * background.r + 0.7152f * background.g + 0.0722f * background.b;
+        if (luminance < 0.45f)
+        {
+            Color text = Color.Lerp(Color.white, accent, 0.35f);
+            text.a = 1f;
+            return text;
+        }
+
+        Color dark = Color.Lerp(new Color(0.12f, 0.14f, 0.18f, 1f), accent, 0.55f);
+        dark.a = 1f;
+        return dark;
     }
 
     private static string BuildAbilityLine(PredatorClassDetail detail)
@@ -389,18 +483,26 @@ public class PredatorClassSelectPanel : MonoBehaviour
         return builder.ToString();
     }
 
-    private static GameObject CreateTextObject(Transform parent, string name, string text, float fontSize, FontStyles style)
+    private GameObject CreateTextObject(Transform parent, string name, string text, float fontSize, FontStyles style, Color color)
     {
         GameObject obj = new GameObject(name);
         obj.transform.SetParent(parent, false);
         TextMeshProUGUI tmp = obj.AddComponent<TextMeshProUGUI>();
+        tmp.font = ResolveFont();
         tmp.text = text;
         tmp.fontSize = fontSize;
         tmp.fontStyle = style;
-        tmp.color = Color.white;
+        tmp.color = color;
         tmp.raycastTarget = false;
+        tmp.enableAutoSizing = false;
+        tmp.overflowMode = TextOverflowModes.Overflow;
+        tmp.ForceMeshUpdate();
+
         LayoutElement layout = obj.AddComponent<LayoutElement>();
+        layout.minHeight = fontSize + 6f;
         layout.preferredHeight = fontSize + 8f;
+        layout.flexibleWidth = 1f;
+
         return obj;
     }
 }

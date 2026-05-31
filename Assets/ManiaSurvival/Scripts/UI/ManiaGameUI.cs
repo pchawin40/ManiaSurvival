@@ -68,6 +68,7 @@ public class ManiaGameUI : MonoBehaviour
 
     [Header("Class Summary")]
     public bool showClassSummaryInAbilityInfo = true;
+    public bool showPredatorKitLineInRoleText = true;
     public bool showDebugClassSummaryLog = false;
     public bool logAbilityLabelDebug = false;
 
@@ -1431,6 +1432,8 @@ public class ManiaGameUI : MonoBehaviour
         {
             classManager.SetPredatorClass(selectedClass);
         }
+
+        RefreshRoleLabel();
     }
 
     public void OnSurvivorPrimaryPressed()
@@ -1552,6 +1555,7 @@ public class ManiaGameUI : MonoBehaviour
 
         RefreshAbilityLabels(force: true);
         RefreshAbilityInfo(force: true);
+        RefreshRoleLabel();
     }
 
     public void RefreshAbilityLabels(bool force = false)
@@ -1806,16 +1810,91 @@ public class ManiaGameUI : MonoBehaviour
         return null;
     }
 
-    private string GetPlayingRoleLabel()
+    public void RefreshRoleLabel()
     {
-        if (localRoleController != null)
+        if (roleText == null)
         {
-            return localRoleController.controlMode == PlayerControlMode.MonsterControlled
-                ? "Playing: Monster"
-                : "Playing: Survivor";
+            return;
         }
 
-        return playingRoleText;
+        ManiaGameManager manager = FindFirstObjectByType<ManiaGameManager>();
+        if (manager != null && manager.State == ManiaGameState.Playing)
+        {
+            roleText.text = GetPlayingRoleLabel();
+        }
+    }
+
+    private string GetPlayingRoleLabel()
+    {
+        if (localRoleController == null)
+        {
+            localRoleController = FindFirstObjectByType<LocalRoleController>();
+        }
+
+        if (localRoleController == null)
+        {
+            return playingRoleText;
+        }
+
+        if (localRoleController.controlMode != PlayerControlMode.MonsterControlled)
+        {
+            return "Playing: Survivor";
+        }
+
+        PredatorClassManager classManager = ResolveLocalPredatorClassManager();
+        if (classManager == null)
+        {
+            return "Playing: Monster";
+        }
+
+        PredatorClassDetail detail = PredatorClassCatalog.GetDetail(classManager.GetCurrentPredatorClass());
+        string primary = "Playing: " + detail.displayName + " (Monster — " + detail.shortRole + ")";
+        if (!showPredatorKitLineInRoleText || detail.abilityNames == null || detail.abilityNames.Length == 0)
+        {
+            return primary;
+        }
+
+        return primary + "\nKit: " + BuildKitLine(detail) + "\nThreat: " + detail.tagline;
+    }
+
+    private PredatorClassManager ResolveLocalPredatorClassManager()
+    {
+        if (localRoleController != null && localRoleController.predatorClassManager != null)
+        {
+            return localRoleController.predatorClassManager;
+        }
+
+        if (predatorAbilityController != null)
+        {
+            PredatorClassManager manager = predatorAbilityController.GetComponent<PredatorClassManager>();
+            if (manager != null)
+            {
+                return manager;
+            }
+        }
+
+        return FindFirstObjectByType<PredatorClassManager>();
+    }
+
+    private static string BuildKitLine(PredatorClassDetail detail)
+    {
+        System.Text.StringBuilder builder = new System.Text.StringBuilder();
+        for (int i = 0; i < detail.abilityNames.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(detail.abilityNames[i]))
+            {
+                continue;
+            }
+
+            if (builder.Length > 0)
+            {
+                builder.Append(" • ");
+            }
+
+            builder.Append(detail.abilityNames[i]);
+        }
+
+        return builder.ToString();
     }
 
     private string FormatTime(float seconds)
